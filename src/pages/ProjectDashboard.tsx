@@ -85,11 +85,11 @@ export default function ProjectDashboard() {
 
   // Resolve which entities to show based on source mode + manual selection
   const resolvedEntities = useMemo(() => {
-    const byMode = resolveEntitiesByMode(allEntities, sourceMode);
+    // When user explicitly selects entities via pills, show exactly those
     if (selectedEntityIds.size > 0) {
-      return byMode.filter((e) => selectedEntityIds.has(e.id));
+      return allEntities.filter((e) => selectedEntityIds.has(e.id));
     }
-    return byMode;
+    return resolveEntitiesByMode(allEntities, sourceMode);
   }, [allEntities, sourceMode, selectedEntityIds]);
 
   const resolvedEntityIds = useMemo(
