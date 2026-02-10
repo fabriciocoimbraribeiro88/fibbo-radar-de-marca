@@ -377,7 +377,7 @@ export default function ProjectDashboard() {
               </div>
 
               {/* Row 3: Top Posts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <TopPostsTable posts={filteredPosts} entityId={selectedEntity.entityId} mode="best" />
                 <TopPostsTable posts={filteredPosts} entityId={selectedEntity.entityId} mode="worst" />
               </div>
