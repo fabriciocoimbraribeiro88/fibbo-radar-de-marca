@@ -126,6 +126,7 @@ interface CollectOptions {
   dateFrom: string;
   dateTo: string;
   collectAds: boolean;
+  adsLibraryUrl: string;
   collectSeo: boolean;
 }
 
@@ -135,6 +136,7 @@ const defaultCollectOptions: CollectOptions = {
   dateFrom: "",
   dateTo: "",
   collectAds: false,
+  adsLibraryUrl: "",
   collectSeo: false,
 };
 
@@ -277,6 +279,7 @@ export default function ProjectDataSources() {
         body.date_to = opts.dateTo;
       }
       body.collect_ads = opts.collectAds;
+      body.ads_library_url = opts.adsLibraryUrl || undefined;
       body.collect_seo = opts.collectSeo;
 
       const { data, error } = await supabase.functions.invoke("fetch-instagram", { body });
@@ -664,18 +667,35 @@ export default function ProjectDataSources() {
                 Fontes adicionais
               </Label>
               <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div className="flex items-center gap-2">
-                    <Megaphone className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Biblioteca de Anúncios</p>
-                      <p className="text-xs text-muted-foreground">Meta Ads Library</p>
+                <div className="rounded-lg border border-border p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Megaphone className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Biblioteca de Anúncios</p>
+                        <p className="text-xs text-muted-foreground">Meta Ads, Google Ads, TikTok Ads</p>
+                      </div>
                     </div>
+                    <Switch
+                      checked={collectOpts.collectAds}
+                      onCheckedChange={(v) => setCollectOpts((o) => ({ ...o, collectAds: v }))}
+                    />
                   </div>
-                  <Switch
-                    checked={collectOpts.collectAds}
-                    onCheckedChange={(v) => setCollectOpts((o) => ({ ...o, collectAds: v }))}
-                  />
+                  {collectOpts.collectAds && (
+                    <div className="space-y-1 pl-6">
+                      <Label className="text-xs text-muted-foreground">Link da Biblioteca de Anúncios</Label>
+                      <Input
+                        type="url"
+                        placeholder="https://www.facebook.com/ads/library/?active_status=all&ad_type=all&q=..."
+                        value={collectOpts.adsLibraryUrl}
+                        onChange={(e) => setCollectOpts((o) => ({ ...o, adsLibraryUrl: e.target.value }))}
+                        className="text-xs"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Cole o link de busca da Meta Ads Library, Google Ads Transparency ou TikTok Ad Library.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border p-3">
                   <div className="flex items-center gap-2">
