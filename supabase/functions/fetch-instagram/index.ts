@@ -114,9 +114,9 @@ Deno.serve(async (req) => {
         resultsLimit: results_limit,
       };
 
-      // If date mode, increase limit and we'll filter after
+      // If date mode, remove limit so we fetch all and filter after
       if (date_from || date_to) {
-        postInput.resultsLimit = 200; // fetch more so we can filter by date
+        postInput.resultsLimit = 0; // 0 = unlimited in Apify
       }
 
       const postsRun = await runApifyActor(apifyToken, "apify~instagram-post-scraper", postInput);
