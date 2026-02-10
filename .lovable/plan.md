@@ -1,116 +1,194 @@
 
 
-# Plano: Modulo Completo de Analises
+# Plano: Sistema Completo Fibbo Radar -- Roadmap por Modulos
 
-## Problema Atual
-1. **Erro na coleta (Apify)**: O edge function `fetch-instagram` usa actor IDs com `/` (ex: `apify/instagram-profile-scraper`) mas a API do Apify espera `~` (ex: `apify~instagram-profile-scraper`). Isso causa o erro 404 que aparece no screenshot.
-2. **Pagina de Analises**: Atualmente e apenas um placeholder vazio, sem funcionalidade.
-3. **Rotas**: As analises nao estao vinculadas a projetos (`/analyses` global em vez de `/projects/:id/analyses`).
+## Situacao Atual
 
-## O Que Sera Implementado
+O sistema ja possui:
+- Autenticacao (login/signup)
+- Dashboard geral (lista de projetos + stats)
+- CRUD de Projetos (wizard de criacao)
+- Gerenciamento de Entidades (concorrentes/influencers/inspiracoes)
+- Coleta Instagram via Apify (edge function funcionando)
+- Modulo de Analises (wizard 5 steps + pipeline Claude + visualizacao)
+- Settings (teste de conexao Apify + Anthropic)
 
-### Fase A: Corrigir Coleta Apify (pre-requisito)
+## O Que Falta (Mapeamento Completo)
 
-Corrigir o edge function `fetch-instagram/index.ts` para usar `~` no lugar de `/` nos actor IDs:
-- `apify/instagram-profile-scraper` -> `apify~instagram-profile-scraper`
-- `apify/instagram-post-scraper` -> `apify~instagram-post-scraper`
+Comparando com a visao descrita, os modulos ausentes sao:
 
-### Fase B: Pagina de Analises do Projeto
+### 1. Navegacao por Projeto (Sub-Sidebar)
+Atualmente ao clicar num projeto, vai direto para Entidades. Falta uma navegacao interna do projeto com todas as secoes:
+- Visao Geral (dashboard do projeto)
+- Marca (briefing)
+- Entidades
+- Fontes de Dados
+- Dashboard (dados quantitativos)
+- Analises
+- Planejamento
+- OKRs
+- Relatorios
 
-**Rota:** `/projects/:id/analyses`
+### 2. Pagina da Marca (/projects/:id/brand)
+Formulario editavel com o briefing completo:
+- Descricao, publico-alvo, tom de voz, keywords
+- Auto-save com indicador visual
 
-Lista de analises do projeto com:
-- Cards de cada analise (titulo, tipo, status, data, entidades)
-- Badge de status com cores (draft, analyzing, review, approved)
-- Botao "Nova Analise" que leva ao wizard
+### 3. Fontes de Dados (/projects/:id/data-sources)
+Configuracao e gerenciamento de coletas:
+- Grid de todas as configuracoes (entidade x fonte x schedule)
+- Botao "Executar Agora" por fonte
+- Toggle de schedule (manual/semanal/mensal)
+- Log das ultimas execucoes com status
+- Configuracao de quais fontes baixar uma vez vs. recorrente
 
-**Rota:** `/projects/:id/analyses/new` -- Wizard de 5 Steps
+### 4. Dashboard do Projeto (/projects/:id/dashboard)
+Visualizacao quantitativa dos dados coletados (sem analise IA):
+- Sub-tabs: Overview / Social / Ads / SEO
+- Big Numbers com sparklines (posts, comentarios, curtidas, engajamento, virais, hit%, views)
+- Graficos comparativos marca vs concorrentes (Recharts)
+- Tabela de posts com filtros e sort
+- Metricas de perfil (seguidores, evolucao)
 
-**Step 1 - Tipo de Analise:**
-Cards selecionaveis com icones:
-- Diagnostico da Marca
-- Analise de Concorrentes
-- Analise Cruzada
-- Analise de Influencers
-- Analise de Inspiracoes
+### 5. Planejamento (/projects/:id/planning)
+- Calendario Social: visualizacao mensal, drag-and-drop, banco de ideias
+- Plano de Ads: campanhas, conjuntos, anuncios
+- Plano de SEO: keywords prioritarias, briefing de artigos
+- Botao "Gerar com IA" baseado nas analises existentes
+- Edge function `generate-planning`
 
-**Step 2 - Selecionar Entidades:**
-Checkboxes com as entidades do projeto, agrupadas por tipo. A marca (projeto) e sempre incluida.
+### 6. OKRs (/projects/:id/okrs)
+- Seletor de trimestre
+- Cards de objetivos expandiveis com key results
+- Progress bars com trend arrows
+- Graficos de acompanhamento (line chart semana a semana)
+- Automacao: puxar dados mais recentes de instagram_profiles, instagram_posts, seo_data
+- Alertas visuais (amarelo <70%, vermelho <50% do esperado)
 
-**Step 3 - Periodo:**
-Date range picker. Mostra aviso sobre dados disponiveis baseado nos dados ja coletados no banco.
+### 7. Relatorios do Projeto (/projects/:id/reports)
+- Lista de relatorios gerados a partir das analises
+- Visualizacao do relatorio em markdown formatado
+- Exportacao PDF (jsPDF + html2canvas)
+- Exportacao Markdown
 
-**Step 4 - Parametros:**
-Checkboxes para selecionar secoes do relatorio:
-- Big Numbers, Performance, Sentimento, Formatos, Temas, Temporal, Hashtags, Recomendacoes, Banco de Conteudo
-- Secoes condicionais por tipo (ex: Oceanos Azuis so para analise cruzada)
+### 8. Analises Programadas
+- Opcao de agendar analises (diaria/semanal/mensal)
+- Notificacao por email com resumo e big numbers
+- Edge function de cron para disparar
 
-**Step 5 - Revisar e Iniciar:**
-Resumo completo + botao "Iniciar Analise"
+## Plano de Execucao (Fases)
 
-### Fase C: Pipeline de Analise (Edge Function)
+Dado o tamanho, recomendo implementar em **4 fases sequenciais**:
 
-**Edge Function:** `run-analysis-pipeline`
+---
 
-Fluxo:
-1. Recebe `analysis_id`
-2. Busca config da analise, briefing do projeto, dados das entidades (posts, perfis, comentarios)
-3. Pre-calcula metricas quantitativas (medias, totais, rankings)
-4. Cria `analysis_sections` para cada entidade (status: pending)
-5. Executa agentes em paralelo via `Promise.all` -- cada agente chama a API do Claude com:
-   - System prompt contextualizado (segmento, marca, publico-alvo)
-   - Dados quantitativos + posts da entidade
-6. Agente Orquestrador: apos todos completarem, sintetiza analise cruzada
-7. Salva resultados em `analysis_sections` com markdown + dados estruturados
-8. Atualiza status da analise para `review`
+### Fase 1: Navegacao + Marca + Fontes de Dados
+**Prioridade: Alta** -- e a base para tudo funcionar bem
 
-### Fase D: Pagina de Acompanhamento e Revisao
-
-**Rota:** `/projects/:id/analyses/:analysisId`
-
-**Modo Execucao** (status: analyzing/agents_running):
-- Status board visual tipo pipeline
-- Grid de cards dos agentes com progresso em tempo real (polling)
-- Preview das secoes conforme vao sendo completadas
-
-**Modo Revisao** (status: review):
-- Relatorio renderizado em Markdown com formatacao
-- Secoes clicaveis para expandir detalhes
-- Botoes: Aprovar, Exportar Markdown
-
-## Detalhes Tecnicos
-
-### Novas Rotas no App.tsx
+**Rotas novas:**
 ```text
-/projects/:id/analyses          -> ProjectAnalyses (lista)
-/projects/:id/analyses/new      -> NewAnalysis (wizard)
-/projects/:id/analyses/:aid     -> AnalysisView (execucao/revisao)
+/projects/:id              -> ProjectOverview (visao geral)
+/projects/:id/brand        -> ProjectBrand (briefing editavel)
+/projects/:id/data-sources -> ProjectDataSources (config de coletas)
 ```
 
-### Novos Arquivos
+**Arquivos novos:**
 ```text
-src/pages/ProjectAnalyses.tsx      -- Lista de analises do projeto
-src/pages/NewAnalysis.tsx          -- Wizard de 5 steps
-src/pages/AnalysisView.tsx         -- Acompanhamento + revisao
-supabase/functions/run-analysis-pipeline/index.ts  -- Pipeline IA
+src/components/ProjectLayout.tsx     -- Layout com sub-sidebar do projeto
+src/pages/ProjectOverview.tsx        -- Visao geral do projeto
+src/pages/ProjectBrand.tsx           -- Briefing editavel com auto-save
+src/pages/ProjectDataSources.tsx     -- Config de fontes de dados
 ```
 
-### Arquivos Modificados
+**Arquivos modificados:**
 ```text
-src/App.tsx                        -- Novas rotas
-src/pages/ProjectEntities.tsx      -- Link para analises
-src/components/AppLayout.tsx       -- Navegacao atualizada
-supabase/functions/fetch-instagram/index.ts  -- Fix actor IDs (~ em vez de /)
+src/App.tsx                          -- Novas rotas aninhadas
+src/components/AppLayout.tsx         -- Navegacao atualizada
 ```
 
-### Modelo Claude
-O edge function usara o modelo selecionado nas configuracoes. Inicialmente, o modelo sera passado como parametro na analise. Caso nao definido, usara `claude-sonnet-4-20250514` como fallback.
+**Funcionalidades:**
+- Sub-sidebar com links: Overview, Marca, Entidades, Fontes, Dashboard, Analises, Planejamento, OKRs, Relatorios
+- ProjectBrand: formulario com campos do briefing, auto-save com debounce
+- ProjectDataSources: tabela de data_fetch_configs, botao executar agora, toggle schedule, log de execucoes
 
-### Polling de Status
-A pagina de acompanhamento fara polling a cada 3 segundos consultando `analysis_sections` para atualizar o progresso dos agentes em tempo real.
+---
 
-### Prompts dos Agentes
-Seguirao exatamente o template do prompt original:
-- Agente Individual: analista senior de inteligencia digital, com contexto do projeto (marca, segmento, publico-alvo, prioridades)
-- Orquestrador: estrategista-chefe, sintetiza todas as analises em visao integrada com oceanos azuis e matriz de diferenciacao
+### Fase 2: Dashboard de Dados Quantitativos
+**Prioridade: Alta** -- o usuario precisa ver os dados coletados
+
+**Rotas novas:**
+```text
+/projects/:id/dashboard          -> ProjectDashboard
+/projects/:id/dashboard/social   -> sub-tab social
+/projects/:id/dashboard/ads      -> sub-tab ads
+/projects/:id/dashboard/seo      -> sub-tab seo
+```
+
+**Arquivos novos:**
+```text
+src/pages/ProjectDashboard.tsx       -- Dashboard com sub-tabs
+src/components/BigNumberCard.tsx     -- Card de metrica com sparkline
+src/components/ComparisonChart.tsx   -- Grafico comparativo multi-entidade
+```
+
+**Funcionalidades:**
+- Big Numbers: total posts, comentarios, curtidas, engajamento medio, virais, hit%, views
+- Comparativo: bar chart marca vs concorrentes por metrica
+- Tabela de posts: filtros (data, formato, entidade), sort, expandir detalhes
+- Graficos de perfil: evolucao de seguidores (line chart)
+- Distribuicao por formato (pie chart), por dia da semana (bar chart)
+
+---
+
+### Fase 3: Planejamento + OKRs
+**Prioridade: Media** -- depende de ter analises prontas
+
+**Rotas novas:**
+```text
+/projects/:id/planning           -> ProjectPlanning
+/projects/:id/okrs               -> ProjectOKRs
+```
+
+**Arquivos novos:**
+```text
+src/pages/ProjectPlanning.tsx        -- Calendario + planos
+src/pages/ProjectOKRs.tsx            -- Objetivos e acompanhamento
+src/components/CalendarGrid.tsx      -- Grid mensal de posts
+src/components/OKRProgressCard.tsx   -- Card de objetivo com KRs
+supabase/functions/generate-planning/index.ts  -- Geracao IA
+```
+
+**Funcionalidades:**
+- Calendario mensal visual com cards de posts planejados
+- CRUD de itens de planejamento (posts, ads, artigos SEO)
+- Geracao com IA baseada nas analises
+- OKRs: CRUD de objetivos e key results por trimestre
+- Progress bars automaticas (puxando dados de instagram_profiles, posts, seo_data)
+- Alertas visuais de desempenho
+
+---
+
+### Fase 4: Relatorios + Agendamento + Notificacoes
+**Prioridade: Media-Baixa** -- refinamento
+
+**Arquivos novos:**
+```text
+src/pages/ProjectReports.tsx         -- Relatorios do projeto
+supabase/functions/scheduled-fetch/index.ts     -- Cron coleta
+supabase/functions/scheduled-analysis/index.ts  -- Cron analise
+supabase/functions/send-notification/index.ts   -- Email
+```
+
+**Funcionalidades:**
+- Lista e visualizacao de relatorios com markdown formatado
+- Exportacao PDF e Markdown
+- Agendamento de coletas automaticas (cron)
+- Agendamento de analises (diaria/semanal/mensal)
+- Notificacoes por email com resumo
+
+---
+
+## Recomendacao
+
+Sugiro comecar pela **Fase 1** (Navegacao + Marca + Fontes de Dados) pois ela reestrutura a experiencia do projeto inteiro e torna todas as outras fases mais faceis de implementar. Cada fase subsequente pode ser aprovada e implementada individualmente.
 
