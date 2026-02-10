@@ -6,6 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   Users,
   Link2,
   CreditCard,
@@ -81,6 +89,14 @@ export default function SettingsPage() {
 
   const [testingClaude, setTestingClaude] = useState(false);
   const [claudeStatus, setClaudeStatus] = useState<ConnectionStatus>("idle");
+  const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514");
+
+  const CLAUDE_MODELS = [
+    { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
+    { value: "claude-opus-4-20250514", label: "Claude Opus 4" },
+    { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
+    { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
+  ];
 
   const testApify = async () => {
     setTestingApify(true);
@@ -173,6 +189,33 @@ export default function SettingsPage() {
               testing={testingClaude}
               onTest={testClaude}
             />
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="claude-model" className="text-sm font-medium text-foreground">
+                      Modelo LLM
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Modelo usado nas análises de inteligência competitiva
+                    </p>
+                  </div>
+                  <Select value={claudeModel} onValueChange={setClaudeModel}>
+                    <SelectTrigger id="claude-model" className="w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLAUDE_MODELS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
