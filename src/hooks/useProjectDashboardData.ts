@@ -150,11 +150,6 @@ export function useProjectDashboardData(projectId: string | undefined) {
 
 /* ── Derived metrics ── */
 
-export interface DateRange {
-  from: Date;
-  to: Date;
-}
-
 export type PostLimit = number | "all";
 
 export function useFilteredAndLimitedPosts(posts: PostData[], dateRange: DateRange, limit: PostLimit) {
@@ -191,6 +186,7 @@ export interface EntityMetrics {
   avgComments: number;
   avgEngagement: number;
   followers: number;
+  following: number;
   engagementRate: number;
   postTypes: Record<string, number>;
   hashtags: Record<string, number>;
@@ -222,6 +218,7 @@ export function useEntityMetrics(
         avgComments: 0,
         avgEngagement: 0,
         followers: 0,
+        following: 0,
         engagementRate: 0,
         postTypes: {},
         hashtags: {},
@@ -233,6 +230,7 @@ export function useEntityMetrics(
     for (const p of profiles) {
       if (p.entity_id && metricsMap[p.entity_id]) {
         metricsMap[p.entity_id].followers = p.followers_count ?? 0;
+        metricsMap[p.entity_id].following = p.following_count ?? 0;
       }
     }
 
