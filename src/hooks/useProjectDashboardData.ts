@@ -149,14 +149,20 @@ export function useProjectDashboardData(projectId: string | undefined) {
 
       entities.sort((a, b) => (a.role === "brand" ? -1 : b.role === "brand" ? 1 : 0));
 
-      const [{ data: posts }, { data: profiles }] = await Promise.all([
+      // Fetch posts per entity in parallel to avoid the 1000-row default limit
+      const postPromises = entityIds.map((eid) =>
         supabase
           .from("instagram_posts")
           .select(
             "entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url"
           )
-          .in("entity_id", entityIds)
-          .order("posted_at", { ascending: true }),
+          .eq("entity_id", eid)
+          .order("posted_at", { ascending: true })
+          .limit(5000)
+      );
+
+      const [postResults, { data: profiles }] = await Promise.all([
+        Promise.all(postPromises),
         supabase
           .from("instagram_profiles")
           .select("entity_id, followers_count, following_count, posts_count, snapshot_date")
@@ -164,7 +170,8 @@ export function useProjectDashboardData(projectId: string | undefined) {
           .order("snapshot_date", { ascending: true }),
       ]);
 
-      const enrichedPosts: PostData[] = (posts ?? []).map((p) => ({
+      const posts = postResults.flatMap((r) => r.data ?? []);
+      const enrichedPosts: PostData[] = posts.map((p) => ({
         entity_id: p.entity_id ?? "",
         post_type: p.post_type,
         likes_count: p.likes_count ?? 0,

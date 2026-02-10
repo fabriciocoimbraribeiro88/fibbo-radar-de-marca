@@ -210,7 +210,10 @@ export default function ProjectDashboard() {
       {/* Filters */}
       <DashboardFilters
         period={period}
-        onPeriodChange={setPeriod}
+        onPeriodChange={(p) => {
+          setPeriod(p);
+          if (p.preset !== "all") setPostLimit("all");
+        }}
         postLimit={postLimit}
         onPostLimitChange={setPostLimit}
         sourceMode={sourceMode}

@@ -167,23 +167,25 @@ export default function DashboardFilters({
         </Popover>
       </div>
 
-      {/* Row 2: Post limit */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Quantidade</span>
-        {POST_LIMITS.map((p) => (
-          <button
-            key={String(p.value)}
-            onClick={() => onPostLimitChange(p.value)}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-              postLimit === p.value
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-muted text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {/* Row 2: Post limit — only visible when period is "all" */}
+      {period.preset === "all" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Quantidade</span>
+          {POST_LIMITS.map((p) => (
+            <button
+              key={String(p.value)}
+              onClick={() => onPostLimitChange(p.value)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                postLimit === p.value
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Row 3: Source mode pills */}
       <div className="flex flex-wrap items-center gap-2">
