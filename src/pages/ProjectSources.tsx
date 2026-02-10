@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
+
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -82,21 +82,13 @@ const AD_PLATFORMS = [
 import { FetchProgressBar } from "@/components/FetchProgressBar";
 
 interface CollectOptions {
-  mode: "count" | "date";
+  mode: "all" | "count";
   postsCount: number;
-  dateFrom: string;
-  dateTo: string;
-  collectAds: boolean;
-  adPlatformUrls: Record<string, string>;
 }
 
 const defaultCollectOptions: CollectOptions = {
-  mode: "count",
+  mode: "all",
   postsCount: 30,
-  dateFrom: "",
-  dateTo: "",
-  collectAds: false,
-  adPlatformUrls: {},
 };
 
 export default function ProjectSources() {
@@ -120,8 +112,6 @@ export default function ProjectSources() {
     entityId: string;
     handle: string;
     isBrand?: boolean;
-    adPlatforms?: string[];
-    adLibraryUrls?: Record<string, string>;
   } | null>(null);
   const [collectOpts, setCollectOpts] = useState<CollectOptions>(defaultCollectOptions);
 
@@ -245,14 +235,34 @@ export default function ProjectSources() {
     setAdUrls({});
   };
 
-  const openCollectDialog = (entityId: string, handle: string, isBrand?: boolean, adPlatforms?: string[], adLibraryUrls?: Record<string, string>) => {
-    // Pre-fill ad URLs from entity metadata
-    const prefilled: Record<string, string> = {};
-    if (adLibraryUrls) {
-      for (const [k, v] of Object.entries(adLibraryUrls)) prefilled[k] = v;
-    }
-    setCollectOpts({ ...defaultCollectOptions, adPlatformUrls: prefilled });
-    setCollectDialog({ entityId, handle, isBrand, adPlatforms, adLibraryUrls });
+  // Edit dialog state
+  const [editDialog, setEditDialog] = useState<{ entityId: string; name: string; handle: string; website: string } | null>(null);
+
+  const editEntity = useMutation({
+    mutationFn: async (data: { entityId: string; name: string; handle: string; website: string }) => {
+      const { error } = await supabase
+        .from("monitored_entities")
+        .update({
+          name: data.name,
+          instagram_handle: data.handle || null,
+          website_url: data.website || null,
+        })
+        .eq("id", data.entityId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-entities", projectId] });
+      setEditDialog(null);
+      toast({ title: "Fonte atualizada com sucesso!" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const openCollectDialog = (entityId: string, handle: string, isBrand?: boolean) => {
+    setCollectOpts({ ...defaultCollectOptions });
+    setCollectDialog({ entityId, handle, isBrand });
   };
 
   const executeWithOptions = async () => {
@@ -271,10 +281,7 @@ export default function ProjectSources() {
     try {
       const body: Record<string, unknown> = { entity_id: entityId };
       if (opts.mode === "count") body.results_limit = opts.postsCount;
-      else { body.date_from = opts.dateFrom; body.date_to = opts.dateTo; }
-      body.collect_ads = opts.collectAds;
-      body.ad_platform_urls = opts.adPlatformUrls;
-
+      else body.results_limit = 0;
       const { data, error } = await supabase.functions.invoke("fetch-instagram", { body });
       if (error) throw error;
       if (data?.success) {
@@ -583,7 +590,6 @@ export default function ProjectSources() {
                   const isExecuting = executingId === e.id;
                   const lastLog = getEntityLastLog(e.id);
                   const recentLogs = getEntityLogs(e.id);
-                  const adPlatforms = (e.metadata as any)?.ad_platforms as string[] | undefined;
                   const adLibraryUrls = (e.metadata as any)?.ad_library_urls as Record<string, string> | undefined;
 
                   return (
@@ -621,16 +627,6 @@ export default function ProjectSources() {
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            {adPlatforms && adPlatforms.length > 0 && (
-                              <div className="hidden sm:flex items-center gap-1">
-                                {adPlatforms.map((p) => (
-                                  <Badge key={p} variant="secondary" className="text-[9px] rounded-full px-2 py-0.5">
-                                    {p === "meta_ads" ? "Meta" : p === "google_ads" ? "Google" : p === "linkedin_ads" ? "LinkedIn" : "TikTok"}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-
                             {lastLog && (
                               <Badge
                                 variant="secondary"
@@ -651,7 +647,7 @@ export default function ProjectSources() {
                                 disabled={isExecuting}
                                 onClick={(ev) => {
                                   ev.stopPropagation();
-                                  openCollectDialog(e.id, e.instagram_handle!, false, adPlatforms, adLibraryUrls);
+                                  openCollectDialog(e.id, e.instagram_handle!, false);
                                 }}
                               >
                                 {isExecuting ? (
@@ -661,6 +657,23 @@ export default function ProjectSources() {
                                 )}
                               </Button>
                             )}
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-full h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                setEditDialog({
+                                  entityId: e.id,
+                                  name: e.name,
+                                  handle: e.instagram_handle ?? "",
+                                  website: e.website_url ?? "",
+                                });
+                              }}
+                            >
+                              <Settings2 className="h-3.5 w-3.5" />
+                            </Button>
 
                             <Button
                               variant="ghost"
@@ -803,9 +816,16 @@ export default function ProjectSources() {
               </Label>
               <RadioGroup
                 value={collectOpts.mode}
-                onValueChange={(v) => setCollectOpts((o) => ({ ...o, mode: v as "count" | "date" }))}
+                onValueChange={(v) => setCollectOpts((o) => ({ ...o, mode: v as "all" | "count" }))}
                 className="space-y-2"
               >
+                <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="all" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">Todos os Posts</p>
+                    <p className="text-xs text-muted-foreground">Coletar todos os posts disponíveis</p>
+                  </div>
+                </label>
                 <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="count" />
                   <div className="flex-1">
@@ -816,7 +836,6 @@ export default function ProjectSources() {
                     <Input
                       type="number"
                       min={1}
-                      max={200}
                       value={collectOpts.postsCount}
                       onChange={(e) => setCollectOpts((o) => ({ ...o, postsCount: Number(e.target.value) || 30 }))}
                       className="w-20 h-8 text-sm"
@@ -824,64 +843,7 @@ export default function ProjectSources() {
                     />
                   )}
                 </label>
-                <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="date" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">Por período</p>
-                    <p className="text-xs text-muted-foreground">Intervalo de datas</p>
-                  </div>
-                </label>
               </RadioGroup>
-              {collectOpts.mode === "date" && (
-                <div className="grid grid-cols-2 gap-3 pl-8">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">De</Label>
-                    <Input type="date" value={collectOpts.dateFrom} onChange={(e) => setCollectOpts((o) => ({ ...o, dateFrom: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Até</Label>
-                    <Input type="date" value={collectOpts.dateTo} onChange={(e) => setCollectOpts((o) => ({ ...o, dateTo: e.target.value }))} />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Fontes adicionais
-              </Label>
-              <div className="space-y-2">
-                <div className="rounded-xl border border-border p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Megaphone className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium text-foreground">Bibliotecas de Anúncios</p>
-                    </div>
-                    <Switch checked={collectOpts.collectAds} onCheckedChange={(v) => setCollectOpts((o) => ({ ...o, collectAds: v }))} />
-                  </div>
-                  {collectOpts.collectAds && (
-                    <div className="space-y-2 pl-6">
-                      {AD_PLATFORMS.map((p) => (
-                        <div key={p.value} className="space-y-1">
-                          <Label className="text-[10px] text-muted-foreground">{p.label}</Label>
-                          <Input
-                            type="url"
-                            placeholder={p.placeholder}
-                            value={collectOpts.adPlatformUrls[p.value] ?? ""}
-                            onChange={(e) =>
-                              setCollectOpts((o) => ({
-                                ...o,
-                                adPlatformUrls: { ...o.adPlatformUrls, [p.value]: e.target.value },
-                              }))
-                            }
-                            className="text-xs h-8"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
 
@@ -892,6 +854,59 @@ export default function ProjectSources() {
               Iniciar Coleta
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit entity dialog */}
+      <Dialog open={!!editDialog} onOpenChange={(open) => !open && setEditDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Fonte</DialogTitle>
+          </DialogHeader>
+          {editDialog && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Nome</Label>
+                <Input
+                  value={editDialog.name}
+                  onChange={(e) => setEditDialog((d) => d ? { ...d, name: e.target.value } : null)}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Instagram</Label>
+                <div className="relative">
+                  <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={editDialog.handle}
+                    onChange={(e) => setEditDialog((d) => d ? { ...d, handle: e.target.value } : null)}
+                    placeholder="@handle"
+                    className="h-11 pl-10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Website</Label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={editDialog.website}
+                    onChange={(e) => setEditDialog((d) => d ? { ...d, website: e.target.value } : null)}
+                    placeholder="https://"
+                    className="h-11 pl-10"
+                  />
+                </div>
+              </div>
+              <Button
+                className="w-full h-11 rounded-xl"
+                onClick={() => editDialog && editEntity.mutate(editDialog)}
+                disabled={!editDialog.name.trim() || editEntity.isPending}
+              >
+                {editEntity.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

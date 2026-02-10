@@ -112,8 +112,7 @@ export function useProjectDashboardData(projectId: string | undefined) {
         supabase.from("instagram_posts")
           .select("entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url")
           .in("entity_id", entityIds)
-          .order("posted_at", { ascending: true })
-          .limit(3000),
+          .order("posted_at", { ascending: true }),
         supabase.from("instagram_profiles")
           .select("entity_id, followers_count, following_count, posts_count, snapshot_date")
           .in("entity_id", entityIds)
@@ -151,14 +150,18 @@ export function useProjectDashboardData(projectId: string | undefined) {
 
 /* ── Derived metrics ── */
 
-export function useFilteredPosts(posts: PostData[], dateRange: DateRange) {
+export type PostLimit = number | "all";
+
+export function useLimitedPosts(posts: PostData[], limit: PostLimit) {
   return useMemo(() => {
-    return posts.filter((p) => {
-      if (!p.posted_at) return false;
-      const d = new Date(p.posted_at);
-      return d >= dateRange.from && d <= dateRange.to;
+    if (!posts?.length) return [];
+    const sorted = [...posts].sort((a, b) => {
+      const da = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+      const db = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+      return db - da;
     });
-  }, [posts, dateRange]);
+    return limit === "all" ? sorted : sorted.slice(0, limit);
+  }, [posts, limit]);
 }
 
 export interface EntityMetrics {
