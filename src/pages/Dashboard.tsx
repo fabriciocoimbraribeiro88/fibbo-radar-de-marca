@@ -18,6 +18,8 @@ import {
   Megaphone,
   Zap,
 } from "lucide-react";
+import FollowersChart from "@/components/dashboard/FollowersChart";
+import EngagementChart from "@/components/dashboard/EngagementChart";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useDashboardStats } from "@/hooks/useProjects";
 
@@ -154,6 +156,14 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Charts */}
+      {!loadingStats && (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <FollowersChart data={stats?.followers_timeline ?? []} />
+          <EngagementChart data={stats?.engagement_timeline ?? []} />
+        </div>
+      )}
+
       {/* Analyses summary */}
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-2">
         <Card>
@@ -171,8 +181,8 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="rounded-lg bg-green-500/10 p-2">
-              <BarChart3 className="h-4 w-4 text-green-600" />
+            <div className="rounded-lg bg-accent p-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
               <p className="text-lg font-bold font-mono text-foreground">
