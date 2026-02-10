@@ -11,6 +11,9 @@ import Dashboard from "@/pages/Dashboard";
 import Projects from "@/pages/Projects";
 import NewProject from "@/pages/NewProject";
 import ProjectEntities from "@/pages/ProjectEntities";
+import ProjectAnalyses from "@/pages/ProjectAnalyses";
+import NewAnalysis from "@/pages/NewAnalysis";
+import AnalysisView from "@/pages/AnalysisView";
 import Analyses from "@/pages/Analyses";
 import Reports from "@/pages/Reports";
 import SettingsPage from "@/pages/Settings";
@@ -45,6 +48,9 @@ const App = () => (
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/new" element={<NewProject />} />
               <Route path="/projects/:id/entities" element={<ProjectEntities />} />
+              <Route path="/projects/:id/analyses" element={<ProjectAnalyses />} />
+              <Route path="/projects/:id/analyses/new" element={<NewAnalysis />} />
+              <Route path="/projects/:id/analyses/:analysisId" element={<AnalysisView />} />
               <Route path="/analyses" element={<Analyses />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<SettingsPage />} />

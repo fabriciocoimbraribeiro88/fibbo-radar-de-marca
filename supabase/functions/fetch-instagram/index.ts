@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     try {
       // 1. Fetch profile using apify/instagram-profile-scraper
       console.log(`Fetching profile for @${handle}...`);
-      const profileRun = await runApifyActor(apifyToken, "apify/instagram-profile-scraper", {
+      const profileRun = await runApifyActor(apifyToken, "apify~instagram-profile-scraper", {
         usernames: [handle],
       });
 
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
 
       // 2. Fetch posts using apify/instagram-post-scraper
       console.log(`Fetching posts for @${handle}...`);
-      const postsRun = await runApifyActor(apifyToken, "apify/instagram-post-scraper", {
+      const postsRun = await runApifyActor(apifyToken, "apify~instagram-post-scraper", {
         username: [handle],
         resultsLimit: 30,
       });
