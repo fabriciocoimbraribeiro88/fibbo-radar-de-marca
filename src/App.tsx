@@ -20,6 +20,7 @@ import NewAnalysis from "@/pages/NewAnalysis";
 import AnalysisView from "@/pages/AnalysisView";
 import ProjectPlanning from "@/pages/ProjectPlanning";
 import ProjectOKRs from "@/pages/ProjectOKRs";
+import ProjectDashboard from "@/pages/ProjectDashboard";
 import SettingsPage from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="brand" element={<ProjectBrand />} />
                 <Route path="entities" element={<ProjectEntities />} />
                 <Route path="data-sources" element={<ProjectDataSources />} />
+                <Route path="dashboard" element={<ProjectDashboard />} />
                 <Route path="analyses" element={<ProjectAnalyses />} />
                 <Route path="analyses/new" element={<NewAnalysis />} />
                 <Route path="analyses/:analysisId" element={<AnalysisView />} />
