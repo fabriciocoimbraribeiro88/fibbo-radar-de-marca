@@ -88,10 +88,11 @@ Deno.serve(async (req) => {
           metadata: p,
         };
 
-        await supabase.from("instagram_profiles").upsert(profileData, {
-          onConflict: "entity_id,snapshot_date",
+        const { error: profileErr } = await supabase.from("instagram_profiles").upsert(profileData, {
+          onConflict: "handle,snapshot_date",
           ignoreDuplicates: false,
         });
+        if (profileErr) console.error("Profile upsert error:", profileErr.message);
         totalRecords++;
         console.log(`Profile saved for @${handle}`);
       }
@@ -117,8 +118,6 @@ Deno.serve(async (req) => {
           views_count: post.videoViewCount ?? post.videoPlayCount ?? null,
           shares_count: null,
           saves_count: null,
-          engagement_total:
-            (post.likesCount ?? 0) + (post.commentsCount ?? 0),
           hashtags: post.hashtags ?? null,
           mentions: post.mentions ?? null,
           thumbnail_url: post.displayUrl ?? null,
@@ -130,10 +129,11 @@ Deno.serve(async (req) => {
 
         // Upsert posts
         for (const post of posts) {
-          await supabase.from("instagram_posts").upsert(post, {
+          const { error: postErr } = await supabase.from("instagram_posts").upsert(post, {
             onConflict: "post_id_instagram",
             ignoreDuplicates: false,
           });
+          if (postErr) console.error("Post upsert error:", postErr.message);
         }
         totalRecords += posts.length;
         console.log(`${posts.length} posts saved for @${handle}`);
