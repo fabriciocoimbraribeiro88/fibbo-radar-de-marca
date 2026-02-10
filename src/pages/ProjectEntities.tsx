@@ -139,27 +139,16 @@ export default function ProjectEntities() {
     entities?.filter((e) => e.entity_role === type) ?? [];
 
   return (
-    <div className="mx-auto max-w-4xl animate-fade-in">
+    <div className="max-w-4xl animate-fade-in">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/projects")} className="mb-3">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Projetos
-        </Button>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">
-              {project?.name ?? "Entidades"}
-            </h1>
+            <h1 className="text-xl font-semibold text-foreground">Entidades</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Gerencie concorrentes, influencers e inspirações.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate(`/projects/${projectId}/analyses`)}>
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Análises
-            </Button>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
@@ -209,7 +198,6 @@ export default function ProjectEntities() {
               </div>
             </DialogContent>
           </Dialog>
-          </div>
         </div>
       </div>
       <Tabs defaultValue="competitor">

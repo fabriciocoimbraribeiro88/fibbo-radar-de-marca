@@ -51,7 +51,7 @@ export default function Projects() {
             <Card
               key={p.id}
               className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate(`/projects/${p.id}/entities`)}
+              onClick={() => navigate(`/projects/${p.id}`)}
             >
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-3">

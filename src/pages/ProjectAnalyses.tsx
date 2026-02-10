@@ -59,12 +59,8 @@ export default function ProjectAnalyses() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl animate-fade-in">
+    <div className="max-w-4xl animate-fade-in">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/projects/${projectId}/entities`)} className="mb-3">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {project?.name ?? "Projeto"}
-        </Button>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Análises</h1>
