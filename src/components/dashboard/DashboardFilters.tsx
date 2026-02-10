@@ -181,19 +181,16 @@ export default function DashboardFilters({
         ))}
       </div>
 
-      {/* Row 3: Individual entity pills (including brand) */}
-      {entities.length > 0 && (
+      {/* Row 3: Individual entity pills — only visible in brand_only mode */}
+      {sourceMode === "brand_only" && entities.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Marca</span>
           {entities.map((e) => {
-            const selected = sourceMode === "brand_vs_selected" && selectedEntityIds.has(e.id);
+            const selected = selectedEntityIds.has(e.id);
             return (
               <button
                 key={e.id}
-                onClick={() => {
-                  onSourceModeChange("brand_vs_selected");
-                  onToggleEntity(e.id);
-                }}
+                onClick={() => onToggleEntity(e.id)}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
                   selected
                     ? "bg-primary text-primary-foreground shadow-sm"
