@@ -1,143 +1,37 @@
 
 
-## Plano: Processamento de Dados em Grande Volume com IA
+## Plano: Corrigir importacao JSON (0 posts importados)
 
-### Resumo
+### Problema encontrado
 
-Criar um sistema que processa todos os posts de uma entidade (milhares de posts) usando Claude Opus, gerando um relatorio completo com big numbers, tabelas, rankings, distribuicao temporal e insights qualitativos. O sistema pre-computa metricas no servidor (como o Python fez no exemplo) e envia dados estruturados + amostra de posts para o AI gerar a analise narrativa.
+O erro nos logs de rede diz:
 
----
-
-### Arquitetura
-
-O processamento sera dividido em 2 camadas na edge function:
-
-1. **Camada computacional** (Deno/TypeScript): calcula todas as metricas quantitativas (big numbers, distribuicao por mes, top posts, top hashtags, distribuicao por tipo, etc.) - sem limite de posts
-2. **Camada AI** (Claude via Anthropic API): recebe os dados pre-computados + top/bottom 20 posts completos e gera analise qualitativa (insights, padroes, recomendacoes)
-
-Isso evita enviar 5000+ posts brutos para o AI (caro e lento), mas ainda permite analise qualitativa profunda.
-
----
-
-### 1. Edge Function `process-entity-data` 
-
-**Recebe via POST:**
-- `entity_id` (string)
-- `project_id` (string)
-- `use_ai` (boolean, default true) - permite rodar so a parte computacional se quiser
-
-**Processamento computacional (sem AI):**
-
-```text
-1. Busca TODOS os posts da entidade (sem .limit())
-2. Busca perfil mais recente da entidade
-3. Calcula:
-   - Big numbers: total posts, total likes, total comments, total views, 
-     media likes/post, mediana likes/post, media comments/post, 
-     engajamento total, taxa de engajamento
-   - Top 10 posts por likes
-   - Top 10 posts por comentarios
-   - Bottom 10 posts por likes
-   - Distribuicao por mes (posts, likes, avg likes/post)
-   - Distribuicao por ano (posts, likes, avg likes/post)
-   - Distribuicao por tipo de post (Reel, Image, Sidecar, Video)
-   - Performance por tipo (avg likes, avg comments por tipo)
-   - Top 20 hashtags mais usadas
-   - Distribuicao por dia da semana
-   - Distribuicao por hora do dia
-   - Posts virais (engagement > 2x media)
-   - Tendencia de crescimento (comparando periodos)
+```
+"cannot insert a non-DEFAULT value into column \"engagement_total\""
 ```
 
-**Processamento AI (Claude Opus):**
+A coluna `engagement_total` na tabela `instagram_posts` e uma **coluna gerada automaticamente** pelo banco (`likes_count + comments_count`). A edge function `import-instagram-json` esta tentando inserir um valor nessa coluna, o que o banco rejeita, fazendo com que **todos os batches falhem** e 0 posts sejam importados.
 
-Envia para o Claude:
-- Big numbers pre-computados
-- Top 20 posts completos (com caption)
-- Bottom 10 posts completos
-- Distribuicao mensal resumida
-- Distribuicao por tipo
-- Top hashtags
+### Correcao
 
-O AI gera:
-- Resumo executivo narrativo
-- Insights de performance
-- Analise de padroes de conteudo
-- Analise temporal / sazonalidade
-- Recomendacoes estrategicas priorizadas
+Remover o campo `engagement_total` do objeto retornado pela funcao `mapApifyPost` no arquivo `supabase/functions/import-instagram-json/index.ts`.
 
-**Retorna:** JSON com `computed_metrics` + `ai_analysis` (markdown)
+### Alteracao especifica
 
----
+**Arquivo:** `supabase/functions/import-instagram-json/index.ts`
 
-### 2. Tabela de resultados
+Na funcao `mapApifyPost`, remover as linhas que calculam e retornam `engagement_total`:
 
-Usar a tabela `analysis_sections` existente ou criar um campo na tabela `data_fetch_logs` para armazenar o resultado. Melhor opcao: salvar no campo `metadata` da tabela existente ou criar uma tabela simples `entity_reports` para guardar os resultados.
+- Remover o calculo (linhas 26-29):
+```typescript
+const engagementTotal = ...
+```
 
-**Nova tabela `entity_reports`:**
+- Remover `engagement_total: engagementTotal` do objeto de retorno (linha 50)
 
-| Coluna | Tipo |
-|---|---|
-| id | uuid PK |
-| entity_id | uuid FK |
-| project_id | uuid FK |
-| computed_metrics | jsonb |
-| ai_analysis | text (markdown) |
-| model_used | text |
-| posts_analyzed | integer |
-| created_at | timestamptz |
+O banco vai calcular esse valor automaticamente a partir de `likes_count + comments_count`.
 
----
+### Resultado esperado
 
-### 3. UI - Botao no Dashboard
-
-Adicionar um botao "Processar com IA" no dashboard (secao individual), ao lado do seletor de entidade. Ao clicar:
-
-1. Mostra dialog de confirmacao com estimativa (X posts serao analisados)
-2. Inicia processamento (loading state com progresso)
-3. Ao concluir, abre uma nova aba/secao com o resultado completo:
-   - Big numbers em cards (como no exemplo React do usuario)
-   - Tabelas interativas (top posts, distribuicao mensal, etc.)
-   - Markdown renderizado da analise AI
-   - Botao para exportar/copiar
-
-**Alternativa mais simples:** Adicionar como uma nova pagina `ProjectReports.tsx` (que hoje esta "Em breve"), transformando-a no visualizador de relatorios processados.
-
----
-
-### 4. Pagina de Relatorio (`ProjectReports.tsx`)
-
-Substituir o placeholder atual por:
-- Lista de relatorios ja processados (com data, entidade, nro de posts)
-- Botao "Novo Relatorio" que abre seletor de entidade
-- Visualizacao do relatorio com:
-  - Abas: "Big Numbers" | "Rankings" | "Evolucao" | "Analise AI"
-  - Cards de metricas
-  - Tabelas de top/bottom posts
-  - Graficos de distribuicao (Recharts)
-  - Markdown renderizado da analise qualitativa
-
----
-
-### 5. Detalhes Tecnicos
-
-**Modelo AI:** Usara a ANTHROPIC_API_KEY ja configurada com `claude-opus-4-6` (ou fallback para `claude-sonnet-4-20250514`). O usuario pode escolher o modelo.
-
-**Limite de contexto:** Os dados pre-computados + 30 posts completos cabem em ~15K tokens. O AI retorna ~3-5K tokens. Total seguro para qualquer modelo.
-
-**Query sem limite:** A edge function usara `SUPABASE_SERVICE_ROLE_KEY` para buscar todos os posts sem o limite de 1000 rows do client. Paginacao com range se necessario.
-
-**Tempo de execucao:** Edge functions tem timeout de 150s. O processamento computacional e rapido (~1s para 5000 posts). A chamada ao Claude pode levar 30-60s. Total dentro do limite.
-
----
-
-### Arquivos criados/alterados
-
-| Arquivo | Acao |
-|---|---|
-| `supabase/functions/process-entity-data/index.ts` | **Criar** - edge function principal |
-| `supabase/config.toml` | **Alterar** - adicionar config da nova function |
-| `src/pages/ProjectReports.tsx` | **Alterar** - substituir placeholder por pagina completa |
-| `src/hooks/useEntityReports.ts` | **Criar** - hooks para listar/criar relatorios |
-| Migration SQL | **Criar** - tabela `entity_reports` |
+Apos essa correcao, a importacao do JSON do Tallis (~5.600 posts) vai funcionar normalmente, inserindo todos os posts em batches de 500.
 
