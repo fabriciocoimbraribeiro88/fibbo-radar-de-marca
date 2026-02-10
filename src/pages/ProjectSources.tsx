@@ -621,7 +621,8 @@ export default function ProjectSources() {
 
               <div className="space-y-2">
                 {group.items.map((pe) => {
-                  const e = pe.monitored_entities;
+                  const raw = pe.monitored_entities;
+                  const e = Array.isArray(raw) ? raw[0] : raw;
                   if (!e) return null;
                   const isExpanded = expandedId === pe.id;
                   const isExecuting = executingId === e.id;
@@ -643,7 +644,7 @@ export default function ProjectSources() {
                         >
                           <div className="flex items-center gap-3.5 min-w-0">
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground shrink-0">
-                              {e.name.slice(0, 2).toUpperCase()}
+                              {(e.name ?? "??").slice(0, 2).toUpperCase()}
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-foreground truncate">{e.name}</p>
@@ -749,7 +750,7 @@ export default function ProjectSources() {
                                       <span className="font-medium">
                                         {AD_PLATFORMS.find((p) => p.value === platform)?.label ?? platform}
                                       </span>
-                                      <span className="truncate opacity-60">{url.replace(/https?:\/\//, "").slice(0, 40)}...</span>
+                                      <span className="truncate opacity-60">{(typeof url === "string" ? url : "").replace(/https?:\/\//, "").slice(0, 40)}...</span>
                                       <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </a>
                                   ))}
