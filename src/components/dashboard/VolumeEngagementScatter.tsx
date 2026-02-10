@@ -37,10 +37,10 @@ export default function VolumeEngagementScatter({ metrics }: Props) {
         <p className="text-sm font-medium text-foreground mb-3 text-center">Volume vs Engajamento (tamanho = seguidores)</p>
         <ResponsiveContainer width="100%" height={320}>
           <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-            <XAxis dataKey="x" name="Posts" tick={{ fontSize: 10 }}>
+            <XAxis dataKey="x" type="number" name="Posts" tick={{ fontSize: 10 }}>
               <Label value="Volume de Posts" position="insideBottom" offset={-5} style={{ fontSize: 10 }} />
             </XAxis>
-            <YAxis dataKey="y" name="Engajamento %" tick={{ fontSize: 10 }}>
+            <YAxis dataKey="y" type="number" name="Engajamento %" tick={{ fontSize: 10 }}>
               <Label value="Engajamento %" angle={-90} position="insideLeft" style={{ fontSize: 10 }} />
             </YAxis>
             <ZAxis dataKey="z" range={[60, 400]} />
