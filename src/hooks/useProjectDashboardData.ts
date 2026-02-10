@@ -84,7 +84,32 @@ function assignColor(type: string, role: string, index: number): string {
   return ENTITY_COLORS[key] ?? ENTITY_COLORS.competitor_0;
 }
 
-/* ── Main data hook ── */
+/* ── Paginated fetch helper (server caps at 1000 rows) ── */
+
+async function fetchAllPostsForEntity(entityId: string) {
+  const PAGE = 1000;
+  const columns =
+    "entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url";
+  let all: any[] = [];
+  let from = 0;
+
+  while (true) {
+    const { data } = await supabase
+      .from("instagram_posts")
+      .select(columns)
+      .eq("entity_id", entityId)
+      .order("posted_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+
+    const rows = data ?? [];
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+
 
 export function useProjectDashboardData(projectId: string | undefined) {
   return useQuery({
@@ -149,20 +174,9 @@ export function useProjectDashboardData(projectId: string | undefined) {
 
       entities.sort((a, b) => (a.role === "brand" ? -1 : b.role === "brand" ? 1 : 0));
 
-      // Fetch posts per entity in parallel to avoid the 1000-row default limit
-      const postPromises = entityIds.map((eid) =>
-        supabase
-          .from("instagram_posts")
-          .select(
-            "entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url"
-          )
-          .eq("entity_id", eid)
-          .order("posted_at", { ascending: true })
-          .limit(5000)
-      );
-
-      const [postResults, { data: profiles }] = await Promise.all([
-        Promise.all(postPromises),
+      // Fetch ALL posts per entity (paginated) + profiles in parallel
+      const [postArrays, { data: profiles }] = await Promise.all([
+        Promise.all(entityIds.map(fetchAllPostsForEntity)),
         supabase
           .from("instagram_profiles")
           .select("entity_id, followers_count, following_count, posts_count, snapshot_date")
@@ -170,7 +184,7 @@ export function useProjectDashboardData(projectId: string | undefined) {
           .order("snapshot_date", { ascending: true }),
       ]);
 
-      const posts = postResults.flatMap((r) => r.data ?? []);
+      const posts = postArrays.flat();
       const enrichedPosts: PostData[] = posts.map((p) => ({
         entity_id: p.entity_id ?? "",
         post_type: p.post_type,
