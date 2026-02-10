@@ -160,13 +160,9 @@ export default function NewAnalysis() {
     entities?.filter((e) => e.entity_role === type) ?? [];
 
   return (
-    <div className="mx-auto max-w-3xl animate-fade-in">
+    <div className="max-w-3xl animate-fade-in">
       {/* Header */}
       <div className="mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/projects/${projectId}/analyses`)} className="mb-3">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Análises
-        </Button>
         <h1 className="text-xl font-semibold text-foreground">Nova Análise</h1>
       </div>
 
