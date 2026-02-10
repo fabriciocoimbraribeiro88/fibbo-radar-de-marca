@@ -40,19 +40,19 @@ export default function TopPostsTable({ posts, entityId, mode, limit = 10 }: Pro
         {sorted.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">Sem posts disponíveis.</p>
         ) : (
-          <div className="overflow-auto max-h-[420px]">
+          <div className="overflow-auto max-h-[600px]">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[10px] w-12">#</TableHead>
-                  <TableHead className="text-[10px] w-14">Thumb</TableHead>
+                  <TableHead className="text-[10px] w-10">#</TableHead>
+                  <TableHead className="text-[10px] w-20">Imagem</TableHead>
                   <TableHead className="text-[10px]">Data</TableHead>
+                  <TableHead className="text-[10px] min-w-[160px]">Caption</TableHead>
                   <TableHead className="text-[10px]">Tipo</TableHead>
                   <TableHead className="text-[10px] text-right">Likes</TableHead>
                   <TableHead className="text-[10px] text-right">Coment.</TableHead>
                   <TableHead className="text-[10px] text-right">Views</TableHead>
                   <TableHead className="text-[10px] text-right">Eng.</TableHead>
-                  <TableHead className="text-[10px]">Caption</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -64,28 +64,19 @@ export default function TopPostsTable({ posts, entityId, mode, limit = 10 }: Pro
                         <img
                           src={p.thumbnail_url}
                           alt=""
-                          className="w-10 h-10 rounded object-cover"
+                          className="w-16 h-16 rounded object-cover"
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
-                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        <div className="w-16 h-16 rounded bg-muted flex items-center justify-center">
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="py-2 whitespace-nowrap">
                       {p.posted_at ? new Date(p.posted_at).toLocaleDateString("pt-BR") : "—"}
                     </TableCell>
-                    <TableCell className="py-2">
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {p.post_type ?? "—"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="py-2 text-right font-mono">{formatNum(p.likes_count)}</TableCell>
-                    <TableCell className="py-2 text-right font-mono">{formatNum(p.comments_count)}</TableCell>
-                    <TableCell className="py-2 text-right font-mono">{formatNum(p.views_count)}</TableCell>
-                    <TableCell className="py-2 text-right font-mono font-semibold">{formatNum(p.engagement_total)}</TableCell>
-                    <TableCell className="py-2 max-w-[180px]">
+                    <TableCell className="py-2 max-w-[220px]">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-muted-foreground">
                           {p.caption ? p.caption.slice(0, 80) : "—"}
@@ -97,6 +88,15 @@ export default function TopPostsTable({ posts, entityId, mode, limit = 10 }: Pro
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="py-2">
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {p.post_type ?? "—"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2 text-right font-mono">{formatNum(p.likes_count)}</TableCell>
+                    <TableCell className="py-2 text-right font-mono">{formatNum(p.comments_count)}</TableCell>
+                    <TableCell className="py-2 text-right font-mono">{formatNum(p.views_count)}</TableCell>
+                    <TableCell className="py-2 text-right font-mono font-semibold">{formatNum(p.engagement_total)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
