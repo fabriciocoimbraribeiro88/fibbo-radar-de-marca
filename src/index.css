@@ -4,109 +4,102 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fibbo Radar Design System — Clean & Minimal
-   Inspired by Claude.ai aesthetic with Fibbo brand colors.
+/* Fibbo Radar Design System — Dark-first, Claude Code inspired.
+   Brand accent: Coral #E87040 → hsl(18, 79%, 58%)
    All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Fibbo brand: #E85002 → hsl(21, 96%, 45%) */
-    --brand: 21 96% 45%;
+    /* Default = dark mode */
+    --brand: 18 79% 58%;
     --brand-foreground: 0 0% 100%;
-    --brand-light: 21 96% 55%;
-    --brand-dark: 21 96% 35%;
+    --brand-light: 18 85% 65%;
+    --brand-dark: 18 79% 48%;
 
-    /* Clean light background like Claude — #F9F9F9 */
-    --background: 0 0% 97.6%;
-    --foreground: 0 0% 0%;
+    /* Page: #0B0B0F → hsl(240 18% 4%) */
+    --background: 240 18% 4%;
+    --foreground: 0 0% 100%;
 
-    /* Cards: pure white */
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    /* Card: #16161F → hsl(240 14% 10%) */
+    --card: 240 14% 10%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    /* Popover same as card */
+    --popover: 240 14% 10%;
+    --popover-foreground: 0 0% 100%;
 
-    /* Primary = Fibbo orange */
-    --primary: 21 96% 45%;
+    /* Primary = Coral */
+    --primary: 18 79% 58%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary = light warm gray */
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 20%;
+    /* Secondary = subtle surface */
+    --secondary: 240 12% 13%;
+    --secondary-foreground: 240 10% 75%;
 
-    /* Muted = subtle gray */
-    --muted: 0 0% 93%;
-    --muted-foreground: 0 0% 39%;
+    /* Muted text/bg */
+    --muted: 240 12% 13%;
+    --muted-foreground: 240 10% 50%;
 
-    /* Accent = very light orange tint */
-    --accent: 21 30% 96%;
-    --accent-foreground: 0 0% 0%;
+    /* Accent = slightly lighter surface for hovers */
+    --accent: 240 12% 15%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders: very subtle */
+    /* Borders: very subtle white alpha */
+    --border: 240 10% 14%;
+    --input: 240 10% 14%;
+    --ring: 18 79% 58%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar: #101017 → hsl(240 18% 5%) */
+    --sidebar-background: 240 18% 5%;
+    --sidebar-foreground: 240 10% 75%;
+    --sidebar-primary: 18 79% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 12% 11%;
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 240 10% 10%;
+    --sidebar-ring: 18 79% 58%;
+
+    /* Extended tokens */
+    --success: 152 69% 62%;
+    --info: 218 91% 71%;
+    --warning: 45 93% 56%;
+  }
+
+  /* Light mode override (optional) */
+  .light {
+    --background: 0 0% 97.6%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 18 79% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 39%;
+    --accent: 18 30% 96%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
     --border: 0 0% 90%;
     --input: 0 0% 90%;
-    --ring: 21 96% 45%;
-
-    --radius: 0.75rem;
-
-    /* Sidebar */
+    --ring: 18 79% 50%;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 21 96% 45%;
+    --sidebar-primary: 18 79% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 96%;
     --sidebar-accent-foreground: 0 0% 20%;
     --sidebar-border: 0 0% 93%;
-    --sidebar-ring: 21 96% 45%;
-  }
-
-  .dark {
-    --brand: 21 96% 50%;
-    --brand-foreground: 0 0% 100%;
-    --brand-light: 21 96% 60%;
-    --brand-dark: 21 96% 40%;
-
-    --background: 0 0% 7%;
-    --foreground: 0 0% 97%;
-
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 97%;
-
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 97%;
-
-    --primary: 21 96% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 97%;
-
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 97%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 97%;
-
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 21 96% 50%;
-
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 21 96% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 13%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 21 96% 50%;
+    --sidebar-ring: 18 79% 50%;
   }
 }
 
@@ -124,11 +117,27 @@
   .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
+
+  /* Selection color */
+  ::selection {
+    background: hsl(18 79% 58% / 0.3);
+    color: white;
+  }
 }
 
 @layer utilities {
-  /* Glassmorphism subtle */
+  /* Glassmorphism */
   .glass {
-    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+    @apply bg-card/80 backdrop-blur-md border border-border/50;
+  }
+
+  /* Coral gradient for buttons / accents */
+  .gradient-coral {
+    background: linear-gradient(135deg, hsl(18, 79%, 58%), hsl(10, 68%, 48%));
+  }
+
+  /* Glow effect */
+  .glow-coral {
+    box-shadow: 0 0 40px hsl(18 79% 58% / 0.12);
   }
 }
