@@ -49,6 +49,7 @@ export default function ProjectEntities() {
   const [newWebsite, setNewWebsite] = useState("");
   const [newType, setNewType] = useState<EntityType>("competitor");
   const [newAdPlatforms, setNewAdPlatforms] = useState<string[]>([]);
+  const [adUrls, setAdUrls] = useState<Record<string, string>>({});
 
   const AD_PLATFORMS = [
     { value: "meta_ads", label: "Meta Ads" },
@@ -85,7 +86,14 @@ export default function ProjectEntities() {
 
   const addEntity = useMutation({
     mutationFn: async () => {
-      const metadata = newAdPlatforms.length > 0 ? { ad_platforms: newAdPlatforms } : null;
+      const metadata = newAdPlatforms.length > 0
+        ? {
+            ad_platforms: newAdPlatforms,
+            ad_library_urls: Object.fromEntries(
+              newAdPlatforms.filter((p) => adUrls[p]?.trim()).map((p) => [p, adUrls[p].trim()])
+            ),
+          }
+        : null;
       const { data: entity, error: entityError } = await supabase
         .from("monitored_entities")
         .insert({
@@ -115,6 +123,7 @@ export default function ProjectEntities() {
       setNewHandle("");
       setNewWebsite("");
       setNewAdPlatforms([]);
+      setAdUrls({});
       toast({ title: "Entidade adicionada!" });
     },
     onError: (err: any) => {
@@ -198,6 +207,24 @@ export default function ProjectEntities() {
                       </button>
                     ))}
                   </div>
+                  {newAdPlatforms.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {newAdPlatforms.map((p) => {
+                        const label = AD_PLATFORMS.find((a) => a.value === p)?.label ?? p;
+                        return (
+                          <div key={p} className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground">Link {label} Library</Label>
+                            <Input
+                              value={adUrls[p] ?? ""}
+                              onChange={(e) => setAdUrls((prev) => ({ ...prev, [p]: e.target.value }))}
+                              placeholder={`https://www.facebook.com/ads/library/...`}
+                              className="text-xs"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <Button
                   className="w-full"
