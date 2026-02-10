@@ -290,12 +290,14 @@ export default function ProjectDashboard() {
           </div>
 
           {/* Entity big numbers */}
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+          <div className="grid grid-cols-5 sm:grid-cols-10 gap-3">
             {[
               { label: "Seguidores", value: fmt(em.followers) },
               { label: "Posts", value: fmt(em.totalPosts) },
               { label: "Média Likes", value: fmt(em.avgLikes) },
               { label: "Média Coment.", value: fmt(em.avgComments) },
+              { label: "Saves", value: fmt(em.totalSaves) },
+              { label: "Shares", value: fmt(em.totalShares) },
               { label: "Taxa Eng.", value: `${em.engagementRate.toFixed(2)}%` },
               { label: "Views", value: fmt(em.totalViews) },
               { label: "Hits Virais", value: fmt(em.viralHits) },
