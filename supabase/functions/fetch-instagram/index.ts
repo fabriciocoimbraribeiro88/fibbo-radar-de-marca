@@ -25,7 +25,16 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { entity_id } = await req.json();
+    const body = await req.json();
+    const {
+      entity_id,
+      results_limit = 30,
+      date_from,
+      date_to,
+      collect_ads = false,
+      collect_seo = false,
+    } = body;
+
     if (!entity_id) {
       return new Response(
         JSON.stringify({ success: false, error: "entity_id é obrigatório" }),
@@ -67,7 +76,7 @@ Deno.serve(async (req) => {
     let totalRecords = 0;
 
     try {
-      // 1. Fetch profile using apify/instagram-profile-scraper
+      // 1. Fetch profile
       console.log(`Fetching profile for @${handle}...`);
       const profileRun = await runApifyActor(apifyToken, "apify~instagram-profile-scraper", {
         usernames: [handle],
@@ -97,15 +106,36 @@ Deno.serve(async (req) => {
         console.log(`Profile saved for @${handle}`);
       }
 
-      // 2. Fetch posts using apify/instagram-post-scraper
-      console.log(`Fetching posts for @${handle}...`);
-      const postsRun = await runApifyActor(apifyToken, "apify~instagram-post-scraper", {
+      // 2. Fetch posts with options
+      console.log(`Fetching posts for @${handle} (limit: ${results_limit}, dateFrom: ${date_from || 'none'}, dateTo: ${date_to || 'none'})...`);
+      
+      const postInput: Record<string, unknown> = {
         username: [handle],
-        resultsLimit: 30,
-      });
+        resultsLimit: results_limit,
+      };
+
+      // If date mode, increase limit and we'll filter after
+      if (date_from || date_to) {
+        postInput.resultsLimit = 200; // fetch more so we can filter by date
+      }
+
+      const postsRun = await runApifyActor(apifyToken, "apify~instagram-post-scraper", postInput);
 
       if (postsRun && postsRun.length > 0) {
-        const posts = postsRun.map((post: any) => ({
+        let filteredPosts = postsRun;
+
+        // Filter by date if provided
+        if (date_from || date_to) {
+          const from = date_from ? new Date(date_from).getTime() : 0;
+          const to = date_to ? new Date(date_to + "T23:59:59").getTime() : Date.now();
+          filteredPosts = postsRun.filter((post: any) => {
+            if (!post.timestamp) return true;
+            const postTime = new Date(post.timestamp).getTime();
+            return postTime >= from && postTime <= to;
+          });
+        }
+
+        const posts = filteredPosts.map((post: any) => ({
           entity_id,
           post_id_instagram: post.id || post.shortCode || `${handle}_${post.timestamp}`,
           shortcode: post.shortCode ?? null,
@@ -127,7 +157,6 @@ Deno.serve(async (req) => {
           metadata: post,
         }));
 
-        // Upsert posts
         for (const post of posts) {
           const { error: postErr } = await supabase.from("instagram_posts").upsert(post, {
             onConflict: "post_id_instagram",
@@ -137,6 +166,16 @@ Deno.serve(async (req) => {
         }
         totalRecords += posts.length;
         console.log(`${posts.length} posts saved for @${handle}`);
+      }
+
+      // 3. Collect Ads (placeholder - log intent for now)
+      if (collect_ads) {
+        console.log(`Ads collection requested for @${handle} — feature pending integration`);
+      }
+
+      // 4. Collect SEO (placeholder - log intent for now)
+      if (collect_seo) {
+        console.log(`SEO collection requested for @${handle} — feature pending integration`);
       }
 
       // Update fetch log as completed
@@ -193,7 +232,6 @@ async function runApifyActor(
   actorId: string,
   input: Record<string, unknown>
 ): Promise<any[]> {
-  // Start the actor run synchronously (waits for completion)
   const runUrl = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
 
   const response = await fetch(runUrl, {
