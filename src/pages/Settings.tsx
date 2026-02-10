@@ -89,14 +89,28 @@ export default function SettingsPage() {
 
   const [testingClaude, setTestingClaude] = useState(false);
   const [claudeStatus, setClaudeStatus] = useState<ConnectionStatus>("idle");
-  const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514");
+  const [claudeModel, setClaudeModel] = useState("");
+  const [claudeModels, setClaudeModels] = useState<{ id: string; name: string }[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
 
-  const CLAUDE_MODELS = [
-    { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-    { value: "claude-opus-4-20250514", label: "Claude Opus 4" },
-    { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
-    { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
-  ];
+  const fetchModels = async () => {
+    setLoadingModels(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("list-anthropic-models");
+      if (error) throw error;
+      if (data?.success && data.models) {
+        setClaudeModels(data.models);
+        if (!claudeModel && data.models.length > 0) {
+          const defaultModel = data.models.find((m: any) => m.id.includes("sonnet-4")) || data.models[0];
+          setClaudeModel(defaultModel.id);
+        }
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao buscar modelos", description: err.message, variant: "destructive" });
+    } finally {
+      setLoadingModels(false);
+    }
+  };
 
   const testApify = async () => {
     setTestingApify(true);
@@ -129,6 +143,7 @@ export default function SettingsPage() {
       if (data?.success) {
         setClaudeStatus("ok");
         toast({ title: "Claude conectado!", description: "API key válida." });
+        fetchModels();
       } else {
         setClaudeStatus("error");
         toast({ title: "Erro Claude", description: data?.error, variant: "destructive" });
@@ -190,32 +205,41 @@ export default function SettingsPage() {
               onTest={testClaude}
             />
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label htmlFor="claude-model" className="text-sm font-medium text-foreground">
-                      Modelo LLM
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Modelo usado nas análises de inteligência competitiva
-                    </p>
+            {claudeStatus === "ok" && (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor="claude-model" className="text-sm font-medium text-foreground">
+                        Modelo LLM
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Modelo usado nas análises de inteligência competitiva
+                      </p>
+                    </div>
+                    {loadingModels ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Carregando modelos…
+                      </div>
+                    ) : (
+                      <Select value={claudeModel} onValueChange={setClaudeModel}>
+                        <SelectTrigger id="claude-model" className="w-[260px]">
+                          <SelectValue placeholder="Selecione um modelo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {claudeModels.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
-                  <Select value={claudeModel} onValueChange={setClaudeModel}>
-                    <SelectTrigger id="claude-model" className="w-[220px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CLAUDE_MODELS.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
