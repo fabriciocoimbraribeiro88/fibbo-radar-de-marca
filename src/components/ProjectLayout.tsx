@@ -5,7 +5,6 @@ import { NavLink } from "@/components/NavLink";
 import {
   LayoutDashboard,
   Palette,
-  Users,
   Database,
   BarChart3,
   Search,
@@ -18,8 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const projectNav = [
   { title: "Visão Geral", path: "", icon: LayoutDashboard, end: true },
   { title: "Contexto de Marca", path: "/brand", icon: Palette },
-  { title: "Entidades", path: "/entities", icon: Users },
-  { title: "Fontes de Dados", path: "/data-sources", icon: Database },
+  { title: "Fontes de Dados", path: "/sources", icon: Database },
   { title: "Dashboard", path: "/dashboard", icon: BarChart3 },
   { title: "Análises", path: "/analyses", icon: Search },
   { title: "Planejamento", path: "/planning", icon: CalendarDays },
