@@ -13,8 +13,7 @@ import Projects from "@/pages/Projects";
 import NewProject from "@/pages/NewProject";
 import ProjectOverview from "@/pages/ProjectOverview";
 import ProjectBrand from "@/pages/ProjectBrand";
-import ProjectEntities from "@/pages/ProjectEntities";
-import ProjectDataSources from "@/pages/ProjectDataSources";
+import ProjectSources from "@/pages/ProjectSources";
 import ProjectAnalyses from "@/pages/ProjectAnalyses";
 import NewAnalysis from "@/pages/NewAnalysis";
 import AnalysisView from "@/pages/AnalysisView";
@@ -57,8 +56,7 @@ const App = () => (
               <Route path="/projects/:id" element={<ProjectLayout />}>
                 <Route index element={<ProjectOverview />} />
                 <Route path="brand" element={<ProjectBrand />} />
-                <Route path="entities" element={<ProjectEntities />} />
-                <Route path="data-sources" element={<ProjectDataSources />} />
+                <Route path="sources" element={<ProjectSources />} />
                 <Route path="dashboard" element={<ProjectDashboard />} />
                 <Route path="analyses" element={<ProjectAnalyses />} />
                 <Route path="analyses/new" element={<NewAnalysis />} />
