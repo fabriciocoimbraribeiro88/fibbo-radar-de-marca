@@ -33,6 +33,10 @@ export interface ProfileSnapshot {
   snapshot_date: string;
 }
 
+export interface DateRange {
+  from: Date;
+  to: Date;
+}
 
 const ENTITY_COLORS: Record<string, string> = {
   brand: "hsl(18, 79%, 50%)",
@@ -108,7 +112,8 @@ export function useProjectDashboardData(projectId: string | undefined) {
         supabase.from("instagram_posts")
           .select("entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url")
           .in("entity_id", entityIds)
-          .order("posted_at", { ascending: true }),
+          .order("posted_at", { ascending: true })
+          .limit(3000),
         supabase.from("instagram_profiles")
           .select("entity_id, followers_count, following_count, posts_count, snapshot_date")
           .in("entity_id", entityIds)
@@ -146,18 +151,14 @@ export function useProjectDashboardData(projectId: string | undefined) {
 
 /* ── Derived metrics ── */
 
-export type PostLimit = number | "all";
-
-export function useLimitedPosts(posts: PostData[], limit: PostLimit) {
+export function useFilteredPosts(posts: PostData[], dateRange: DateRange) {
   return useMemo(() => {
-    if (limit === "all") return posts;
-    const sorted = [...posts].sort((a, b) => {
-      const da = a.posted_at ? new Date(a.posted_at).getTime() : 0;
-      const db = b.posted_at ? new Date(b.posted_at).getTime() : 0;
-      return db - da;
+    return posts.filter((p) => {
+      if (!p.posted_at) return false;
+      const d = new Date(p.posted_at);
+      return d >= dateRange.from && d <= dateRange.to;
     });
-    return sorted.slice(0, limit);
-  }, [posts, limit]);
+  }, [posts, dateRange]);
 }
 
 export interface EntityMetrics {

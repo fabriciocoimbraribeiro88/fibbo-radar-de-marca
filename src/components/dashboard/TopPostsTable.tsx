@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Image as ImageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,7 @@ export default function TopPostsTable({ posts, entityId, mode, limit = 10 }: Pro
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-[10px] w-10">#</TableHead>
-                  <TableHead className="text-[10px]">Data</TableHead>
+                  <TableHead className="text-[10px] w-20">Imagem</TableHead>
                   <TableHead className="text-[10px]">Data</TableHead>
                   <TableHead className="text-[10px] min-w-[160px]">Caption</TableHead>
                   <TableHead className="text-[10px]">Tipo</TableHead>
@@ -59,6 +59,20 @@ export default function TopPostsTable({ posts, entityId, mode, limit = 10 }: Pro
                 {sorted.map((p, i) => (
                   <TableRow key={`${p.posted_at}-${i}`} className="text-xs">
                     <TableCell className="py-2 font-mono text-muted-foreground">{i + 1}</TableCell>
+                    <TableCell className="py-2">
+                      {p.thumbnail_url ? (
+                        <img
+                          src={p.thumbnail_url}
+                          alt=""
+                          className="w-16 h-16 rounded object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded bg-muted flex items-center justify-center">
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="py-2 whitespace-nowrap">
                       {p.posted_at ? new Date(p.posted_at).toLocaleDateString("pt-BR") : "—"}
                     </TableCell>
