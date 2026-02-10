@@ -44,8 +44,7 @@ function fmt(n: number): string {
 
 function resolveEntitiesByMode(
   entities: EntityInfo[],
-  mode: SourceMode,
-  brandEntityId: string | null
+  mode: SourceMode
 ): EntityInfo[] {
   switch (mode) {
     case "brand_only":
@@ -86,12 +85,12 @@ export default function ProjectDashboard() {
 
   // Resolve which entities to show based on source mode + manual selection
   const resolvedEntities = useMemo(() => {
-    const byMode = resolveEntitiesByMode(allEntities, sourceMode, brandEntityId);
+    const byMode = resolveEntitiesByMode(allEntities, sourceMode);
     if (selectedEntityIds.size > 0) {
       return byMode.filter((e) => selectedEntityIds.has(e.id));
     }
     return byMode;
-  }, [allEntities, sourceMode, brandEntityId, selectedEntityIds]);
+  }, [allEntities, sourceMode, selectedEntityIds]);
 
   const resolvedEntityIds = useMemo(
     () => new Set(resolvedEntities.map((e) => e.id)),
