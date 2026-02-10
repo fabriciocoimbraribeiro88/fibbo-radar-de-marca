@@ -109,7 +109,11 @@ export default function NewAnalysis() {
 
   const canNext = () => {
     if (step === 0) return !!analysisType;
-    if (step === 1) return selectedEntities.length > 0;
+    if (step === 1) {
+      // Brand diagnosis doesn't require additional entities
+      if (analysisType === "brand_diagnosis") return true;
+      return selectedEntities.length > 0;
+    }
     if (step === 2) return !!periodStart && !!periodEnd;
     if (step === 3) return selectedSections.length > 0;
     return true;
