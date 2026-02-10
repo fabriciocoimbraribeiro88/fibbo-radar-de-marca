@@ -27,6 +27,8 @@ import AvgCommentsChart from "@/components/dashboard/AvgCommentsChart";
 import ContentMixChart from "@/components/dashboard/ContentMixChart";
 import RadarComparisonChart from "@/components/dashboard/RadarComparisonChart";
 import VolumeEngagementScatter from "@/components/dashboard/VolumeEngagementScatter";
+import ViralHitsChart from "@/components/dashboard/ViralHitsChart";
+import ViralRateChart from "@/components/dashboard/ViralRateChart";
 
 import ContentTypePieChart from "@/components/dashboard/ContentTypePieChart";
 import PerformanceByTypeChart from "@/components/dashboard/PerformanceByTypeChart";
@@ -265,6 +267,10 @@ export default function ProjectDashboard() {
             <RadarComparisonChart metrics={entityMetrics} />
             <VolumeEngagementScatter metrics={entityMetrics} />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ViralHitsChart metrics={entityMetrics} />
+            <ViralRateChart metrics={entityMetrics} />
+          </div>
         </div>
       )}
 
@@ -284,7 +290,7 @@ export default function ProjectDashboard() {
           </div>
 
           {/* Entity big numbers */}
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
             {[
               { label: "Seguidores", value: fmt(em.followers) },
               { label: "Posts", value: fmt(em.totalPosts) },
@@ -292,6 +298,8 @@ export default function ProjectDashboard() {
               { label: "Média Coment.", value: fmt(em.avgComments) },
               { label: "Taxa Eng.", value: `${em.engagementRate.toFixed(2)}%` },
               { label: "Views", value: fmt(em.totalViews) },
+              { label: "Hits Virais", value: fmt(em.viralHits) },
+              { label: "% Viral", value: `${em.viralRate.toFixed(1)}%` },
             ].map((item) => (
               <Card key={item.label} className="border border-border">
                 <CardContent className="p-3 text-center">

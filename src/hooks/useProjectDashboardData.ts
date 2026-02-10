@@ -61,6 +61,8 @@ export interface EntityMetrics {
   engagementRate: number;
   postTypes: Record<string, number>;
   hashtags: Record<string, number>;
+  viralHits: number;
+  viralRate: number;
 }
 
 /* ── Color palette ── */
@@ -322,6 +324,12 @@ export function useEntityMetrics(
         });
       });
 
+      // Viral hits: posts with engagement > 2x the entity average
+      const viralHits = total > 0
+        ? entityPosts.filter((p) => (p.likes_count + p.comments_count) > avgEngagement * 2).length
+        : 0;
+      const viralRate = total > 0 ? (viralHits / total) * 100 : 0;
+
       return {
         entityId: entity.id,
         name: entity.name,
@@ -341,6 +349,8 @@ export function useEntityMetrics(
         engagementRate,
         postTypes,
         hashtags,
+        viralHits,
+        viralRate,
       };
     });
   }, [entities, filteredPosts, profiles]);
