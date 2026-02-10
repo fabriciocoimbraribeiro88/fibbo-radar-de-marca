@@ -1,1 +1,16 @@
 project_id = "hpuklcgcbrgnulrwtkwc"
+
+[functions.fetch-instagram]
+verify_jwt = false
+
+[functions.run-analysis-pipeline]
+verify_jwt = false
+
+[functions.test-anthropic]
+verify_jwt = false
+
+[functions.test-apify]
+verify_jwt = false
+
+[functions.list-anthropic-models]
+verify_jwt = false

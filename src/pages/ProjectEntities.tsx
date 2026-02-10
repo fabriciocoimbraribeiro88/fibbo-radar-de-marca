@@ -26,6 +26,7 @@ import {
   Globe,
   Loader2,
   Download,
+  BarChart3,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -153,13 +154,18 @@ export default function ProjectEntities() {
               Gerencie concorrentes, influencers e inspirações.
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate(`/projects/${projectId}/analyses`)}>
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Análises
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar
+                </Button>
+              </DialogTrigger>
             <DialogContent className="bg-card">
               <DialogHeader>
                 <DialogTitle>Nova Entidade</DialogTitle>
@@ -203,9 +209,9 @@ export default function ProjectEntities() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </div>
-
       <Tabs defaultValue="competitor">
         <TabsList className="mb-6 bg-accent">
           {TAB_CONFIG.map((t) => (
