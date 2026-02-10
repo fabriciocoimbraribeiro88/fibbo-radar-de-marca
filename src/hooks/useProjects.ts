@@ -47,6 +47,16 @@ export interface DashboardStats {
     entity_name: string;
     instagram_handle: string | null;
   }>;
+  followers_timeline: Array<{
+    snapshot_date: string;
+    followers: number;
+    entity_name: string;
+  }>;
+  engagement_timeline: Array<{
+    period: string;
+    avg_engagement: number;
+    posts_count: number;
+  }>;
 }
 
 export function useDashboardStats() {
