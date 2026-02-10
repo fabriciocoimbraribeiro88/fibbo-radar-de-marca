@@ -54,7 +54,7 @@ import {
   Trash2,
   Settings2,
   Megaphone,
-  Search,
+  // Search removed - not needed
   MoreHorizontal,
   ExternalLink,
 } from "lucide-react";
@@ -132,8 +132,7 @@ interface CollectOptions {
   dateFrom: string;
   dateTo: string;
   collectAds: boolean;
-  adsLibraryUrl: string;
-  collectSeo: boolean;
+  adPlatformUrls: Record<string, string>;
 }
 
 const defaultCollectOptions: CollectOptions = {
@@ -142,8 +141,7 @@ const defaultCollectOptions: CollectOptions = {
   dateFrom: "",
   dateTo: "",
   collectAds: false,
-  adsLibraryUrl: "",
-  collectSeo: false,
+  adPlatformUrls: {},
 };
 
 export default function ProjectSources() {
@@ -167,6 +165,8 @@ export default function ProjectSources() {
     entityId: string;
     handle: string;
     isBrand?: boolean;
+    adPlatforms?: string[];
+    adLibraryUrls?: Record<string, string>;
   } | null>(null);
   const [collectOpts, setCollectOpts] = useState<CollectOptions>(defaultCollectOptions);
 
@@ -290,9 +290,14 @@ export default function ProjectSources() {
     setAdUrls({});
   };
 
-  const openCollectDialog = (entityId: string, handle: string, isBrand?: boolean) => {
-    setCollectOpts({ ...defaultCollectOptions });
-    setCollectDialog({ entityId, handle, isBrand });
+  const openCollectDialog = (entityId: string, handle: string, isBrand?: boolean, adPlatforms?: string[], adLibraryUrls?: Record<string, string>) => {
+    // Pre-fill ad URLs from entity metadata
+    const prefilled: Record<string, string> = {};
+    if (adLibraryUrls) {
+      for (const [k, v] of Object.entries(adLibraryUrls)) prefilled[k] = v;
+    }
+    setCollectOpts({ ...defaultCollectOptions, adPlatformUrls: prefilled });
+    setCollectDialog({ entityId, handle, isBrand, adPlatforms, adLibraryUrls });
   };
 
   const executeWithOptions = async () => {
@@ -313,8 +318,7 @@ export default function ProjectSources() {
       if (opts.mode === "count") body.results_limit = opts.postsCount;
       else { body.date_from = opts.dateFrom; body.date_to = opts.dateTo; }
       body.collect_ads = opts.collectAds;
-      body.ads_library_url = opts.adsLibraryUrl || undefined;
-      body.collect_seo = opts.collectSeo;
+      body.ad_platform_urls = opts.adPlatformUrls;
 
       const { data, error } = await supabase.functions.invoke("fetch-instagram", { body });
       if (error) throw error;
@@ -691,7 +695,7 @@ export default function ProjectSources() {
                                 disabled={isExecuting}
                                 onClick={(ev) => {
                                   ev.stopPropagation();
-                                  openCollectDialog(e.id, e.instagram_handle!, false);
+                                  openCollectDialog(e.id, e.instagram_handle!, false, adPlatforms, adLibraryUrls);
                                 }}
                               >
                                 {isExecuting ? (
@@ -891,34 +895,35 @@ export default function ProjectSources() {
                 Fontes adicionais
               </Label>
               <div className="space-y-2">
-                <div className="rounded-xl border border-border p-3.5 space-y-2">
+                <div className="rounded-xl border border-border p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Megaphone className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">Biblioteca de Anúncios</p>
-                      </div>
+                      <p className="text-sm font-medium text-foreground">Bibliotecas de Anúncios</p>
                     </div>
                     <Switch checked={collectOpts.collectAds} onCheckedChange={(v) => setCollectOpts((o) => ({ ...o, collectAds: v }))} />
                   </div>
                   {collectOpts.collectAds && (
-                    <div className="space-y-1 pl-6">
-                      <Input
-                        type="url"
-                        placeholder="URL da biblioteca de anúncios"
-                        value={collectOpts.adsLibraryUrl}
-                        onChange={(e) => setCollectOpts((o) => ({ ...o, adsLibraryUrl: e.target.value }))}
-                        className="text-xs h-9"
-                      />
+                    <div className="space-y-2 pl-6">
+                      {AD_PLATFORMS.map((p) => (
+                        <div key={p.value} className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">{p.label}</Label>
+                          <Input
+                            type="url"
+                            placeholder={p.placeholder}
+                            value={collectOpts.adPlatformUrls[p.value] ?? ""}
+                            onChange={(e) =>
+                              setCollectOpts((o) => ({
+                                ...o,
+                                adPlatformUrls: { ...o.adPlatformUrls, [p.value]: e.target.value },
+                              }))
+                            }
+                            className="text-xs h-8"
+                          />
+                        </div>
+                      ))}
                     </div>
                   )}
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-border p-3.5">
-                  <div className="flex items-center gap-2">
-                    <Search className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">SEO / Keywords</p>
-                  </div>
-                  <Switch checked={collectOpts.collectSeo} onCheckedChange={(v) => setCollectOpts((o) => ({ ...o, collectSeo: v }))} />
                 </div>
               </div>
             </div>
