@@ -62,7 +62,8 @@ import type { Database } from "@/integrations/supabase/types";
 
 type EntityType = Database["public"]["Enums"]["entity_type"];
 
-const TYPE_CONFIG: { value: EntityType; label: string; singular: string; icon: typeof Users; color: string }[] = [
+const TYPE_CONFIG: { value: EntityType | "brand"; label: string; singular: string; icon: typeof Users; color: string }[] = [
+  { value: "brand", label: "Marca", singular: "Marca", icon: Crown, color: "bg-primary/10 text-primary" },
   { value: "competitor", label: "Concorrentes", singular: "Concorrente", icon: Users, color: "bg-primary/10 text-primary" },
   { value: "inspiration", label: "Inspirações", singular: "Inspiração", icon: Eye, color: "bg-accent text-accent-foreground" },
   { value: "influencer", label: "Influencers", singular: "Influencer", icon: Sparkles, color: "bg-accent text-accent-foreground" },
@@ -372,11 +373,11 @@ export default function ProjectSources() {
   const getEntityLastLog = (entityId: string) => getEntityLogs(entityId)[0];
 
   const brandHandle = project?.instagram_handle?.replace("@", "");
-  const brandInEntities = brandHandle && entities?.some(
+  const brandEntityPe = brandHandle ? entities?.find(
     (pe) => pe.monitored_entities?.instagram_handle?.replace("@", "") === brandHandle
-  );
+  ) : undefined;
 
-  const getTypeConfig = (type: EntityType) => TYPE_CONFIG.find((t) => t.value === type) ?? TYPE_CONFIG[0];
+  const getTypeConfig = (type: EntityType) => TYPE_CONFIG.find((t) => t.value === type) ?? TYPE_CONFIG[1];
 
   if (isLoading) {
     return (
@@ -388,10 +389,22 @@ export default function ProjectSources() {
     );
   }
 
-  const groupedEntities = TYPE_CONFIG.map((type) => ({
-    ...type,
-    items: entities?.filter((e) => e.entity_role === type.value) ?? [],
-  }));
+  // Separate brand from other entities
+  const brandEntityId = brandEntityPe?.entity_id;
+  const nonBrandEntities = entities?.filter((e) => e.entity_id !== brandEntityId) ?? [];
+
+  const groupedEntities = [
+    // Brand section
+    {
+      ...TYPE_CONFIG[0], // brand config
+      items: brandEntityPe ? [brandEntityPe] : [],
+    },
+    // Other sections (exclude brand entity)
+    ...TYPE_CONFIG.slice(1).map((type) => ({
+      ...type,
+      items: nonBrandEntities.filter((e) => e.entity_role === type.value),
+    })),
+  ];
 
   return (
     <div className="max-w-3xl animate-fade-in">
@@ -400,7 +413,7 @@ export default function ProjectSources() {
         <div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">Fontes de Dados</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie concorrentes, inspirações e influencers que alimentam suas análises.
+            Gerencie sua marca, concorrentes, inspirações e influencers que alimentam suas análises.
           </p>
         </div>
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -419,10 +432,10 @@ export default function ProjectSources() {
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Classificação</Label>
                 <div className="flex gap-2">
-                  {TYPE_CONFIG.map((t) => (
+                  {TYPE_CONFIG.filter(t => t.value !== "brand").map((t) => (
                     <button
                       key={t.value}
-                      onClick={() => setNewType(t.value)}
+                      onClick={() => setNewType(t.value as EntityType)}
                       className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition-all ${
                         newType === t.value
                           ? "bg-primary text-primary-foreground shadow-sm"
@@ -539,55 +552,61 @@ export default function ProjectSources() {
         </Dialog>
       </div>
 
-      {/* Brand card (special) */}
-      {brandHandle && !brandInEntities && (
-        <div className="mb-6">
-          <Card className="border-primary/15 bg-primary/[0.02]">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <Crown className="h-4.5 w-4.5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <p className="text-sm font-semibold text-foreground">{project?.brand_name}</p>
-                      <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0 rounded-full">
-                        Sua Marca
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">@{brandHandle}</p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  disabled={executingId === "brand"}
-                  onClick={() => openCollectDialog("brand", brandHandle, true)}
-                >
-                  {executingId === "brand" ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Play className="mr-1.5 h-3.5 w-3.5" />
-                  )}
-                  Coletar
-                </Button>
-              </div>
-              <FetchProgressBar active={executingId === "brand"} />
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Grouped entities */}
+      {/* Grouped entities (including brand section) */}
       <div className="space-y-8">
         {groupedEntities.map((group) => {
+          // For brand section: show "add brand" card if no brand entity yet
+          if (group.value === "brand" && group.items.length === 0) {
+            if (!brandHandle) return null;
+            return (
+              <div key="brand">
+                <div className="flex items-center gap-2 mb-3">
+                  <Crown className="h-4 w-4 text-primary" />
+                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Marca</h2>
+                </div>
+                <Card className="border-primary/15 bg-primary/[0.02]">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3.5">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                          <Crown className="h-4.5 w-4.5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2.5">
+                            <p className="text-sm font-semibold text-foreground">{project?.brand_name}</p>
+                            <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0 rounded-full">
+                              Sua Marca
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">@{brandHandle}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full"
+                        disabled={executingId === "brand"}
+                        onClick={() => openCollectDialog("brand", brandHandle, true)}
+                      >
+                        {executingId === "brand" ? (
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Play className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Coletar
+                      </Button>
+                    </div>
+                    <FetchProgressBar active={executingId === "brand"} />
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          }
           if (group.items.length === 0) return null;
           return (
             <div key={group.value}>
               <div className="flex items-center gap-2 mb-3">
-                <group.icon className="h-4 w-4 text-muted-foreground" />
+                <group.icon className={`h-4 w-4 ${group.value === "brand" ? "text-primary" : "text-muted-foreground"}`} />
                 <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {group.label}
                 </h2>
