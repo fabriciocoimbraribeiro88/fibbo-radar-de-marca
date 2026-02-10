@@ -3,12 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, configured } = useAuth();
-
-  // If Cloud isn't ready, skip auth and show the app
-  if (!configured) {
-    return <>{children}</>;
-  }
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
