@@ -236,13 +236,37 @@ export function useFilteredAndLimitedPosts(
       return d >= dateRange.from && d <= dateRange.to;
     });
 
-    const sorted = [...filtered].sort((a, b) => {
+    if (limit === "all") {
+      return [...filtered].sort((a, b) => {
+        const da = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+        const db = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+        return db - da;
+      });
+    }
+
+    // Apply limit PER ENTITY so every entity gets fair representation
+    const byEntity = new Map<string, PostData[]>();
+    for (const p of filtered) {
+      const arr = byEntity.get(p.entity_id) ?? [];
+      arr.push(p);
+      byEntity.set(p.entity_id, arr);
+    }
+
+    const result: PostData[] = [];
+    for (const [, entityPosts] of byEntity) {
+      entityPosts.sort((a, b) => {
+        const da = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+        const db = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+        return db - da;
+      });
+      result.push(...entityPosts.slice(0, limit));
+    }
+
+    return result.sort((a, b) => {
       const da = a.posted_at ? new Date(a.posted_at).getTime() : 0;
       const db = b.posted_at ? new Date(b.posted_at).getTime() : 0;
       return db - da;
     });
-
-    return limit === "all" ? sorted : sorted.slice(0, limit);
   }, [posts, dateRange, limit]);
 }
 
