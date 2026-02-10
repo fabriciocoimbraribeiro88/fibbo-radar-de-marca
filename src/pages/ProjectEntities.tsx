@@ -25,8 +25,8 @@ import {
   Instagram,
   Globe,
   Loader2,
-  Download,
   BarChart3,
+  Megaphone,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -48,29 +48,13 @@ export default function ProjectEntities() {
   const [newHandle, setNewHandle] = useState("");
   const [newWebsite, setNewWebsite] = useState("");
   const [newType, setNewType] = useState<EntityType>("competitor");
-  const [fetchingEntityId, setFetchingEntityId] = useState<string | null>(null);
+  const [newAdPlatforms, setNewAdPlatforms] = useState<string[]>([]);
 
-  const fetchInstagram = async (entityId: string, handle: string) => {
-    setFetchingEntityId(entityId);
-    try {
-      const { data, error } = await supabase.functions.invoke("fetch-instagram", {
-        body: { entity_id: entityId },
-      });
-      if (error) throw error;
-      if (data?.success) {
-        toast({
-          title: "Coleta concluída!",
-          description: `${data.records} registros coletados para @${handle.replace("@", "")}`,
-        });
-      } else {
-        toast({ title: "Erro na coleta", description: data?.error, variant: "destructive" });
-      }
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
-      setFetchingEntityId(null);
-    }
-  };
+  const AD_PLATFORMS = [
+    { value: "meta_ads", label: "Meta Ads" },
+    { value: "google_ads", label: "Google Ads" },
+    { value: "tiktok_ads", label: "TikTok Ads" },
+  ];
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -101,6 +85,7 @@ export default function ProjectEntities() {
 
   const addEntity = useMutation({
     mutationFn: async () => {
+      const metadata = newAdPlatforms.length > 0 ? { ad_platforms: newAdPlatforms } : null;
       const { data: entity, error: entityError } = await supabase
         .from("monitored_entities")
         .insert({
@@ -108,6 +93,7 @@ export default function ProjectEntities() {
           type: newType,
           instagram_handle: newHandle || null,
           website_url: newWebsite || null,
+          metadata: metadata as any,
         })
         .select()
         .single();
@@ -128,6 +114,7 @@ export default function ProjectEntities() {
       setNewName("");
       setNewHandle("");
       setNewWebsite("");
+      setNewAdPlatforms([]);
       toast({ title: "Entidade adicionada!" });
     },
     onError: (err: any) => {
@@ -186,6 +173,31 @@ export default function ProjectEntities() {
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Website</Label>
                   <Input value={newWebsite} onChange={(e) => setNewWebsite(e.target.value)} placeholder="https://" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Biblioteca de Anúncios</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {AD_PLATFORMS.map((p) => (
+                      <button
+                        key={p.value}
+                        onClick={() =>
+                          setNewAdPlatforms((prev) =>
+                            prev.includes(p.value)
+                              ? prev.filter((v) => v !== p.value)
+                              : [...prev, p.value]
+                          )
+                        }
+                        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors ${
+                          newAdPlatforms.includes(p.value)
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-accent"
+                        }`}
+                      >
+                        <Megaphone className="h-3 w-3" />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <Button
                   className="w-full"
@@ -256,23 +268,18 @@ export default function ProjectEntities() {
                                 </span>
                               )}
                             </div>
+                            {(e.metadata as any)?.ad_platforms?.length > 0 && (
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {((e.metadata as any).ad_platforms as string[]).map((p: string) => (
+                                  <Badge key={p} variant="secondary" className="text-[9px] gap-1">
+                                    <Megaphone className="h-2.5 w-2.5" />
+                                    {p === "meta_ads" ? "Meta" : p === "google_ads" ? "Google" : "TikTok"}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        {e.instagram_handle && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={fetchingEntityId === pe.entity_id}
-                            onClick={() => fetchInstagram(pe.entity_id, e.instagram_handle!)}
-                          >
-                            {fetchingEntityId === pe.entity_id ? (
-                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Download className="mr-2 h-3.5 w-3.5" />
-                            )}
-                            Coletar
-                          </Button>
-                        )}
                       </CardContent>
                     </Card>
                   );

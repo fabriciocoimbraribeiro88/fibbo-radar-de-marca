@@ -14,6 +14,7 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   synthesizing: { label: "Sintetizando", className: "bg-indigo-500/20 text-indigo-600" },
   review: { label: "Em Revisão", className: "bg-orange-500/20 text-orange-600" },
   approved: { label: "Aprovada", className: "bg-green-500/20 text-green-600" },
+  rejected: { label: "Reprovada", className: "bg-destructive/20 text-destructive" },
   published: { label: "Publicada", className: "bg-primary/20 text-primary" },
 };
 
