@@ -23,11 +23,6 @@ function mapApifyPost(post: any, entityId: string) {
   const viewsCount =
     post.videoViewCount || post.videoPlayCount || null;
 
-  const engagementTotal =
-    (likesCount || 0) + (commentsCount || 0) > 0
-      ? (likesCount || 0) + (commentsCount || 0)
-      : null;
-
   // Media URLs: try images array, then displayUrls, then single displayUrl
   let mediaUrls: string[] | null = null;
   if (Array.isArray(post.images) && post.images.length > 0) {
@@ -47,7 +42,7 @@ function mapApifyPost(post: any, entityId: string) {
     likes_count: likesCount,
     comments_count: commentsCount,
     views_count: viewsCount,
-    engagement_total: engagementTotal,
+    
     hashtags: Array.isArray(post.hashtags) && post.hashtags.length > 0 ? post.hashtags : null,
     mentions: Array.isArray(post.mentions) && post.mentions.length > 0 ? post.mentions : null,
     thumbnail_url: post.displayUrl || null,
