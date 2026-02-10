@@ -10,15 +10,14 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   useProjectDashboardData,
-  useFilteredPosts,
+  useLimitedPosts,
   useEntityMetrics,
   type EntityMetrics,
   type PostData,
 } from "@/hooks/useProjectDashboardData";
 
 import DashboardFilters, {
-  getPresetRange,
-  type PeriodRange,
+  type PostLimit,
   type SourceMode,
 } from "@/components/dashboard/DashboardFilters";
 import type { CategoryKey } from "@/components/dashboard/FilterBar";
@@ -59,14 +58,13 @@ export default function ProjectDashboard() {
     queryClient.invalidateQueries({ queryKey: ["project-dashboard-full", id] });
   };
 
-  const defaultRange = getPresetRange("this_month");
-  const [period, setPeriod] = useState<PeriodRange>({ ...defaultRange, preset: "this_month" });
+  const [postLimit, setPostLimit] = useState<PostLimit>("all");
   const [sourceMode, setSourceMode] = useState<SourceMode>("brand_only");
   const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set());
   const [selectedEntityId, setSelectedEntityId] = useState("");
 
-  const filteredPosts = useFilteredPosts(data?.posts ?? [], period);
-  const allMetrics = useEntityMetrics(filteredPosts, data?.profiles ?? [], data?.entities ?? []);
+  const limitedPosts = useLimitedPosts(data?.posts ?? [], postLimit);
+  const allMetrics = useEntityMetrics(limitedPosts, data?.profiles ?? [], data?.entities ?? []);
 
   const visibleMetrics = useMemo(() => {
     if (!allMetrics.length) return [];
@@ -173,8 +171,8 @@ export default function ProjectDashboard() {
 
       {/* Filters */}
       <DashboardFilters
-        period={period}
-        onPeriodChange={setPeriod}
+        postLimit={postLimit}
+        onPostLimitChange={setPostLimit}
         sourceMode={sourceMode}
         onSourceModeChange={setSourceMode}
         selectedEntityIds={selectedEntityIds}
@@ -275,21 +273,21 @@ export default function ProjectDashboard() {
             {/* Row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <ContentTypePieChart metrics={selectedEntity} handle={selectedEntity.handle} />
-              <PerformanceByTypeChart posts={filteredPosts} entityId={selectedEntity.entityId} />
-              <PostsVolumeChart posts={filteredPosts} entityId={selectedEntity.entityId} color={selectedEntity.color} />
+              <PerformanceByTypeChart posts={limitedPosts} entityId={selectedEntity.entityId} />
+              <PostsVolumeChart posts={limitedPosts} entityId={selectedEntity.entityId} color={selectedEntity.color} />
             </div>
 
             {/* Row 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <TopHashtagsChart metrics={selectedEntity} color={selectedEntity.color} />
-              <LikesTimelineChart posts={filteredPosts} entityId={selectedEntity.entityId} />
+              <LikesTimelineChart posts={limitedPosts} entityId={selectedEntity.entityId} />
               <ThemeDistributionChart metrics={selectedEntity} color={selectedEntity.color} />
             </div>
 
             {/* Row 3: Top Posts */}
             <div className="space-y-4">
-              <TopPostsTable posts={filteredPosts} entityId={selectedEntity.entityId} mode="best" />
-              <TopPostsTable posts={filteredPosts} entityId={selectedEntity.entityId} mode="worst" />
+              <TopPostsTable posts={limitedPosts} entityId={selectedEntity.entityId} mode="best" />
+              <TopPostsTable posts={limitedPosts} entityId={selectedEntity.entityId} mode="worst" />
             </div>
           </>
         )}
