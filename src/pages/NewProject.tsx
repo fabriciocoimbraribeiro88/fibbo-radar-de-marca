@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ import {
   Globe,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { createProject } from "@/lib/createProject";
 
 const STEPS = [
   { title: "Marca", icon: Building2 },
@@ -108,12 +110,34 @@ export default function NewProject() {
     }
   };
 
+  const queryClient = useQueryClient();
+
   const handleCreate = async () => {
     setLoading(true);
     try {
-      // TODO: Save to Supabase
+      await createProject({
+        projectName,
+        brandName,
+        segment,
+        websiteUrl,
+        instagramHandle,
+        brandDescription,
+        targetAudience,
+        toneOfVoice,
+        keywords,
+        entities,
+        dataSources: {
+          instagramPosts,
+          instagramComments,
+          adsLibrary,
+          seoData,
+        },
+        schedule,
+      });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-stats"] });
       toast({ title: "Projeto criado!", description: `${projectName} foi criado com sucesso.` });
-      navigate("/");
+      navigate("/projects");
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
