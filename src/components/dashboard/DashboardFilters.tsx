@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,15 @@ const PRESETS: { value: PeriodPreset; label: string }[] = [
 ];
 
 /* ── Source selection types ── */
-export type SourceMode = "brand_only" | "brand_vs_all" | "brand_vs_selected";
+export type SourceMode = "brand_only" | "brand_vs_all" | "brand_vs_competitors" | "brand_vs_influencers" | "brand_vs_inspiration" | "brand_vs_selected";
+
+const SOURCE_MODES: { value: SourceMode; label: string }[] = [
+  { value: "brand_only", label: "Apenas Marca" },
+  { value: "brand_vs_all", label: "Marca vs Todos" },
+  { value: "brand_vs_competitors", label: "Marca vs Concorrentes" },
+  { value: "brand_vs_influencers", label: "Marca vs Influencers" },
+  { value: "brand_vs_inspiration", label: "Marca vs Inspiração" },
+];
 
 export interface EntityOption {
   id: string;
@@ -155,51 +163,49 @@ export default function DashboardFilters({
         </Popover>
       </div>
 
-      {/* Row 2: Sources */}
+      {/* Row 2: Source mode pills */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Fontes</span>
-        <button
-          onClick={() => onSourceModeChange("brand_only")}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-            sourceMode === "brand_only"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted text-muted-foreground hover:bg-accent"
-          }`}
-        >
-          Apenas Marca
-        </button>
-        <button
-          onClick={() => onSourceModeChange("brand_vs_all")}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-            sourceMode === "brand_vs_all"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted text-muted-foreground hover:bg-accent"
-          }`}
-        >
-          Marca vs Todos
-        </button>
-
-        {/* Individual entity pills */}
-        {nonBrandEntities.map((e) => {
-          const selected = sourceMode === "brand_vs_selected" && selectedEntityIds.has(e.id);
-          return (
-            <button
-              key={e.id}
-              onClick={() => {
-                onSourceModeChange("brand_vs_selected");
-                onToggleEntity(e.id);
-              }}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                selected
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              {e.name}
-            </button>
-          );
-        })}
+        {SOURCE_MODES.map((sm) => (
+          <button
+            key={sm.value}
+            onClick={() => onSourceModeChange(sm.value)}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+              sourceMode === sm.value
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            {sm.label}
+          </button>
+        ))}
       </div>
+
+      {/* Row 3: Individual entity pills */}
+      {nonBrandEntities.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Selecionar</span>
+          {nonBrandEntities.map((e) => {
+            const selected = sourceMode === "brand_vs_selected" && selectedEntityIds.has(e.id);
+            return (
+              <button
+                key={e.id}
+                onClick={() => {
+                  onSourceModeChange("brand_vs_selected");
+                  onToggleEntity(e.id);
+                }}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  selected
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                {e.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

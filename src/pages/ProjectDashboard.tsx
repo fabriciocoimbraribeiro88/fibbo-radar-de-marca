@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, Users, Eye, Zap, Heart, MessageCircle, Instagram, TrendingUp } from "lucide-react";
+import { BarChart3, Users, Eye, Zap, Heart, MessageCircle, Instagram, TrendingUp, Flame, Percent } from "lucide-react";
 
 import {
   useProjectDashboardData,
@@ -39,6 +39,7 @@ import PostsVolumeChart from "@/components/dashboard/PostsVolumeChart";
 import TopHashtagsChart from "@/components/dashboard/TopHashtagsChart";
 import LikesTimelineChart from "@/components/dashboard/LikesTimelineChart";
 import ThemeDistributionChart from "@/components/dashboard/ThemeDistributionChart";
+import TopPostsTable from "@/components/dashboard/TopPostsTable";
 
 function formatNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -71,6 +72,10 @@ export default function ProjectDashboard() {
     if (!allMetrics.length) return [];
     if (sourceMode === "brand_only") return allMetrics.filter((m) => m.role === "brand");
     if (sourceMode === "brand_vs_all") return allMetrics;
+    if (sourceMode === "brand_vs_competitors") return allMetrics.filter((m) => m.role === "brand" || m.role === "competitor");
+    if (sourceMode === "brand_vs_influencers") return allMetrics.filter((m) => m.role === "brand" || m.role === "influencer");
+    if (sourceMode === "brand_vs_inspiration") return allMetrics.filter((m) => m.role === "brand" || m.role === "inspiration");
+    // brand_vs_selected
     const brand = allMetrics.filter((m) => m.role === "brand");
     const selected = allMetrics.filter((m) => selectedEntityIds.has(m.entityId));
     return [...brand, ...selected];
@@ -92,6 +97,10 @@ export default function ProjectDashboard() {
         ? Math.round(m.reduce((s, e) => s + e.avgEngagement, 0) / m.length)
         : 0,
       totalFollowers: m.reduce((s, e) => s + e.followers, 0),
+      totalViralHits: m.reduce((s, e) => s + e.viralHits, 0),
+      avgViralRate: m.length
+        ? parseFloat((m.reduce((s, e) => s + e.viralRate, 0) / m.length).toFixed(1))
+        : 0,
     };
   }, [visibleMetrics]);
 
@@ -136,8 +145,8 @@ export default function ProjectDashboard() {
       <div className="mx-auto max-w-6xl space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-12 w-full" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
@@ -218,21 +227,23 @@ export default function ProjectDashboard() {
         {/* ═══ TAB 1: VISÃO GERAL ═══ */}
         <TabsContent value="overview" className="mt-6 space-y-6">
           {/* Big Numbers */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
             {[
-              { icon: Instagram, label: "Posts", value: bigNumbers.totalPosts },
-              { icon: Heart, label: "Curtidas", value: bigNumbers.totalLikes },
-              { icon: MessageCircle, label: "Comentários", value: bigNumbers.totalComments },
-              { icon: Eye, label: "Views", value: bigNumbers.totalViews },
-              { icon: Zap, label: "Eng. Médio", value: bigNumbers.avgEngagement },
-              { icon: Users, label: "Seguidores", value: bigNumbers.totalFollowers },
+              { icon: Instagram, label: "Posts", value: formatNum(bigNumbers.totalPosts) },
+              { icon: Heart, label: "Curtidas", value: formatNum(bigNumbers.totalLikes) },
+              { icon: MessageCircle, label: "Comentários", value: formatNum(bigNumbers.totalComments) },
+              { icon: Eye, label: "Views", value: formatNum(bigNumbers.totalViews) },
+              { icon: Zap, label: "Eng. Médio", value: formatNum(bigNumbers.avgEngagement) },
+              { icon: Users, label: "Seguidores", value: formatNum(bigNumbers.totalFollowers) },
+              { icon: Flame, label: "Hits Virais", value: formatNum(bigNumbers.totalViralHits) },
+              { icon: Percent, label: "Taxa Viral", value: `${bigNumbers.avgViralRate}%` },
             ].map(({ icon: Icon, label, value }) => (
               <Card key={label} className="border border-border">
                 <CardContent className="flex flex-col items-center p-4">
                   <div className="rounded-lg bg-accent p-2 mb-2">
                     <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <p className="text-xl font-bold font-mono text-foreground">{formatNum(value)}</p>
+                  <p className="text-xl font-bold font-mono text-foreground">{value}</p>
                   <p className="text-[10px] text-muted-foreground">{label}</p>
                 </CardContent>
               </Card>
@@ -333,12 +344,14 @@ export default function ProjectDashboard() {
           {selectedEntity && (
             <>
               {/* Big numbers */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
                   { label: "Seguidores", value: formatNum(selectedEntity.followers) },
                   { label: "Posts", value: formatNum(selectedEntity.totalPosts) },
                   { label: "Eng. Médio", value: formatNum(selectedEntity.avgEngagement) },
                   { label: "Taxa Eng.", value: `${selectedEntity.engagementRate.toFixed(2)}%` },
+                  { label: "Hits Virais", value: formatNum(selectedEntity.viralHits) },
+                  { label: "Taxa Viral", value: `${selectedEntity.viralRate.toFixed(1)}%` },
                 ].map((item) => (
                   <Card key={item.label} className="border border-border">
                     <CardContent className="p-4 text-center">
@@ -361,6 +374,12 @@ export default function ProjectDashboard() {
                 <TopHashtagsChart metrics={selectedEntity} color={selectedEntity.color} />
                 <LikesTimelineChart posts={filteredPosts} entityId={selectedEntity.entityId} />
                 <ThemeDistributionChart metrics={selectedEntity} color={selectedEntity.color} />
+              </div>
+
+              {/* Row 3: Top Posts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <TopPostsTable posts={filteredPosts} entityId={selectedEntity.entityId} mode="best" />
+                <TopPostsTable posts={filteredPosts} entityId={selectedEntity.entityId} mode="worst" />
               </div>
             </>
           )}
