@@ -342,6 +342,57 @@ export type Database = {
           },
         ]
       }
+      entity_reports: {
+        Row: {
+          ai_analysis: string | null
+          computed_metrics: Json | null
+          created_at: string
+          created_by: string | null
+          entity_id: string
+          id: string
+          model_used: string | null
+          posts_analyzed: number | null
+          project_id: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          computed_metrics?: Json | null
+          created_at?: string
+          created_by?: string | null
+          entity_id: string
+          id?: string
+          model_used?: string | null
+          posts_analyzed?: number | null
+          project_id: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          computed_metrics?: Json | null
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string
+          id?: string
+          model_used?: string | null
+          posts_analyzed?: number | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_reports_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_comments: {
         Row: {
           comment_id_instagram: string | null
