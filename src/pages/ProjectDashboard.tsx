@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, Users, Eye, Zap, Heart, MessageCircle, Instagram, TrendingUp, Flame, Percent, RefreshCw } from "lucide-react";
+import { BarChart3, Users, Eye, Zap, Heart, MessageCircle, Instagram, TrendingUp, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -68,7 +68,7 @@ export default function ProjectDashboard() {
   const [selectedEntityId, setSelectedEntityId] = useState("");
 
   const filteredPosts = useFilteredAndLimitedPosts(data?.posts ?? [], period, postLimit);
-  const allMetrics = useEntityMetrics(filteredPosts, data?.profiles ?? [], data?.entities ?? []);
+  const allMetrics = useEntityMetrics(data?.entities ?? [], filteredPosts, data?.profiles ?? []);
 
   const visibleMetrics = useMemo(() => {
     if (!allMetrics.length) return [];
@@ -102,10 +102,6 @@ export default function ProjectDashboard() {
         ? Math.round(m.reduce((s, e) => s + e.avgEngagement, 0) / m.length)
         : 0,
       totalFollowers: m.reduce((s, e) => s + e.followers, 0),
-      totalViralHits: m.reduce((s, e) => s + e.viralHits, 0),
-      avgViralRate: m.length
-        ? parseFloat((m.reduce((s, e) => s + e.viralRate, 0) / m.length).toFixed(1))
-        : 0,
     };
   }, [visibleMetrics]);
 
@@ -202,8 +198,6 @@ export default function ProjectDashboard() {
           { icon: Eye, label: "Views", value: formatNum(bigNumbers.totalViews) },
           { icon: Zap, label: "Eng. Médio", value: formatNum(bigNumbers.avgEngagement) },
           { icon: Users, label: "Seguidores", value: formatNum(bigNumbers.totalFollowers) },
-          { icon: Flame, label: "Hits Virais", value: formatNum(bigNumbers.totalViralHits) },
-          { icon: Percent, label: "Taxa Viral", value: `${bigNumbers.avgViralRate}%` },
         ].map(({ icon: Icon, label, value }) => (
           <Card key={label} className="border border-border">
             <CardContent className="flex flex-col items-center p-4">
@@ -264,8 +258,8 @@ export default function ProjectDashboard() {
                 { label: "Posts", value: formatNum(selectedEntity.totalPosts) },
                 { label: "Eng. Médio", value: formatNum(selectedEntity.avgEngagement) },
                 { label: "Taxa Eng.", value: `${selectedEntity.engagementRate.toFixed(2)}%` },
-                { label: "Hits Virais", value: formatNum(selectedEntity.viralHits) },
-                { label: "Taxa Viral", value: `${selectedEntity.viralRate.toFixed(1)}%` },
+                { label: "Seguindo", value: formatNum(selectedEntity.following) },
+                { label: "Total Views", value: formatNum(selectedEntity.totalViews) },
               ].map((item) => (
                 <Card key={item.label} className="border border-border">
                   <CardContent className="p-4 text-center">
