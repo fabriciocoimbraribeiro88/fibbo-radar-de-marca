@@ -1,194 +1,81 @@
 
+# Plano: Limpeza de Arquitetura + Correcoes
 
-# Plano: Sistema Completo Fibbo Radar -- Roadmap por Modulos
+## Problemas Identificados
 
-## Situacao Atual
+### 1. Secoes Duplicadas na Sidebar Principal
+A sidebar principal (`AppLayout.tsx`) tem links para "Analises" (`/analyses`) e "Relatorios" (`/reports`) que sao paginas placeholder vazias. Essas funcionalidades ja existem DENTRO de cada projeto (`/projects/:id/analyses` e futuramente `/projects/:id/reports`). Nao faz sentido existirem globalmente.
 
-O sistema ja possui:
-- Autenticacao (login/signup)
-- Dashboard geral (lista de projetos + stats)
-- CRUD de Projetos (wizard de criacao)
-- Gerenciamento de Entidades (concorrentes/influencers/inspiracoes)
-- Coleta Instagram via Apify (edge function funcionando)
-- Modulo de Analises (wizard 5 steps + pipeline Claude + visualizacao)
-- Settings (teste de conexao Apify + Anthropic)
+**Solucao:** Remover "Analises" e "Relatorios" da sidebar principal. Manter apenas: Dashboard, Projetos e Configuracoes. Deletar os arquivos `src/pages/Analyses.tsx` e `src/pages/Reports.tsx` e remover as rotas de `/analyses` e `/reports` do `App.tsx`.
 
-## O Que Falta (Mapeamento Completo)
+### 2. Marca Ausente nas Fontes de Dados
+A pagina de Fontes de Dados (`ProjectDataSources.tsx`) lista apenas entidades da tabela `monitored_entities` (concorrentes, influencers, inspiracoes). A propria marca do projeto (que tem `instagram_handle` na tabela `projects`) nao aparece como fonte de dados.
 
-Comparando com a visao descrita, os modulos ausentes sao:
+**Solucao:** Adicionar a marca do projeto como primeira linha na lista de fontes de dados. Sera mostrada com destaque (badge "Marca") e tera o mesmo botao "Executar" para coletar dados do Instagram. A coleta usara o mesmo edge function `fetch-instagram`, mas precisara criar uma `monitored_entity` para a marca (ou usar diretamente o handle do projeto).
 
-### 1. Navegacao por Projeto (Sub-Sidebar)
-Atualmente ao clicar num projeto, vai direto para Entidades. Falta uma navegacao interna do projeto com todas as secoes:
-- Visao Geral (dashboard do projeto)
-- Marca (briefing)
-- Entidades
-- Fontes de Dados
-- Dashboard (dados quantitativos)
-- Analises
-- Planejamento
-- OKRs
-- Relatorios
+A abordagem mais limpa: ao coletar dados da marca, o sistema criara automaticamente uma entidade `monitored_entity` do tipo "brand" (ou reutilizara se ja existir) e associara ao projeto. Isso mantem a mesma estrutura de dados.
 
-### 2. Pagina da Marca (/projects/:id/brand)
-Formulario editavel com o briefing completo:
-- Descricao, publico-alvo, tom de voz, keywords
-- Auto-save com indicador visual
+### 3. Barra de Progresso na Coleta
+Atualmente, ao clicar "Executar" na coleta, aparece apenas um spinner (`Loader2`). O usuario nao tem nocao de progresso.
 
-### 3. Fontes de Dados (/projects/:id/data-sources)
-Configuracao e gerenciamento de coletas:
-- Grid de todas as configuracoes (entidade x fonte x schedule)
-- Botao "Executar Agora" por fonte
-- Toggle de schedule (manual/semanal/mensal)
-- Log das ultimas execucoes com status
-- Configuracao de quais fontes baixar uma vez vs. recorrente
+**Solucao:** Adicionar uma barra de progresso animada com etapas visuais durante a coleta:
+- Fase 1: "Conectando ao Apify..." (0-20%)
+- Fase 2: "Baixando perfil..." (20-50%)
+- Fase 3: "Baixando posts..." (50-80%)
+- Fase 4: "Salvando dados..." (80-100%)
 
-### 4. Dashboard do Projeto (/projects/:id/dashboard)
-Visualizacao quantitativa dos dados coletados (sem analise IA):
-- Sub-tabs: Overview / Social / Ads / SEO
-- Big Numbers com sparklines (posts, comentarios, curtidas, engajamento, virais, hit%, views)
-- Graficos comparativos marca vs concorrentes (Recharts)
-- Tabela de posts com filtros e sort
-- Metricas de perfil (seguidores, evolucao)
+Como o edge function e sincrono (espera o Apify terminar), a barra sera uma **animacao simulada** com etapas automaticas a cada poucos segundos, dando sensacao de movimento. Quando o fetch retorna, a barra pula para 100%.
 
-### 5. Planejamento (/projects/:id/planning)
-- Calendario Social: visualizacao mensal, drag-and-drop, banco de ideias
-- Plano de Ads: campanhas, conjuntos, anuncios
-- Plano de SEO: keywords prioritarias, briefing de artigos
-- Botao "Gerar com IA" baseado nas analises existentes
-- Edge function `generate-planning`
+### 4. Analise Aprovada Nao Aparece na Lista
+Ao aprovar uma analise na `AnalysisView.tsx`, o `handleApprove` atualiza o status no banco mas:
+- Nao invalida o cache do React Query (a lista de analises nao atualiza)
+- Nao redireciona o usuario de volta para a lista
 
-### 6. OKRs (/projects/:id/okrs)
-- Seletor de trimestre
-- Cards de objetivos expandiveis com key results
-- Progress bars com trend arrows
-- Graficos de acompanhamento (line chart semana a semana)
-- Automacao: puxar dados mais recentes de instagram_profiles, instagram_posts, seo_data
-- Alertas visuais (amarelo <70%, vermelho <50% do esperado)
+**Solucao:** Apos aprovar, invalidar as queries `["analysis", analysisId]` e `["project-analyses", projectId]`, e redirecionar para `/projects/:id/analyses` com um toast de confirmacao.
 
-### 7. Relatorios do Projeto (/projects/:id/reports)
-- Lista de relatorios gerados a partir das analises
-- Visualizacao do relatorio em markdown formatado
-- Exportacao PDF (jsPDF + html2canvas)
-- Exportacao Markdown
+## Arquivos Modificados
 
-### 8. Analises Programadas
-- Opcao de agendar analises (diaria/semanal/mensal)
-- Notificacao por email com resumo e big numbers
-- Edge function de cron para disparar
-
-## Plano de Execucao (Fases)
-
-Dado o tamanho, recomendo implementar em **4 fases sequenciais**:
-
----
-
-### Fase 1: Navegacao + Marca + Fontes de Dados
-**Prioridade: Alta** -- e a base para tudo funcionar bem
-
-**Rotas novas:**
 ```text
-/projects/:id              -> ProjectOverview (visao geral)
-/projects/:id/brand        -> ProjectBrand (briefing editavel)
-/projects/:id/data-sources -> ProjectDataSources (config de coletas)
+src/components/AppLayout.tsx      -- Remover links "Analises" e "Relatorios" da sidebar
+src/App.tsx                       -- Remover rotas /analyses e /reports
+src/pages/ProjectDataSources.tsx  -- Adicionar marca como fonte + barra de progresso
+src/pages/AnalysisView.tsx        -- Fix aprovacao (invalidar cache + redirecionar)
 ```
 
-**Arquivos novos:**
+## Arquivos Deletados
+
 ```text
-src/components/ProjectLayout.tsx     -- Layout com sub-sidebar do projeto
-src/pages/ProjectOverview.tsx        -- Visao geral do projeto
-src/pages/ProjectBrand.tsx           -- Briefing editavel com auto-save
-src/pages/ProjectDataSources.tsx     -- Config de fontes de dados
+src/pages/Analyses.tsx            -- Pagina placeholder vazia (duplicada)
+src/pages/Reports.tsx             -- Pagina placeholder vazia (duplicada)
 ```
 
-**Arquivos modificados:**
+## Detalhes Tecnicos
+
+### Sidebar Principal (AppLayout.tsx)
+Navegacao simplificada:
+- Dashboard (/)
+- Projetos (/projects)
+- Configuracoes (/settings)
+
+### Marca nas Fontes de Dados (ProjectDataSources.tsx)
+A marca do projeto sera exibida como primeiro item na lista, usando os dados de `projects.instagram_handle`. Ao clicar "Executar":
+1. Verificar se ja existe uma `monitored_entity` para esse handle
+2. Se nao existir, criar uma com `type: 'competitor'` (reutilizavel) e associar ao projeto
+3. Chamar `fetch-instagram` com o `entity_id`
+
+### Barra de Progresso na Coleta
+Componente de progresso inline no card durante a execucao:
+- Progress bar com animacao suave
+- Texto descritivo da etapa atual
+- Timer simulado que avanca a cada 3-5 segundos
+- Ao completar (resposta do edge function), pula para 100% e mostra resultado
+
+### Fix Aprovacao (AnalysisView.tsx)
 ```text
-src/App.tsx                          -- Novas rotas aninhadas
-src/components/AppLayout.tsx         -- Navegacao atualizada
+handleApprove:
+  1. await supabase.update(status: "approved")
+  2. queryClient.invalidateQueries(["analysis", analysisId])
+  3. queryClient.invalidateQueries(["project-analyses", projectId])
+  4. toast("Analise aprovada!")
+  5. navigate(`/projects/${projectId}/analyses`)
 ```
-
-**Funcionalidades:**
-- Sub-sidebar com links: Overview, Marca, Entidades, Fontes, Dashboard, Analises, Planejamento, OKRs, Relatorios
-- ProjectBrand: formulario com campos do briefing, auto-save com debounce
-- ProjectDataSources: tabela de data_fetch_configs, botao executar agora, toggle schedule, log de execucoes
-
----
-
-### Fase 2: Dashboard de Dados Quantitativos
-**Prioridade: Alta** -- o usuario precisa ver os dados coletados
-
-**Rotas novas:**
-```text
-/projects/:id/dashboard          -> ProjectDashboard
-/projects/:id/dashboard/social   -> sub-tab social
-/projects/:id/dashboard/ads      -> sub-tab ads
-/projects/:id/dashboard/seo      -> sub-tab seo
-```
-
-**Arquivos novos:**
-```text
-src/pages/ProjectDashboard.tsx       -- Dashboard com sub-tabs
-src/components/BigNumberCard.tsx     -- Card de metrica com sparkline
-src/components/ComparisonChart.tsx   -- Grafico comparativo multi-entidade
-```
-
-**Funcionalidades:**
-- Big Numbers: total posts, comentarios, curtidas, engajamento medio, virais, hit%, views
-- Comparativo: bar chart marca vs concorrentes por metrica
-- Tabela de posts: filtros (data, formato, entidade), sort, expandir detalhes
-- Graficos de perfil: evolucao de seguidores (line chart)
-- Distribuicao por formato (pie chart), por dia da semana (bar chart)
-
----
-
-### Fase 3: Planejamento + OKRs
-**Prioridade: Media** -- depende de ter analises prontas
-
-**Rotas novas:**
-```text
-/projects/:id/planning           -> ProjectPlanning
-/projects/:id/okrs               -> ProjectOKRs
-```
-
-**Arquivos novos:**
-```text
-src/pages/ProjectPlanning.tsx        -- Calendario + planos
-src/pages/ProjectOKRs.tsx            -- Objetivos e acompanhamento
-src/components/CalendarGrid.tsx      -- Grid mensal de posts
-src/components/OKRProgressCard.tsx   -- Card de objetivo com KRs
-supabase/functions/generate-planning/index.ts  -- Geracao IA
-```
-
-**Funcionalidades:**
-- Calendario mensal visual com cards de posts planejados
-- CRUD de itens de planejamento (posts, ads, artigos SEO)
-- Geracao com IA baseada nas analises
-- OKRs: CRUD de objetivos e key results por trimestre
-- Progress bars automaticas (puxando dados de instagram_profiles, posts, seo_data)
-- Alertas visuais de desempenho
-
----
-
-### Fase 4: Relatorios + Agendamento + Notificacoes
-**Prioridade: Media-Baixa** -- refinamento
-
-**Arquivos novos:**
-```text
-src/pages/ProjectReports.tsx         -- Relatorios do projeto
-supabase/functions/scheduled-fetch/index.ts     -- Cron coleta
-supabase/functions/scheduled-analysis/index.ts  -- Cron analise
-supabase/functions/send-notification/index.ts   -- Email
-```
-
-**Funcionalidades:**
-- Lista e visualizacao de relatorios com markdown formatado
-- Exportacao PDF e Markdown
-- Agendamento de coletas automaticas (cron)
-- Agendamento de analises (diaria/semanal/mensal)
-- Notificacoes por email com resumo
-
----
-
-## Recomendacao
-
-Sugiro comecar pela **Fase 1** (Navegacao + Marca + Fontes de Dados) pois ela reestrutura a experiencia do projeto inteiro e torna todas as outras fases mais faceis de implementar. Cada fase subsequente pode ser aprovada e implementada individualmente.
-
