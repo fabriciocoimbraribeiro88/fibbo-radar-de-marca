@@ -24,6 +24,8 @@ import DashboardFilters, {
 import EngagementRateChart from "@/components/dashboard/EngagementRateChart";
 import AvgLikesChart from "@/components/dashboard/AvgLikesChart";
 import AvgCommentsChart from "@/components/dashboard/AvgCommentsChart";
+import AvgSavesChart from "@/components/dashboard/AvgSavesChart";
+import AvgSharesChart from "@/components/dashboard/AvgSharesChart";
 import ContentMixChart from "@/components/dashboard/ContentMixChart";
 import RadarComparisonChart from "@/components/dashboard/RadarComparisonChart";
 import VolumeEngagementScatter from "@/components/dashboard/VolumeEngagementScatter";
@@ -261,6 +263,10 @@ export default function ProjectDashboard() {
             <EngagementRateChart metrics={entityMetrics} />
             <AvgLikesChart metrics={entityMetrics} />
             <AvgCommentsChart metrics={entityMetrics} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AvgSavesChart metrics={entityMetrics} />
+            <AvgSharesChart metrics={entityMetrics} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <ContentMixChart metrics={entityMetrics} />
