@@ -18,7 +18,7 @@ export default function EngagementRateChart({ metrics }: Props) {
   return (
     <Card className="border border-border">
       <CardContent className="p-4">
-        <p className="text-sm font-medium text-foreground mb-3 text-center">Taxa de Engajamento (L+C+S+Sh / Seguidores)</p>
+        <p className="text-sm font-medium text-foreground mb-3 text-center">Taxa de Engajamento</p>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
             <XAxis dataKey="name" tick={{ fontSize: 10 }} />
