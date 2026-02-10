@@ -181,11 +181,11 @@ export default function DashboardFilters({
         ))}
       </div>
 
-      {/* Row 3: Individual entity pills */}
-      {nonBrandEntities.length > 0 && (
+      {/* Row 3: Individual entity pills (including brand) */}
+      {entities.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Selecionar</span>
-          {nonBrandEntities.map((e) => {
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Marca</span>
+          {entities.map((e) => {
             const selected = sourceMode === "brand_vs_selected" && selectedEntityIds.has(e.id);
             return (
               <button
@@ -200,7 +200,7 @@ export default function DashboardFilters({
                     : "bg-muted text-muted-foreground hover:bg-accent"
                 }`}
               >
-                {e.name}
+                {e.handle ? e.handle.replace("@", "") : e.name}
               </button>
             );
           })}
