@@ -18,6 +18,8 @@ import ProjectDataSources from "@/pages/ProjectDataSources";
 import ProjectAnalyses from "@/pages/ProjectAnalyses";
 import NewAnalysis from "@/pages/NewAnalysis";
 import AnalysisView from "@/pages/AnalysisView";
+import ProjectPlanning from "@/pages/ProjectPlanning";
+import ProjectOKRs from "@/pages/ProjectOKRs";
 import SettingsPage from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
@@ -59,6 +61,8 @@ const App = () => (
                 <Route path="analyses" element={<ProjectAnalyses />} />
                 <Route path="analyses/new" element={<NewAnalysis />} />
                 <Route path="analyses/:analysisId" element={<AnalysisView />} />
+                <Route path="planning" element={<ProjectPlanning />} />
+                <Route path="okrs" element={<ProjectOKRs />} />
               </Route>
 
               <Route path="/settings" element={<SettingsPage />} />
