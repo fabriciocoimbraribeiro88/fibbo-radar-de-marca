@@ -120,6 +120,74 @@ export default function ProjectOKRs() {
     enabled: !!projectId,
   });
 
+  // Fetch API KPIs from instagram data
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projects").select("*").eq("id", projectId!).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: entities } = useQuery({
+    queryKey: ["project-entities", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_entities")
+        .select("entity_id, monitored_entities(id, instagram_handle)")
+        .eq("project_id", projectId!);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const brandEntityId = entities?.find(
+    (e) => (e.monitored_entities as any)?.instagram_handle?.replace("@", "") === project?.instagram_handle?.replace("@", "")
+  )?.entity_id;
+
+  const { data: latestProfile } = useQuery({
+    queryKey: ["brand-profile", brandEntityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("instagram_profiles")
+        .select("*")
+        .eq("entity_id", brandEntityId!)
+        .order("snapshot_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!brandEntityId,
+  });
+
+  const { data: avgEngagement } = useQuery({
+    queryKey: ["brand-engagement", brandEntityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("instagram_posts")
+        .select("engagement_total, likes_count, comments_count")
+        .eq("entity_id", brandEntityId!)
+        .order("posted_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      if (!data?.length) return null;
+      const totalEng = data.reduce((s, p) => s + (p.engagement_total ?? (p.likes_count ?? 0) + (p.comments_count ?? 0)), 0);
+      return Math.round(totalEng / data.length);
+    },
+    enabled: !!brandEntityId,
+  });
+
+  const kpiCards = [
+    { label: "Seguidores", value: latestProfile?.followers_count, icon: Instagram },
+    { label: "Seguindo", value: latestProfile?.following_count, icon: Instagram },
+    { label: "Posts", value: latestProfile?.posts_count, icon: Instagram },
+    { label: "Eng. Médio", value: avgEngagement, icon: TrendingUp },
+  ].filter((k) => k.value != null);
+
   const objIds = objectives?.map((o) => o.id) ?? [];
   const { data: keyResults } = useQuery({
     queryKey: ["okr-key-results", objIds],
@@ -321,6 +389,26 @@ export default function ProjectOKRs() {
           </div>
         )}
       </div>
+
+      {/* API KPIs */}
+      {kpiCards.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">KPIs da API (tempo real)</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {kpiCards.map((kpi) => (
+              <Card key={kpi.label}>
+                <CardContent className="p-3 text-center">
+                  <kpi.icon className="h-4 w-4 text-primary mx-auto mb-1" />
+                  <p className="text-lg font-bold text-foreground font-mono">
+                    {typeof kpi.value === "number" ? kpi.value.toLocaleString("pt-BR") : kpi.value}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">{kpi.label}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Objectives */}
       {objectives && objectives.length === 0 && (

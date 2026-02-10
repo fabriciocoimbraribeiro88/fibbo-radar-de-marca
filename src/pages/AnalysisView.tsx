@@ -15,6 +15,7 @@ import {
   AlertCircle,
   FileText,
   ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -85,23 +86,23 @@ export default function AnalysisView() {
   const isRunning = ["analyzing", "agents_running", "synthesizing", "collecting_data"].includes(
     analysis?.status ?? ""
   );
-  const isReview = analysis?.status === "review" || analysis?.status === "approved";
+  const isReview = analysis?.status === "review" || analysis?.status === "approved" || analysis?.status === "rejected";
 
   const completedCount = sections?.filter((s) => s.status === "completed").length ?? 0;
   const totalCount = sections?.length ?? 1;
   const progressPct = Math.round((completedCount / totalCount) * 100);
 
-  const handleApprove = async () => {
+  const handleStatusUpdate = async (newStatus: "approved" | "rejected") => {
     const { error } = await supabase
       .from("analyses")
-      .update({ status: "approved" })
+      .update({ status: newStatus })
       .eq("id", analysisId!);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       await queryClient.invalidateQueries({ queryKey: ["analysis", analysisId] });
       await queryClient.invalidateQueries({ queryKey: ["project-analyses", projectId] });
-      toast({ title: "Análise aprovada!" });
+      toast({ title: newStatus === "approved" ? "Análise aprovada!" : "Análise reprovada!" });
       navigate(`/projects/${projectId}/analyses`);
     }
   };
@@ -120,11 +121,17 @@ export default function AnalysisView() {
                 `${new Date(analysis.period_start).toLocaleDateString("pt-BR")} – ${new Date(analysis.period_end!).toLocaleDateString("pt-BR")}`}
             </p>
           </div>
-          {isReview && analysis?.status !== "approved" && (
-            <Button onClick={handleApprove}>
-              <ThumbsUp className="mr-2 h-4 w-4" />
-              Aprovar
-            </Button>
+          {isReview && analysis?.status !== "approved" && analysis?.status !== "rejected" && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleStatusUpdate("rejected")}>
+                <ThumbsDown className="mr-2 h-4 w-4" />
+                Reprovar
+              </Button>
+              <Button onClick={() => handleStatusUpdate("approved")}>
+                <ThumbsUp className="mr-2 h-4 w-4" />
+                Aprovar
+              </Button>
+            </div>
           )}
         </div>
       </div>
