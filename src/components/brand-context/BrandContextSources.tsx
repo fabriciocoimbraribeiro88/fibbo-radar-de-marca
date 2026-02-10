@@ -96,10 +96,11 @@ export default function BrandContextSources({ projectId, onFillWithAI, isFilling
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const filePath = `${projectId}/${Date.now()}_${file.name}`;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = `${projectId}/${Date.now()}_${safeName}`;
     const { error: uploadErr } = await supabase.storage
       .from("brand-documents")
-      .upload(filePath, file);
+      .upload(filePath, file, { contentType: file.type });
 
     if (uploadErr) {
       toast.error("Erro ao enviar arquivo: " + uploadErr.message);
