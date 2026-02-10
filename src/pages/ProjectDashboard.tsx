@@ -70,7 +70,10 @@ export default function ProjectDashboard() {
 
   const visibleMetrics = useMemo(() => {
     if (!allMetrics.length) return [];
-    if (sourceMode === "brand_only") return allMetrics.filter((m) => m.role === "brand");
+    if (sourceMode === "brand_only") {
+      if (selectedEntityIds.size > 0) return allMetrics.filter((m) => selectedEntityIds.has(m.entityId));
+      return allMetrics.filter((m) => m.role === "brand");
+    }
     if (sourceMode === "brand_vs_all") return allMetrics;
     if (sourceMode === "brand_vs_competitors") return allMetrics.filter((m) => m.role === "brand" || m.role === "competitor");
     if (sourceMode === "brand_vs_influencers") return allMetrics.filter((m) => m.role === "brand" || m.role === "influencer");
