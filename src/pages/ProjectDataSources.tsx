@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -14,6 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   Instagram,
@@ -27,6 +48,8 @@ import {
   Clock,
   Play,
   Crown,
+  Trash2,
+  Settings2,
 } from "lucide-react";
 
 const SOURCE_ICONS: Record<string, typeof Instagram> = {
@@ -97,11 +120,38 @@ function FetchProgressBar({ active }: { active: boolean }) {
   );
 }
 
+interface CollectOptions {
+  mode: "count" | "date";
+  postsCount: number;
+  dateFrom: string;
+  dateTo: string;
+  collectAds: boolean;
+  collectSeo: boolean;
+}
+
+const defaultCollectOptions: CollectOptions = {
+  mode: "count",
+  postsCount: 30,
+  dateFrom: "",
+  dateTo: "",
+  collectAds: false,
+  collectSeo: false,
+};
+
 export default function ProjectDataSources() {
   const { id: projectId } = useParams<{ id: string }>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [executingId, setExecutingId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ peId: string; name: string } | null>(null);
+
+  // Collection options dialog
+  const [collectDialog, setCollectDialog] = useState<{
+    entityId: string;
+    handle: string;
+    isBrand?: boolean;
+  } | null>(null);
+  const [collectOpts, setCollectOpts] = useState<CollectOptions>(defaultCollectOptions);
 
   // Fetch project for brand info
   const { data: project } = useQuery({
@@ -180,12 +230,56 @@ export default function ProjectDataSources() {
     },
   });
 
-  const executeNow = async (entityId: string, handle: string) => {
+  const removeEntity = useMutation({
+    mutationFn: async (peId: string) => {
+      const { error } = await supabase
+        .from("project_entities")
+        .delete()
+        .eq("id", peId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-entities", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["data-fetch-configs"] });
+      toast({ title: "Fonte removida!" });
+      setRemoveTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const openCollectDialog = (entityId: string, handle: string, isBrand?: boolean) => {
+    setCollectOpts({ ...defaultCollectOptions });
+    setCollectDialog({ entityId, handle, isBrand });
+  };
+
+  const executeWithOptions = async () => {
+    if (!collectDialog) return;
+    const { entityId, handle, isBrand } = collectDialog;
+    setCollectDialog(null);
+
+    if (isBrand) {
+      await executeBrand(handle, collectOpts);
+    } else {
+      await executeNow(entityId, handle, collectOpts);
+    }
+  };
+
+  const executeNow = async (entityId: string, handle: string, opts: CollectOptions) => {
     setExecutingId(entityId);
     try {
-      const { data, error } = await supabase.functions.invoke("fetch-instagram", {
-        body: { entity_id: entityId },
-      });
+      const body: Record<string, unknown> = { entity_id: entityId };
+      if (opts.mode === "count") {
+        body.results_limit = opts.postsCount;
+      } else {
+        body.date_from = opts.dateFrom;
+        body.date_to = opts.dateTo;
+      }
+      body.collect_ads = opts.collectAds;
+      body.collect_seo = opts.collectSeo;
+
+      const { data, error } = await supabase.functions.invoke("fetch-instagram", { body });
       if (error) throw error;
       if (data?.success) {
         toast({
@@ -204,29 +298,24 @@ export default function ProjectDataSources() {
     }
   };
 
-  const executeBrand = async () => {
-    if (!project?.instagram_handle || !projectId) return;
-    const handle = project.instagram_handle.replace("@", "");
-
-    // Find or create a monitored_entity for the brand
+  const executeBrand = async (handle: string, opts: CollectOptions) => {
+    if (!projectId) return;
+    const cleanHandle = handle.replace("@", "");
     setExecutingId("brand");
     try {
-      // Check if entity already linked
       const brandEntity = entities?.find(
-        (pe) => pe.monitored_entities?.instagram_handle?.replace("@", "") === handle
+        (pe) => pe.monitored_entities?.instagram_handle?.replace("@", "") === cleanHandle
       );
 
       let entityId: string;
-
       if (brandEntity) {
         entityId = brandEntity.entity_id;
       } else {
-        // Create entity
         const { data: newEntity, error: entErr } = await supabase
           .from("monitored_entities")
           .insert({
-            name: project.brand_name,
-            instagram_handle: handle,
+            name: project?.brand_name ?? "Marca",
+            instagram_handle: cleanHandle,
             type: "competitor" as const,
           })
           .select("id")
@@ -234,7 +323,6 @@ export default function ProjectDataSources() {
         if (entErr) throw entErr;
         entityId = newEntity.id;
 
-        // Link to project
         const { error: linkErr } = await supabase
           .from("project_entities")
           .insert({
@@ -245,7 +333,7 @@ export default function ProjectDataSources() {
         if (linkErr) throw linkErr;
       }
 
-      await executeNow(entityId, handle);
+      await executeNow(entityId, cleanHandle, opts);
       queryClient.invalidateQueries({ queryKey: ["project-entities"] });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -273,6 +361,7 @@ export default function ProjectDataSources() {
 
     if (entityConfigs.length === 0 && e.instagram_handle) {
       return [{
+        peId: pe.id,
         entityId: e.id,
         entityName: e.name,
         handle: e.instagram_handle,
@@ -282,6 +371,7 @@ export default function ProjectDataSources() {
     }
 
     return entityConfigs.map((c) => ({
+      peId: pe.id,
       entityId: e.id,
       entityName: e.name,
       handle: e.instagram_handle,
@@ -330,14 +420,14 @@ export default function ProjectDataSources() {
                   variant="outline"
                   size="sm"
                   disabled={executingId === "brand"}
-                  onClick={executeBrand}
+                  onClick={() => openCollectDialog("brand", brandHandle, true)}
                 >
                   {executingId === "brand" ? (
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Play className="mr-1.5 h-3.5 w-3.5" />
+                    <Settings2 className="mr-1.5 h-3.5 w-3.5" />
                   )}
-                  Executar
+                  Coletar
                 </Button>
               </div>
               <FetchProgressBar active={executingId === "brand"} />
@@ -384,7 +474,7 @@ export default function ProjectDataSources() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       {row.config && (
                         <Select
                           value={row.config.schedule ?? "manual"}
@@ -430,22 +520,30 @@ export default function ProjectDataSources() {
                           variant="outline"
                           size="sm"
                           disabled={isExecuting}
-                          onClick={() => executeNow(row.entityId, row.handle!)}
+                          onClick={() => openCollectDialog(row.entityId, row.handle!, false)}
                         >
                           {isExecuting ? (
                             <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <Play className="mr-1.5 h-3.5 w-3.5" />
+                            <Settings2 className="mr-1.5 h-3.5 w-3.5" />
                           )}
-                          Executar
+                          Coletar
                         </Button>
                       )}
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => setRemoveTarget({ peId: row.peId, name: row.entityName })}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
 
                   <FetchProgressBar active={isExecuting} />
 
-                  {/* Recent logs (only when not executing) */}
                   {!isExecuting && recentLogs.length > 0 && (
                     <div className="mt-3 border-t border-border pt-3">
                       <p className="text-[10px] font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
@@ -485,6 +583,150 @@ export default function ProjectDataSources() {
           })
         )}
       </div>
+
+      {/* Collection options dialog */}
+      <Dialog open={!!collectDialog} onOpenChange={(open) => !open && setCollectDialog(null)}>
+        <DialogContent className="bg-card sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              Opções de Coleta
+              {collectDialog && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  @{collectDialog.handle.replace("@", "")}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* Posts mode */}
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Posts do Instagram
+              </Label>
+              <RadioGroup
+                value={collectOpts.mode}
+                onValueChange={(v) => setCollectOpts((o) => ({ ...o, mode: v as "count" | "date" }))}
+                className="space-y-2"
+              >
+                <label className="flex items-center gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                  <RadioGroupItem value="count" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">Por quantidade</p>
+                    <p className="text-xs text-muted-foreground">Coletar os N posts mais recentes</p>
+                  </div>
+                  {collectOpts.mode === "count" && (
+                    <Input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={collectOpts.postsCount}
+                      onChange={(e) => setCollectOpts((o) => ({ ...o, postsCount: Number(e.target.value) || 30 }))}
+                      className="w-20 h-8 text-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
+                </label>
+                <label className="flex items-center gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                  <RadioGroupItem value="date" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">Por período</p>
+                    <p className="text-xs text-muted-foreground">Coletar posts dentro de um intervalo de datas</p>
+                  </div>
+                </label>
+              </RadioGroup>
+
+              {collectOpts.mode === "date" && (
+                <div className="grid grid-cols-2 gap-3 pl-8">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">De</Label>
+                    <Input
+                      type="date"
+                      value={collectOpts.dateFrom}
+                      onChange={(e) => setCollectOpts((o) => ({ ...o, dateFrom: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Até</Label>
+                    <Input
+                      type="date"
+                      value={collectOpts.dateTo}
+                      onChange={(e) => setCollectOpts((o) => ({ ...o, dateTo: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Additional sources */}
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Fontes adicionais
+              </Label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Biblioteca de Anúncios</p>
+                      <p className="text-xs text-muted-foreground">Meta Ads Library</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={collectOpts.collectAds}
+                    onCheckedChange={(v) => setCollectOpts((o) => ({ ...o, collectAds: v }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">SEO / Keywords</p>
+                      <p className="text-xs text-muted-foreground">Posicionamento orgânico</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={collectOpts.collectSeo}
+                    onCheckedChange={(v) => setCollectOpts((o) => ({ ...o, collectSeo: v }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCollectDialog(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={executeWithOptions}>
+              <Play className="mr-1.5 h-3.5 w-3.5" />
+              Iniciar Coleta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove confirmation */}
+      <AlertDialog open={!!removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)}>
+        <AlertDialogContent className="bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover fonte de dados</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>{removeTarget?.name}</strong> do projeto?
+              Os dados já coletados serão mantidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => removeTarget && removeEntity.mutate(removeTarget.peId)}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
