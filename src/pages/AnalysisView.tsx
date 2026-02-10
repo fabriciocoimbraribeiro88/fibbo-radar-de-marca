@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,6 +45,7 @@ export default function AnalysisView() {
   const { id: projectId, analysisId } = useParams<{ id: string; analysisId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: analysis } = useQuery({
     queryKey: ["analysis", analysisId],
@@ -98,7 +99,10 @@ export default function AnalysisView() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
+      await queryClient.invalidateQueries({ queryKey: ["analysis", analysisId] });
+      await queryClient.invalidateQueries({ queryKey: ["project-analyses", projectId] });
       toast({ title: "Análise aprovada!" });
+      navigate(`/projects/${projectId}/analyses`);
     }
   };
 
