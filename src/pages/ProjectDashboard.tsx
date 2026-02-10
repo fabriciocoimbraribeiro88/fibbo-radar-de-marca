@@ -4,7 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, Users, Eye, Zap, Heart, MessageCircle, Instagram, TrendingUp, Flame, Percent } from "lucide-react";
+import { BarChart3, Users, Eye, Zap, Heart, MessageCircle, Instagram, TrendingUp, Flame, Percent, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   useProjectDashboardData,
@@ -50,7 +52,12 @@ function formatNum(n: number): string {
 
 export default function ProjectDashboard() {
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading } = useProjectDashboardData(id);
+  const queryClient = useQueryClient();
+  const { data, isLoading, isFetching } = useProjectDashboardData(id);
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["project-dashboard-full", id] });
+  };
 
   const defaultRange = getPresetRange("this_month");
   const [period, setPeriod] = useState<PeriodRange>({ ...defaultRange, preset: "this_month" });
@@ -140,6 +147,16 @@ export default function ProjectDashboard() {
           <p className="text-sm text-muted-foreground mt-0.5">{data.projectName}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="gap-1.5 text-xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
           <Badge variant="secondary" className="text-xs gap-1">
             <Users className="h-3 w-3" />
             {visibleMetrics.length} entidades
