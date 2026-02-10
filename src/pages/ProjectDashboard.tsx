@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   useProjectDashboardData,
-  useLimitedPosts,
+  useFilteredAndLimitedPosts,
   useEntityMetrics,
   type EntityMetrics,
   type PostData,
@@ -18,6 +18,8 @@ import {
 } from "@/hooks/useProjectDashboardData";
 
 import DashboardFilters, {
+  getPresetRange,
+  type PeriodRange,
   type SourceMode,
 } from "@/components/dashboard/DashboardFilters";
 import type { CategoryKey } from "@/components/dashboard/FilterBar";
@@ -58,12 +60,14 @@ export default function ProjectDashboard() {
     queryClient.invalidateQueries({ queryKey: ["project-dashboard-full", id] });
   };
 
+  const defaultRange = getPresetRange("this_month");
+  const [period, setPeriod] = useState<PeriodRange>({ ...defaultRange, preset: "this_month" });
   const [postLimit, setPostLimit] = useState<PostLimit>("all");
   const [sourceMode, setSourceMode] = useState<SourceMode>("brand_only");
   const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set());
   const [selectedEntityId, setSelectedEntityId] = useState("");
 
-  const filteredPosts = useLimitedPosts(data?.posts ?? [], postLimit);
+  const filteredPosts = useFilteredAndLimitedPosts(data?.posts ?? [], period, postLimit);
   const allMetrics = useEntityMetrics(filteredPosts, data?.profiles ?? [], data?.entities ?? []);
 
   const visibleMetrics = useMemo(() => {
@@ -171,6 +175,8 @@ export default function ProjectDashboard() {
 
       {/* Filters */}
       <DashboardFilters
+        period={period}
+        onPeriodChange={setPeriod}
         postLimit={postLimit}
         onPostLimitChange={setPostLimit}
         sourceMode={sourceMode}

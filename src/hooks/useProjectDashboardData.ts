@@ -150,18 +150,30 @@ export function useProjectDashboardData(projectId: string | undefined) {
 
 /* ── Derived metrics ── */
 
+export interface DateRange {
+  from: Date;
+  to: Date;
+}
+
 export type PostLimit = number | "all";
 
-export function useLimitedPosts(posts: PostData[], limit: PostLimit) {
+export function useFilteredAndLimitedPosts(posts: PostData[], dateRange: DateRange, limit: PostLimit) {
   return useMemo(() => {
     if (!posts?.length) return [];
-    const sorted = [...posts].sort((a, b) => {
+    // First filter by date
+    const filtered = posts.filter((p) => {
+      if (!p.posted_at) return false;
+      const d = new Date(p.posted_at);
+      return d >= dateRange.from && d <= dateRange.to;
+    });
+    // Then sort desc and limit
+    const sorted = [...filtered].sort((a, b) => {
       const da = a.posted_at ? new Date(a.posted_at).getTime() : 0;
       const db = b.posted_at ? new Date(b.posted_at).getTime() : 0;
       return db - da;
     });
     return limit === "all" ? sorted : sorted.slice(0, limit);
-  }, [posts, limit]);
+  }, [posts, dateRange, limit]);
 }
 
 export interface EntityMetrics {
