@@ -1,96 +1,41 @@
 
-# Melhorias no Dashboard — Filtros, Métricas Virais, Top Posts e Novas Funcionalidades
 
-## 1. Novos modos de fonte no DashboardFilters
+## Plano: Remover filtros de periodo, limites e imagens dos tops
 
-**Arquivo:** `src/components/dashboard/DashboardFilters.tsx`
+### Resumo
+Os dados coletados no Apify ja estao no banco (200 posts por entidade, coletados com limite antigo). O dashboard vai ser simplificado para mostrar todos os posts ou os ultimos X posts, sem filtro de periodo. As imagens dos top posts serao removidas.
 
-Atualmente existem apenas 3 modos: `brand_only`, `brand_vs_all`, `brand_vs_selected`. Vamos expandir o tipo `SourceMode` e adicionar pills para cada categoria:
+### Problema dos dados
+- `tallisgomes` tem 200 posts no banco (de 5.649 disponiveis no Apify)
+- `layerupbr` tem 200 posts no banco (de 2.142 disponiveis)
+- Isso ocorreu porque a coleta anterior usou `results_limit: 200`
+- **Sera necessario re-coletar esses perfis** usando "Todos os Posts" na tela de coleta para que os dados completos entrem no banco
 
-- Apenas Marca
-- Marca vs Todos
-- Marca vs Concorrentes (novo)
-- Marca vs Influencers (novo)
-- Marca vs Inspiração (novo)
+### Mudancas
 
-Abaixo dessas pills, manter as pills individuais de cada entidade (para seleção granular).
+**1. `src/components/dashboard/DashboardFilters.tsx`**
+- Remover toda a Row 1 (botoes de periodo, popover de datas customizadas)
+- Remover tipos/funcoes: `PeriodPreset`, `PeriodRange`, `getPresetRange`, `PRESETS`
+- Adicionar nova Row 1 com pills de quantidade: "Todos" | "Ultimos 50" | "Ultimos 100" | "Ultimos 200" | "Ultimos 500"
+- Exportar novo tipo `PostLimit` (number | "all")
+- Remover props `period`/`onPeriodChange`, adicionar `postLimit`/`onPostLimitChange`
 
-**Tipo atualizado:**
-```typescript
-export type SourceMode = "brand_only" | "brand_vs_all" | "brand_vs_competitors" | "brand_vs_influencers" | "brand_vs_inspiration" | "brand_vs_selected";
-```
+**2. `src/hooks/useProjectDashboardData.ts`**
+- Remover `.limit(3000)` da query de posts (trazer todos)
+- Remover `useFilteredPosts` e tipo `DateRange`
+- Adicionar `useLimitedPosts(posts, limit)` que ordena por `posted_at` desc e pega os N mais recentes (ou todos)
 
-## 2. Atualizar lógica de filtragem no ProjectDashboard
+**3. `src/pages/ProjectDashboard.tsx`**
+- Remover state `period` e chamada `useFilteredPosts`
+- Adicionar state `postLimit` com default `"all"`
+- Usar `useLimitedPosts` no lugar de `useFilteredPosts`
+- Atualizar props passadas ao `DashboardFilters`
 
-**Arquivo:** `src/pages/ProjectDashboard.tsx`
+**4. `src/components/dashboard/TopPostsTable.tsx`**
+- Remover coluna "Imagem" do header
+- Remover celula com thumbnail/placeholder do body
+- Remover import de `Image as ImageIcon`
 
-No `useMemo` de `visibleMetrics`, adicionar os novos modos:
+### Apos implementar
+- Sera necessario re-coletar `tallisgomes` e `layerupbr` com o modo "Todos os Posts" para que os 5.649 e 2.142 posts entrem no banco
 
-```text
-brand_vs_competitors -> brand + role === "competitor"
-brand_vs_influencers -> brand + role === "influencer"  
-brand_vs_inspiration -> brand + role === "inspiration"
-```
-
-## 3. Métricas virais — Hits e Taxa de Viral
-
-**Arquivo:** `src/hooks/useProjectDashboardData.ts`
-
-Adicionar campos ao `EntityMetrics`:
-- `viralHits`: Posts com engajamento acima de 2x a média da entidade
-- `viralRate`: % de posts virais em relacao ao total
-
-**Arquivo:** `src/pages/ProjectDashboard.tsx`
-
-Adicionar 2 novos big numbers na Visao Geral (total 8 cards, grid ajustado para `lg:grid-cols-4`):
-- Total de Hits (posts virais)
-- Taxa de Viral (%)
-
-Na tab Individual, adicionar os mesmos 2 campos nos big numbers individuais (total 6 cards).
-
-## 4. Top 10 Melhores e Piores Posts — Tab Individual
-
-**Novo componente:** `src/components/dashboard/TopPostsTable.tsx`
-
-Uma tabela/grid mostrando:
-- Thumbnail (se disponivel via `thumbnail_url` — campo existe no DB mas nao esta sendo buscado)
-- Data de publicacao
-- Tipo (Image/Video/Sidecar/Reel)
-- Likes, Comments, Views
-- Engagement total
-- Trecho da caption (primeiros 80 caracteres)
-
-Recebe props: `posts: PostData[]`, `entityId: string`, `mode: "best" | "worst"`, `limit: number`
-
-Os posts sao ordenados por `engagement_total` (desc para best, asc para worst).
-
-**Arquivo:** `src/hooks/useProjectDashboardData.ts`
-
-Atualizar a query de `instagram_posts` para incluir `thumbnail_url` e `post_url` no select e no tipo `PostData`.
-
-**Arquivo:** `src/pages/ProjectDashboard.tsx`
-
-Na tab Individual, adicionar uma nova secao apos os graficos existentes:
-- Linha com 2 cards lado a lado: Top 10 Melhores | Top 10 Piores
-
-## 5. Sugestoes de funcionalidades adicionais para o Dashboard
-
-Alem das mudancas solicitadas, posso incluir:
-
-- **Melhor dia/horario para postar**: Heatmap de engajamento medio por dia da semana e hora do dia (usando `posted_at`).
-- **Crescimento de seguidores %**: Variacao percentual entre o primeiro e ultimo snapshot de seguidores no periodo.
-- **Frequencia de postagem**: Posts por semana medio de cada entidade (barra comparativa).
-- **Engajamento por formato comparativo**: Na tab comparativa, um chart mostrando qual formato performa melhor para cada entidade.
-
-Essas 4 sugestoes ficam como opcoes futuras — vou implementar apenas as 4 mudancas principais agora (filtros, virais, top posts, thumbnail no hook).
-
----
-
-## Resumo tecnico das mudancas
-
-| Arquivo | Mudanca |
-|---|---|
-| `src/components/dashboard/DashboardFilters.tsx` | Novos SourceMode pills (vs concorrentes, vs influencers, vs inspiracao) + pills individuais abaixo |
-| `src/hooks/useProjectDashboardData.ts` | Adicionar `thumbnail_url`, `post_url` ao PostData + `viralHits`, `viralRate` ao EntityMetrics |
-| `src/pages/ProjectDashboard.tsx` | Novos modos no visibleMetrics, 2 novos big numbers (hits/viral), top posts na tab individual |
-| `src/components/dashboard/TopPostsTable.tsx` | Novo componente — tabela de top 10 melhores/piores posts |
