@@ -1,129 +1,98 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, BarChart3, Megaphone, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  LineChart, Line, Legend,
-} from "recharts";
-import { useMemo, useState, useCallback } from "react";
-import FilterBar, { type CategoryKey } from "@/components/dashboard/FilterBar";
-import EntityCard, { type EntityMetrics } from "@/components/dashboard/EntityCard";
-import SectionHeader from "@/components/dashboard/SectionHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useMemo, useCallback } from "react";
+import DashboardFilters, {
+  type PeriodRange, type SourceMode, type EntityOption, getPresetRange,
+} from "@/components/dashboard/DashboardFilters";
+import SocialTab, { type PostData } from "@/components/dashboard/SocialTab";
 
-/* ── helpers ── */
-function fmt(n: number | null | undefined): string {
-  if (n == null) return "0";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("pt-BR");
-}
-
-const CATEGORY_COLORS: Record<CategoryKey, string> = {
-  brand: "hsl(18 79% 50%)",
-  competitor: "hsl(239 84% 67%)",
-  influencer: "hsl(330 81% 60%)",
-  inspiration: "hsl(160 84% 39%)",
+/* ── initial period ── */
+const initialPeriod: PeriodRange = {
+  ...getPresetRange("this_year"),
+  preset: "this_year",
 };
-
-const CATEGORY_LABELS: Record<CategoryKey, string> = {
-  brand: "Marca",
-  competitor: "Concorrentes",
-  influencer: "Influencers",
-  inspiration: "Inspirações",
-};
-
-const SECTION_ORDER: CategoryKey[] = ["brand", "competitor", "influencer", "inspiration"];
 
 /* ── data hook ── */
-function useProjectDashboard(projectId: string | undefined) {
+function useDashboardData(projectId: string | undefined) {
   return useQuery({
-    queryKey: ["project-dashboard", projectId],
+    queryKey: ["project-dashboard-v2", projectId],
     queryFn: async () => {
       const { data: project } = await supabase
         .from("projects")
-        .select("instagram_handle")
+        .select("instagram_handle, brand_name")
         .eq("id", projectId!)
         .single();
 
-      const { data: projectEntities, error: peErr } = await supabase
+      const { data: projectEntities } = await supabase
         .from("project_entities")
         .select("entity_id, entity_role, monitored_entities(id, name, instagram_handle, type)")
         .eq("project_id", projectId!);
 
-      if (peErr) throw peErr;
-      if (!projectEntities?.length) return { entities: [], followersTimeline: [], brandHandle: null };
-
-      const entityIds = projectEntities.map((pe) => pe.entity_id);
-
-      const [{ data: posts }, { data: profiles }, { data: allProfiles }] = await Promise.all([
-        supabase.from("instagram_posts")
-          .select("entity_id, likes_count, comments_count, views_count, engagement_total")
-          .in("entity_id", entityIds),
-        supabase.from("instagram_profiles")
-          .select("entity_id, followers_count, following_count, snapshot_date")
-          .in("entity_id", entityIds)
-          .order("snapshot_date", { ascending: false }),
-        supabase.from("instagram_profiles")
-          .select("entity_id, followers_count, snapshot_date")
-          .in("entity_id", entityIds)
-          .order("snapshot_date", { ascending: true }),
-      ]);
+      if (!projectEntities?.length) return { entities: [], posts: [], profiles: [], brandEntityId: null };
 
       const brandHandle = project?.instagram_handle?.replace("@", "").toLowerCase() ?? null;
-      const metricsMap = new Map<string, EntityMetrics>();
+      const entityIds = projectEntities.map((pe) => pe.entity_id);
 
+      // Find brand entity
+      let brandEntityId: string | null = null;
+      const entityMap: EntityOption[] = [];
       for (const pe of projectEntities) {
         const entity = pe.monitored_entities as unknown as {
           id: string; name: string; instagram_handle: string | null; type: string;
         };
         if (!entity) continue;
-
-        const entityPosts = (posts ?? []).filter((p) => p.entity_id === pe.entity_id);
-        const latestProfile = (profiles ?? []).find((p) => p.entity_id === pe.entity_id);
-        const totalLikes = entityPosts.reduce((s, p) => s + (p.likes_count ?? 0), 0);
-        const totalComments = entityPosts.reduce((s, p) => s + (p.comments_count ?? 0), 0);
-        const totalViews = entityPosts.reduce((s, p) => s + (p.views_count ?? 0), 0);
-        const totalEng = entityPosts.reduce((s, p) => s + (p.engagement_total ?? 0), 0);
-        const postsWithEng = entityPosts.filter((p) => p.engagement_total != null);
-
-        // Determine if this entity is the brand
         const handleNorm = entity.instagram_handle?.replace("@", "").toLowerCase() ?? "";
-        const isBrand = brandHandle && handleNorm === brandHandle;
-
-        metricsMap.set(pe.entity_id, {
-          entity_id: pe.entity_id,
-          entity_name: entity.name,
-          instagram_handle: entity.instagram_handle,
-          entity_type: isBrand ? "brand" : pe.entity_role,
-          posts_count: entityPosts.length,
-          total_likes: totalLikes,
-          total_comments: totalComments,
-          total_views: totalViews,
-          total_engagement: totalEng,
-          avg_engagement: postsWithEng.length > 0 ? Math.round(totalEng / postsWithEng.length) : 0,
-          followers: latestProfile?.followers_count ?? null,
-          following: latestProfile?.following_count ?? null,
+        if (brandHandle && handleNorm === brandHandle) brandEntityId = pe.entity_id;
+        entityMap.push({
+          id: pe.entity_id,
+          name: entity.name,
+          handle: entity.instagram_handle,
+          role: pe.entity_role,
         });
       }
 
-      // Build followers timeline
-      const entityNameMap = new Map<string, string>();
-      for (const [, m] of metricsMap) entityNameMap.set(m.entity_id, m.entity_name);
+      const [{ data: posts }, { data: profiles }] = await Promise.all([
+        supabase.from("instagram_posts")
+          .select("entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at")
+          .in("entity_id", entityIds)
+          .order("posted_at", { ascending: true }),
+        supabase.from("instagram_profiles")
+          .select("entity_id, followers_count, snapshot_date")
+          .in("entity_id", entityIds)
+          .order("snapshot_date", { ascending: false }),
+      ]);
 
-      const timelineMap = new Map<string, Record<string, number | string>>();
-      for (const p of allProfiles ?? []) {
-        const name = entityNameMap.get(p.entity_id ?? "") ?? "?";
-        if (!timelineMap.has(p.snapshot_date)) timelineMap.set(p.snapshot_date, { date: p.snapshot_date });
-        timelineMap.get(p.snapshot_date)![name] = p.followers_count ?? 0;
+      // Build entity name map & latest followers
+      const nameMap: Record<string, string> = {};
+      const followersMap: Record<string, number> = {};
+      for (const eo of entityMap) {
+        nameMap[eo.id] = eo.name;
+      }
+      for (const p of profiles ?? []) {
+        if (p.entity_id && !followersMap[p.entity_id]) {
+          followersMap[p.entity_id] = p.followers_count ?? 0;
+        }
       }
 
-      return {
-        entities: Array.from(metricsMap.values()).sort((a, b) => b.total_engagement - a.total_engagement),
-        followersTimeline: Array.from(timelineMap.values()).sort((a, b) => String(a.date).localeCompare(String(b.date))),
-        brandHandle,
-      };
+      // Enrich posts with entity name
+      const enrichedPosts: PostData[] = (posts ?? []).map((p) => ({
+        entity_id: p.entity_id ?? "",
+        entity_name: nameMap[p.entity_id ?? ""] ?? "?",
+        post_type: p.post_type,
+        likes_count: p.likes_count ?? 0,
+        comments_count: p.comments_count ?? 0,
+        views_count: p.views_count ?? 0,
+        engagement_total: p.engagement_total ?? 0,
+        hashtags: p.hashtags,
+        posted_at: p.posted_at,
+        followers: followersMap[p.entity_id ?? ""] ?? null,
+      }));
+
+      return { entities: entityMap, posts: enrichedPosts, brandEntityId };
     },
     enabled: !!projectId,
   });
@@ -132,112 +101,54 @@ function useProjectDashboard(projectId: string | undefined) {
 /* ── main component ── */
 export default function ProjectDashboard() {
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading } = useProjectDashboard(id);
+  const { data, isLoading } = useDashboardData(id);
 
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [selectedEntities, setSelectedEntities] = useState<Set<string>>(new Set());
+  const [period, setPeriod] = useState<PeriodRange>(initialPeriod);
+  const [sourceMode, setSourceMode] = useState<SourceMode>("brand_only");
+  const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("social");
 
-  const isAllSelected = selectedCategories.size === 0 && selectedEntities.size === 0;
-
-  const onSelectAll = useCallback(() => {
-    setSelectedCategories(new Set());
-    setSelectedEntities(new Set());
-  }, []);
-
-  const onToggleCategory = useCallback((key: CategoryKey) => {
-    setSelectedCategories((prev) => {
+  const onToggleEntity = useCallback((entityId: string) => {
+    setSelectedEntityIds((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
+      if (next.has(entityId)) next.delete(entityId); else next.add(entityId);
       return next;
     });
   }, []);
 
-  const onToggleEntity = useCallback((id: string) => {
-    setSelectedEntities((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+  const allPosts = data?.posts ?? [];
+  const brandEntityId = data?.brandEntityId ?? null;
+
+  // Filter posts by period
+  const periodPosts = useMemo(() => {
+    return allPosts.filter((p) => {
+      if (!p.posted_at) return true; // include posts without date
+      const d = new Date(p.posted_at);
+      return d >= period.from && d <= period.to;
     });
-  }, []);
+  }, [allPosts, period]);
 
-  /* Derived data */
-  const allEntities = data?.entities ?? [];
-
-  const categories = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const e of allEntities) {
-      counts[e.entity_type] = (counts[e.entity_type] || 0) + 1;
+  // Filter posts by source mode
+  const filteredPosts = useMemo(() => {
+    if (sourceMode === "brand_only") {
+      return periodPosts.filter((p) => p.entity_id === brandEntityId);
     }
-    return SECTION_ORDER
-      .filter((k) => (counts[k] ?? 0) > 0)
-      .map((k) => ({ key: k, label: CATEGORY_LABELS[k], count: counts[k] ?? 0 }));
-  }, [allEntities]);
-
-  const entityPills = useMemo(
-    () => allEntities.map((e) => ({ id: e.entity_id, name: e.entity_name, category: e.entity_type as CategoryKey })),
-    [allEntities]
-  );
-
-  const filteredEntities = useMemo(() => {
-    if (isAllSelected) return allEntities;
-    return allEntities.filter((e) => {
-      if (selectedEntities.has(e.entity_id)) return true;
-      if (selectedCategories.has(e.entity_type)) return true;
-      return false;
-    });
-  }, [allEntities, selectedCategories, selectedEntities, isAllSelected]);
-
-  const groupedEntities = useMemo(() => {
-    const groups: Partial<Record<CategoryKey, EntityMetrics[]>> = {};
-    for (const e of filteredEntities) {
-      const cat = e.entity_type as CategoryKey;
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat]!.push(e);
+    if (sourceMode === "brand_vs_all") {
+      return periodPosts;
     }
-    return groups;
-  }, [filteredEntities]);
+    // brand_vs_selected
+    return periodPosts.filter(
+      (p) => p.entity_id === brandEntityId || selectedEntityIds.has(p.entity_id)
+    );
+  }, [periodPosts, sourceMode, brandEntityId, selectedEntityIds]);
 
-  const comparisonData = useMemo(
-    () => filteredEntities.map((e) => ({
-      name: e.entity_name.length > 14 ? e.entity_name.slice(0, 14) + "…" : e.entity_name,
-      Curtidas: e.total_likes,
-      Comentários: e.total_comments,
-      Views: e.total_views,
-      category: e.entity_type as CategoryKey,
-    })),
-    [filteredEntities]
-  );
+  const isComparative = sourceMode !== "brand_only";
 
-  const filteredEntityNames = useMemo(() => new Set(filteredEntities.map((e) => e.entity_name)), [filteredEntities]);
+  const activeEntityCount = useMemo(() => {
+    const ids = new Set(filteredPosts.map((p) => p.entity_id));
+    return ids.size;
+  }, [filteredPosts]);
 
-  const formattedTimeline = useMemo(() => {
-    if (!data?.followersTimeline) return [];
-    return data.followersTimeline.map((d) => ({
-      ...d,
-      date: new Date(d.date as string).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
-    }));
-  }, [data]);
-
-  const timelineEntityNames = useMemo(() => {
-    if (!formattedTimeline.length) return [];
-    const keys = new Set<string>();
-    for (const row of formattedTimeline) {
-      for (const k of Object.keys(row)) {
-        if (k !== "date" && filteredEntityNames.has(k)) keys.add(k);
-      }
-    }
-    return Array.from(keys);
-  }, [formattedTimeline, filteredEntityNames]);
-
-  const entityColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const e of allEntities) {
-      map[e.entity_name] = CATEGORY_COLORS[e.entity_type as CategoryKey] ?? "hsl(var(--primary))";
-    }
-    return map;
-  }, [allEntities]);
-
-  /* ── render ── */
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
@@ -246,7 +157,7 @@ export default function ProjectDashboard() {
     );
   }
 
-  if (!allEntities.length) {
+  if (!data?.entities.length) {
     return (
       <div className="mx-auto max-w-4xl animate-fade-in">
         <h1 className="text-xl font-semibold text-foreground mb-2">Dashboard</h1>
@@ -261,89 +172,70 @@ export default function ProjectDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-in space-y-8">
+    <div className="mx-auto max-w-6xl animate-fade-in space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Visão comparativa de todas as entidades monitoradas.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Dados quantitativos do projeto.</p>
       </div>
 
-      {/* Filter Bar */}
-      <FilterBar
-        categories={categories}
-        entities={entityPills}
-        selectedCategories={selectedCategories}
-        selectedEntities={selectedEntities}
-        onToggleCategory={onToggleCategory}
+      {/* Filters: Period + Sources */}
+      <DashboardFilters
+        period={period}
+        onPeriodChange={setPeriod}
+        sourceMode={sourceMode}
+        onSourceModeChange={setSourceMode}
+        selectedEntityIds={selectedEntityIds}
         onToggleEntity={onToggleEntity}
-        onSelectAll={onSelectAll}
-        isAllSelected={isAllSelected}
+        entities={data.entities}
+        brandEntityId={brandEntityId}
       />
 
-      {/* Sections */}
-      {SECTION_ORDER.map((cat) => {
-        const entities = groupedEntities[cat];
-        if (!entities?.length) return null;
-        return (
-          <section key={cat} className="space-y-4">
-            <SectionHeader category={cat} count={entities.length} />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {entities.map((e) => (
-                <EntityCard key={e.entity_id} entity={e} category={cat} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {/* Tabs: Social | Ads | SEO */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-muted/50">
+          <TabsTrigger value="social" className="gap-1.5 text-xs">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Redes Sociais
+          </TabsTrigger>
+          <TabsTrigger value="ads" className="gap-1.5 text-xs">
+            <Megaphone className="h-3.5 w-3.5" />
+            Ads
+          </TabsTrigger>
+          <TabsTrigger value="seo" className="gap-1.5 text-xs">
+            <Search className="h-3.5 w-3.5" />
+            SEO
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Comparison bar chart */}
-      {comparisonData.length > 1 && (
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">Comparativo de Engajamento</h2>
-          <div className="bg-card rounded-2xl border border-border/50 p-5">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={comparisonData} barGap={2}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
-                <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => fmt(v)} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 12 }} formatter={(v: number) => fmt(v)} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="Curtidas" fill="hsl(18 79% 50%)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Comentários" fill="hsl(239 84% 67%)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Views" fill="hsl(160 84% 39%)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      )}
+        <TabsContent value="social" className="mt-6">
+          <SocialTab
+            posts={filteredPosts}
+            brandEntityId={brandEntityId}
+            isComparative={isComparative}
+          />
+        </TabsContent>
 
-      {/* Followers timeline */}
-      {formattedTimeline.length > 0 && timelineEntityNames.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">Evolução de Seguidores</h2>
-          <div className="bg-card rounded-2xl border border-border/50 p-5">
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={formattedTimeline}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
-                <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => fmt(v)} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {timelineEntityNames.map((name) => (
-                  <Line
-                    key={name}
-                    type="monotone"
-                    dataKey={name}
-                    stroke={entityColorMap[name] ?? "hsl(var(--primary))"}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      )}
+        <TabsContent value="ads" className="mt-6">
+          <Card className="border-border/50">
+            <CardContent className="py-12 text-center">
+              <Megaphone className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm font-medium text-foreground">Análise de Ads</p>
+              <p className="text-xs text-muted-foreground mt-1">Em breve — dados de bibliotecas de anúncios.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="seo" className="mt-6">
+          <Card className="border-border/50">
+            <CardContent className="py-12 text-center">
+              <Search className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm font-medium text-foreground">Análise de SEO</p>
+              <p className="text-xs text-muted-foreground mt-1">Em breve — dados de keywords e posicionamento.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
