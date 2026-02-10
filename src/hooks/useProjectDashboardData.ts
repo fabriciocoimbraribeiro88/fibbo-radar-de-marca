@@ -21,6 +21,8 @@ export interface PostData {
   hashtags: string[] | null;
   posted_at: string | null;
   caption: string | null;
+  thumbnail_url: string | null;
+  post_url: string | null;
 }
 
 export interface ProfileSnapshot {
@@ -104,12 +106,11 @@ export function useProjectDashboardData(projectId: string | undefined) {
         });
       }
 
-      // Sort: brand first
       entities.sort((a, b) => (a.role === "brand" ? -1 : b.role === "brand" ? 1 : 0));
 
       const [{ data: posts }, { data: profiles }] = await Promise.all([
         supabase.from("instagram_posts")
-          .select("entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption")
+          .select("entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url")
           .in("entity_id", entityIds)
           .order("posted_at", { ascending: true })
           .limit(3000),
@@ -129,6 +130,8 @@ export function useProjectDashboardData(projectId: string | undefined) {
         hashtags: p.hashtags,
         posted_at: p.posted_at,
         caption: p.caption,
+        thumbnail_url: p.thumbnail_url ?? null,
+        post_url: p.post_url ?? null,
       }));
 
       const enrichedProfiles: ProfileSnapshot[] = (profiles ?? []).map((p) => ({
@@ -176,6 +179,8 @@ export interface EntityMetrics {
   engagementRate: number;
   postTypes: Record<string, number>;
   hashtags: Record<string, number>;
+  viralHits: number;
+  viralRate: number;
 }
 
 export function useEntityMetrics(
@@ -186,7 +191,6 @@ export function useEntityMetrics(
   return useMemo(() => {
     const metricsMap: Record<string, EntityMetrics> = {};
 
-    // Init
     for (const e of entities) {
       metricsMap[e.id] = {
         entityId: e.id,
@@ -206,18 +210,19 @@ export function useEntityMetrics(
         engagementRate: 0,
         postTypes: {},
         hashtags: {},
+        viralHits: 0,
+        viralRate: 0,
       };
     }
 
-    // Latest followers
     for (const p of profiles) {
       if (p.entity_id && metricsMap[p.entity_id]) {
-        // profiles sorted ascending, so last value wins
         metricsMap[p.entity_id].followers = p.followers_count ?? 0;
       }
     }
 
-    // Aggregate posts
+    // Group posts by entity for viral calculation
+    const postsByEntity: Record<string, PostData[]> = {};
     for (const p of filteredPosts) {
       const m = metricsMap[p.entity_id];
       if (!m) continue;
@@ -235,9 +240,11 @@ export function useEntityMetrics(
           if (tag) m.hashtags[tag] = (m.hashtags[tag] ?? 0) + 1;
         }
       }
+
+      if (!postsByEntity[p.entity_id]) postsByEntity[p.entity_id] = [];
+      postsByEntity[p.entity_id].push(p);
     }
 
-    // Compute averages
     const result: EntityMetrics[] = [];
     for (const e of entities) {
       const m = metricsMap[e.id];
@@ -245,6 +252,11 @@ export function useEntityMetrics(
         m.avgLikes = Math.round(m.totalLikes / m.totalPosts);
         m.avgComments = Math.round(m.totalComments / m.totalPosts);
         m.avgEngagement = Math.round((m.totalLikes + m.totalComments) / m.totalPosts);
+
+        // Viral hits: posts with engagement > 2x avg
+        const entityPosts = postsByEntity[e.id] ?? [];
+        m.viralHits = entityPosts.filter((p) => p.engagement_total > m.avgEngagement * 2).length;
+        m.viralRate = (m.viralHits / m.totalPosts) * 100;
       }
       if (m.followers > 0) {
         m.engagementRate = ((m.totalLikes + m.totalComments) / m.totalPosts / m.followers) * 100 || 0;
