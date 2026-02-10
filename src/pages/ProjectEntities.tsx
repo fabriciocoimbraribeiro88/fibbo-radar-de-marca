@@ -25,6 +25,7 @@ import {
   Instagram,
   Globe,
   Loader2,
+  Download,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -46,6 +47,29 @@ export default function ProjectEntities() {
   const [newHandle, setNewHandle] = useState("");
   const [newWebsite, setNewWebsite] = useState("");
   const [newType, setNewType] = useState<EntityType>("competitor");
+  const [fetchingEntityId, setFetchingEntityId] = useState<string | null>(null);
+
+  const fetchInstagram = async (entityId: string, handle: string) => {
+    setFetchingEntityId(entityId);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-instagram", {
+        body: { entity_id: entityId },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({
+          title: "Coleta concluída!",
+          description: `${data.records} registros coletados para @${handle.replace("@", "")}`,
+        });
+      } else {
+        toast({ title: "Erro na coleta", description: data?.error, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setFetchingEntityId(null);
+    }
+  };
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -240,6 +264,21 @@ export default function ProjectEntities() {
                             </div>
                           </div>
                         </div>
+                        {e.instagram_handle && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={fetchingEntityId === pe.entity_id}
+                            onClick={() => fetchInstagram(pe.entity_id, e.instagram_handle!)}
+                          >
+                            {fetchingEntityId === pe.entity_id ? (
+                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Download className="mr-2 h-3.5 w-3.5" />
+                            )}
+                            Coletar
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   );
