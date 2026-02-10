@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatNum } from "@/lib/formatNumber";
 import {
   FolderOpen,
   Plus,
@@ -23,12 +24,6 @@ import EngagementChart from "@/components/dashboard/EngagementChart";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useDashboardStats } from "@/hooks/useProjects";
 
-function formatNum(n: number | null | undefined): string {
-  if (n == null) return "0";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("pt-BR");
-}
 
 export default function Dashboard() {
   const { user } = useAuth();

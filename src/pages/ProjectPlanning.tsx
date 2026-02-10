@@ -237,7 +237,7 @@ export default function ProjectPlanning() {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("planning_items")
-        .update({ status: "deleted" } as any)
+        .update({ status: "cancelled" })
         .eq("id", id);
       if (error) throw error;
     },
@@ -272,7 +272,7 @@ export default function ProjectPlanning() {
   };
 
   const filteredItems = items?.filter(
-    (i) => i.channel === activeTab && i.status !== "deleted"
+    (i) => i.channel === activeTab && i.status !== "cancelled"
   ) ?? [];
 
   const monthItems = filteredItems.filter((i) => {
@@ -424,7 +424,7 @@ export default function ProjectPlanning() {
                   <ch.icon className="h-3.5 w-3.5" />
                   {ch.label}
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                    {items?.filter((i) => i.channel === ch.value && i.status !== "deleted").length ?? 0}
+                    {items?.filter((i) => i.channel === ch.value && i.status !== "cancelled").length ?? 0}
                   </Badge>
                 </TabsTrigger>
               ))}

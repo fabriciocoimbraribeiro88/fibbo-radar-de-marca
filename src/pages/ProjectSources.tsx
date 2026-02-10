@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
@@ -76,55 +75,11 @@ const AD_PLATFORMS = [
   { value: "tiktok_ads", label: "TikTok Ads", placeholder: "https://library.tiktok.com/..." },
 ];
 
-const PROGRESS_STEPS = [
-  { label: "Conectando...", target: 15 },
-  { label: "Baixando perfil...", target: 35 },
-  { label: "Baixando posts...", target: 60 },
-  { label: "Processando...", target: 80 },
-  { label: "Salvando...", target: 92 },
-];
 
-function FetchProgressBar({ active }: { active: boolean }) {
-  const [step, setStep] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+// FetchProgressBar extracted to shared component
 
-  useEffect(() => {
-    if (!active) {
-      if (progress > 0) {
-        setProgress(100);
-        const t = setTimeout(() => { setProgress(0); setStep(0); }, 1200);
-        return () => clearTimeout(t);
-      }
-      return;
-    }
-    setStep(0);
-    setProgress(5);
-    intervalRef.current = setInterval(() => {
-      setStep((prev) => {
-        const next = Math.min(prev + 1, PROGRESS_STEPS.length - 1);
-        setProgress(PROGRESS_STEPS[next].target);
-        return next;
-      });
-    }, 3500);
-    return () => clearInterval(intervalRef.current);
-  }, [active]);
-
-  if (progress === 0) return null;
-
-  return (
-    <div className="mt-4 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          {progress >= 100 ? "Concluído!" : PROGRESS_STEPS[step]?.label}
-        </span>
-        <span className="text-[10px] font-mono text-muted-foreground">{Math.round(progress)}%</span>
-      </div>
-      <Progress value={progress} className="h-1" />
-    </div>
-  );
-}
+// FetchProgressBar extracted to shared component
+import { FetchProgressBar } from "@/components/FetchProgressBar";
 
 interface CollectOptions {
   mode: "count" | "date";
@@ -350,14 +305,14 @@ export default function ProjectSources() {
       } else {
         const { data: newEntity, error: entErr } = await supabase
           .from("monitored_entities")
-          .insert({ name: project?.brand_name ?? "Marca", instagram_handle: cleanHandle, type: "competitor" as const })
+          .insert({ name: project?.brand_name ?? "Marca", instagram_handle: cleanHandle, type: "brand" as any })
           .select("id")
           .single();
         if (entErr) throw entErr;
         entityId = newEntity.id;
         const { error: linkErr } = await supabase
           .from("project_entities")
-          .insert({ project_id: projectId, entity_id: entityId, entity_role: "competitor" as const });
+          .insert({ project_id: projectId, entity_id: entityId, entity_role: "brand" as any });
         if (linkErr) throw linkErr;
       }
       await executeNow(entityId, cleanHandle, opts);
