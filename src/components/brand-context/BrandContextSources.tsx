@@ -107,12 +107,29 @@ export default function BrandContextSources({ projectId, onFillWithAI, isFilling
       return;
     }
 
-    // For now, we store the file reference — text extraction can be done later
-    addSource.mutate({
-      source_type: "document",
-      content: "",
-      file_name: file.name,
+    // Insert source record
+    const { data: source, error: insertErr } = await supabase
+      .from("brand_context_sources")
+      .insert({ project_id: projectId, source_type: "document", content: "", file_name: file.name, file_url: filePath })
+      .select()
+      .single();
+
+    if (insertErr) {
+      toast.error("Erro ao salvar fonte: " + insertErr.message);
+      return;
+    }
+
+    // Extract content via edge function, passing the storage path
+    const { error: fnErr } = await supabase.functions.invoke("extract-brand-source", {
+      body: { source_id: source.id, source_type: "document", file_path: filePath },
     });
+
+    if (fnErr) {
+      toast.error("Erro ao processar documento: " + fnErr.message);
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["brand-sources", projectId] });
+    setDialogOpen(false);
   };
 
   const statusIcon = (status: string) => {
