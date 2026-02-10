@@ -19,6 +19,8 @@ export interface PostData {
   likes_count: number;
   comments_count: number;
   views_count: number;
+  saves_count: number;
+  shares_count: number;
   engagement_total: number;
   hashtags: string[] | null;
   posted_at: string | null;
@@ -53,6 +55,8 @@ export interface EntityMetrics {
   totalLikes: number;
   totalComments: number;
   totalViews: number;
+  totalSaves: number;
+  totalShares: number;
   avgLikes: number;
   avgComments: number;
   avgEngagement: number;
@@ -91,7 +95,7 @@ function assignColor(type: string, role: string, index: number): string {
 async function fetchAllPostsForEntity(entityId: string) {
   const PAGE = 1000;
   const columns =
-    "entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url";
+    "entity_id, likes_count, comments_count, views_count, saves_count, shares_count, engagement_total, post_type, hashtags, posted_at, caption, thumbnail_url, post_url";
   let all: any[] = [];
   let from = 0;
 
@@ -193,7 +197,9 @@ export function useProjectDashboardData(projectId: string | undefined) {
         likes_count: p.likes_count ?? 0,
         comments_count: p.comments_count ?? 0,
         views_count: p.views_count ?? 0,
-        engagement_total: p.engagement_total ?? 0,
+        saves_count: p.saves_count ?? 0,
+        shares_count: p.shares_count ?? 0,
+        engagement_total: (p.likes_count ?? 0) + (p.comments_count ?? 0) + (p.saves_count ?? 0) + (p.shares_count ?? 0),
         hashtags: p.hashtags,
         posted_at: p.posted_at,
         caption: p.caption,
@@ -289,10 +295,12 @@ export function useEntityMetrics(
       const totalLikes = entityPosts.reduce((s, p) => s + p.likes_count, 0);
       const totalComments = entityPosts.reduce((s, p) => s + p.comments_count, 0);
       const totalViews = entityPosts.reduce((s, p) => s + p.views_count, 0);
+      const totalSaves = entityPosts.reduce((s, p) => s + p.saves_count, 0);
+      const totalShares = entityPosts.reduce((s, p) => s + p.shares_count, 0);
 
       const avgLikes = total > 0 ? Math.round(totalLikes / total) : 0;
       const avgComments = total > 0 ? Math.round(totalComments / total) : 0;
-      const avgEngagement = total > 0 ? Math.round((totalLikes + totalComments) / total) : 0;
+      const avgEngagement = total > 0 ? Math.round((totalLikes + totalComments + totalSaves + totalShares) / total) : 0;
 
       // Latest profile snapshot
       const entityProfiles = profiles
@@ -305,7 +313,7 @@ export function useEntityMetrics(
       // Engagement rate
       const engagementRate =
         followers > 0 && total > 0
-          ? ((totalLikes + totalComments) / total / followers) * 100
+          ? ((totalLikes + totalComments + totalSaves + totalShares) / total / followers) * 100
           : 0;
 
       // Post type distribution
@@ -326,7 +334,7 @@ export function useEntityMetrics(
 
       // Viral hits: posts with engagement > 2x the entity average
       const viralHits = total > 0
-        ? entityPosts.filter((p) => (p.likes_count + p.comments_count) > avgEngagement * 2).length
+        ? entityPosts.filter((p) => p.engagement_total > avgEngagement * 2).length
         : 0;
       const viralRate = total > 0 ? (viralHits / total) * 100 : 0;
 
@@ -341,6 +349,8 @@ export function useEntityMetrics(
         totalLikes,
         totalComments,
         totalViews,
+        totalSaves,
+        totalShares,
         avgLikes,
         avgComments,
         avgEngagement,
