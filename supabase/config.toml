@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.list-anthropic-models]
 verify_jwt = false
+
+[functions.extract-brand-source]
+verify_jwt = false
+
+[functions.fill-brand-context]
+verify_jwt = false

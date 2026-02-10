@@ -210,6 +210,50 @@ export type Database = {
           },
         ]
       }
+      brand_context_sources: {
+        Row: {
+          content: string | null
+          created_at: string
+          extracted_text: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          project_id: string
+          source_type: string
+          status: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          extracted_text?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          project_id: string
+          source_type: string
+          status?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          extracted_text?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          project_id?: string
+          source_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_context_sources_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_fetch_configs: {
         Row: {
           apify_actor_id: string | null

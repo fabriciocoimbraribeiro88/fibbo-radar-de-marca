@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const projectNav = [
   { title: "Visão Geral", path: "", icon: LayoutDashboard, end: true },
-  { title: "Marca", path: "/brand", icon: Palette },
+  { title: "Contexto de Marca", path: "/brand", icon: Palette },
   { title: "Entidades", path: "/entities", icon: Users },
   { title: "Fontes de Dados", path: "/data-sources", icon: Database },
   { title: "Dashboard", path: "/dashboard", icon: BarChart3 },
