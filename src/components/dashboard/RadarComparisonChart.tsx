@@ -23,12 +23,13 @@ export default function RadarComparisonChart({ metrics }: Props) {
     const total = m.totalPosts || 1;
     return Math.round((m.postTypes["Sidecar"] ?? 0) / total * 100);
   });
+  const viralPct = metrics.map((m) => Number(m.viralRate.toFixed(1)));
 
-  const axes = ["Volume Posts", "Média Likes", "Média Comments", "% Vídeos", "% Carrosséis"];
+  const axes = ["Volume Posts", "Média Likes", "Média Comments", "% Vídeos", "% Carrosséis", "% Viral"];
   const data = axes.map((axis, i) => {
     const row: Record<string, any> = { axis };
     metrics.forEach((m, j) => {
-      const vals = [postVolNorm, avgLikesNorm, avgCommentsNorm, videoPct, sidecarPct];
+      const vals = [postVolNorm, avgLikesNorm, avgCommentsNorm, videoPct, sidecarPct, viralPct];
       row[m.name] = vals[i][j];
     });
     return row;
