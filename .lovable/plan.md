@@ -1,81 +1,96 @@
 
-# Dashboard do Projeto -- Redesign Apple-like com Secoes e Filtros
+# Melhorias no Dashboard — Filtros, Métricas Virais, Top Posts e Novas Funcionalidades
 
-## Resumo
+## 1. Novos modos de fonte no DashboardFilters
 
-Reescrever completamente `ProjectDashboard.tsx` com um design minimalista inspirado na Apple, organizando os dados em 4 secoes (Marca, Influencers, Concorrentes, Inspiracoes) e adicionando um sistema de filtros que permite selecionar entidades individuais, multiplas ou por classificacao.
+**Arquivo:** `src/components/dashboard/DashboardFilters.tsx`
 
-## O que muda para o usuario
+Atualmente existem apenas 3 modos: `brand_only`, `brand_vs_all`, `brand_vs_selected`. Vamos expandir o tipo `SourceMode` e adicionar pills para cada categoria:
 
-1. **Barra de filtros no topo** com pills selecionaveis:
-   - "Todos" (padrao)
-   - "Marca" / "Concorrentes" / "Influencers" / "Inspiracoes" (filtro por categoria)
-   - Cada entidade individual tambem aparece como pill clicavel
-   - Selecao multipla: clicar em varias entidades ou categorias combina os filtros
+- Apenas Marca
+- Marca vs Todos
+- Marca vs Concorrentes (novo)
+- Marca vs Influencers (novo)
+- Marca vs Inspiração (novo)
 
-2. **Cards de metricas redesenhados** -- estilo limpo com numeros grandes, sem bordas pesadas, fundo sutil, tipografia mono para numeros
+Abaixo dessas pills, manter as pills individuais de cada entidade (para seleção granular).
 
-3. **Secoes visuais separadas** por tipo de entidade, cada uma com:
-   - Header com icone e nome da categoria
-   - Grid de cards de entidades com metricas resumidas
-   - Graficos comparativos dentro da secao (quando ha mais de 1 entidade)
-
-4. **Graficos comparativos globais** que respeitam o filtro ativo:
-   - Comparativo de engajamento (bar chart)
-   - Evolucao de seguidores (line chart)
-   - Os graficos atualizam dinamicamente conforme a selecao
-
-## Detalhes Tecnicos
-
-### Arquivo: `src/pages/ProjectDashboard.tsx` (reescrita completa)
-
-**Estado de filtro:**
-```text
-selectedCategories: Set<string>  -- 'brand' | 'competitor' | 'influencer' | 'inspiration'
-selectedEntities: Set<string>    -- entity_id's individuais
-filterMode: 'all' | 'category' | 'individual'
+**Tipo atualizado:**
+```typescript
+export type SourceMode = "brand_only" | "brand_vs_all" | "brand_vs_competitors" | "brand_vs_influencers" | "brand_vs_inspiration" | "brand_vs_selected";
 ```
 
-**Logica de filtragem:**
-- "Todos" selecionado: mostra todas as entidades
-- Categoria selecionada: mostra apenas entidades daquela categoria
-- Entidades individuais: mostra apenas as selecionadas
-- Combinacao: uniao dos filtros ativos
+## 2. Atualizar lógica de filtragem no ProjectDashboard
 
-**Query de dados:**
-- Reutiliza o hook `useProjectDashboard` existente (busca tudo de uma vez)
-- Filtragem acontece no frontend via `useMemo` sobre os dados ja carregados
-- A marca (instagram_handle do projeto) e identificada e exibida na secao "Marca"
+**Arquivo:** `src/pages/ProjectDashboard.tsx`
 
-**Identificacao da Marca:**
-- Busca o `project.instagram_handle` e cruza com as entidades do projeto
-- A entidade correspondente e destacada na secao "Marca" com icone Crown
+No `useMemo` de `visibleMetrics`, adicionar os novos modos:
 
-**Componentes internos:**
-- `FilterBar` -- barra horizontal de pills com scroll horizontal no mobile
-- `EntityCard` -- card individual com metricas (redesign Apple-like: numeros grandes, label pequeno embaixo, cores sutis)
-- `SectionHeader` -- titulo da secao com icone e contagem
-- `MetricNumber` -- numero grande em font-mono com label
+```text
+brand_vs_competitors -> brand + role === "competitor"
+brand_vs_influencers -> brand + role === "influencer"  
+brand_vs_inspiration -> brand + role === "inspiration"
+```
 
-**Design dos cards (Apple-like):**
-- Fundo `bg-card` sem borda visivel (ou borda muito sutil `border-border/50`)
-- Border-radius grande (`rounded-2xl`)
-- Padding generoso
-- Numeros em `text-2xl font-bold font-mono`
-- Labels em `text-xs text-muted-foreground uppercase tracking-wider`
-- Hover com sombra suave e translate -1px
-- Separacao visual com linhas finas entre metricas
+## 3. Métricas virais — Hits e Taxa de Viral
 
-**Cores por categoria:**
-- Marca: coral/primary
-- Concorrentes: azul (#6366f1)
-- Influencers: rosa (#ec4899)
-- Inspiracoes: verde (#10b981)
+**Arquivo:** `src/hooks/useProjectDashboardData.ts`
 
-### Arquivos a editar
+Adicionar campos ao `EntityMetrics`:
+- `viralHits`: Posts com engajamento acima de 2x a média da entidade
+- `viralRate`: % de posts virais em relacao ao total
 
-| Arquivo | Acao |
+**Arquivo:** `src/pages/ProjectDashboard.tsx`
+
+Adicionar 2 novos big numbers na Visao Geral (total 8 cards, grid ajustado para `lg:grid-cols-4`):
+- Total de Hits (posts virais)
+- Taxa de Viral (%)
+
+Na tab Individual, adicionar os mesmos 2 campos nos big numbers individuais (total 6 cards).
+
+## 4. Top 10 Melhores e Piores Posts — Tab Individual
+
+**Novo componente:** `src/components/dashboard/TopPostsTable.tsx`
+
+Uma tabela/grid mostrando:
+- Thumbnail (se disponivel via `thumbnail_url` — campo existe no DB mas nao esta sendo buscado)
+- Data de publicacao
+- Tipo (Image/Video/Sidecar/Reel)
+- Likes, Comments, Views
+- Engagement total
+- Trecho da caption (primeiros 80 caracteres)
+
+Recebe props: `posts: PostData[]`, `entityId: string`, `mode: "best" | "worst"`, `limit: number`
+
+Os posts sao ordenados por `engagement_total` (desc para best, asc para worst).
+
+**Arquivo:** `src/hooks/useProjectDashboardData.ts`
+
+Atualizar a query de `instagram_posts` para incluir `thumbnail_url` e `post_url` no select e no tipo `PostData`.
+
+**Arquivo:** `src/pages/ProjectDashboard.tsx`
+
+Na tab Individual, adicionar uma nova secao apos os graficos existentes:
+- Linha com 2 cards lado a lado: Top 10 Melhores | Top 10 Piores
+
+## 5. Sugestoes de funcionalidades adicionais para o Dashboard
+
+Alem das mudancas solicitadas, posso incluir:
+
+- **Melhor dia/horario para postar**: Heatmap de engajamento medio por dia da semana e hora do dia (usando `posted_at`).
+- **Crescimento de seguidores %**: Variacao percentual entre o primeiro e ultimo snapshot de seguidores no periodo.
+- **Frequencia de postagem**: Posts por semana medio de cada entidade (barra comparativa).
+- **Engajamento por formato comparativo**: Na tab comparativa, um chart mostrando qual formato performa melhor para cada entidade.
+
+Essas 4 sugestoes ficam como opcoes futuras — vou implementar apenas as 4 mudancas principais agora (filtros, virais, top posts, thumbnail no hook).
+
+---
+
+## Resumo tecnico das mudancas
+
+| Arquivo | Mudanca |
 |---|---|
-| `src/pages/ProjectDashboard.tsx` | Reescrita completa com filtros e secoes |
-
-Nenhuma alteracao de banco de dados necessaria -- todos os dados ja existem nas tabelas `project_entities`, `monitored_entities`, `instagram_posts` e `instagram_profiles`.
+| `src/components/dashboard/DashboardFilters.tsx` | Novos SourceMode pills (vs concorrentes, vs influencers, vs inspiracao) + pills individuais abaixo |
+| `src/hooks/useProjectDashboardData.ts` | Adicionar `thumbnail_url`, `post_url` ao PostData + `viralHits`, `viralRate` ao EntityMetrics |
+| `src/pages/ProjectDashboard.tsx` | Novos modos no visibleMetrics, 2 novos big numbers (hits/viral), top posts na tab individual |
+| `src/components/dashboard/TopPostsTable.tsx` | Novo componente — tabela de top 10 melhores/piores posts |
