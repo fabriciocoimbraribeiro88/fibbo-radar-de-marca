@@ -50,8 +50,6 @@ export default function TopPostsTable({ posts, entityId, mode, limit = 10 }: Pro
                   <TableHead className="text-[10px]">Tipo</TableHead>
                   <TableHead className="text-[10px] text-right">Likes</TableHead>
                   <TableHead className="text-[10px] text-right">Coment.</TableHead>
-                  <TableHead className="text-[10px] text-right">Saves</TableHead>
-                  <TableHead className="text-[10px] text-right">Shares</TableHead>
                   <TableHead className="text-[10px] text-right">Views</TableHead>
                   <TableHead className="text-[10px] text-right">Eng.</TableHead>
                 </TableRow>
@@ -82,8 +80,6 @@ export default function TopPostsTable({ posts, entityId, mode, limit = 10 }: Pro
                     </TableCell>
                     <TableCell className="py-2 text-right font-mono">{formatNum(p.likes_count)}</TableCell>
                     <TableCell className="py-2 text-right font-mono">{formatNum(p.comments_count)}</TableCell>
-                    <TableCell className="py-2 text-right font-mono">{formatNum(p.saves_count)}</TableCell>
-                    <TableCell className="py-2 text-right font-mono">{formatNum(p.shares_count)}</TableCell>
                     <TableCell className="py-2 text-right font-mono">{formatNum(p.views_count)}</TableCell>
                     <TableCell className="py-2 text-right font-mono font-semibold">{formatNum(p.engagement_total)}</TableCell>
                   </TableRow>

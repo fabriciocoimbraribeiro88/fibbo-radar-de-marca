@@ -65,6 +65,7 @@ export interface EntityMetrics {
   engagementRate: number;
   postTypes: Record<string, number>;
   hashtags: Record<string, number>;
+  hits: number;
   viralHits: number;
   viralRate: number;
 }
@@ -332,9 +333,14 @@ export function useEntityMetrics(
         });
       });
 
-      // Viral hits: posts with engagement > 2x the entity average
+      // Hit: posts with 5x more views than followers count
+      const hits = total > 0 && followers > 0
+        ? entityPosts.filter((p) => p.views_count > followers * 5).length
+        : 0;
+
+      // Viral: posts with 1M+ views
       const viralHits = total > 0
-        ? entityPosts.filter((p) => p.engagement_total > avgEngagement * 2).length
+        ? entityPosts.filter((p) => p.views_count >= 1_000_000).length
         : 0;
       const viralRate = total > 0 ? (viralHits / total) * 100 : 0;
 
@@ -359,6 +365,7 @@ export function useEntityMetrics(
         engagementRate,
         postTypes,
         hashtags,
+        hits,
         viralHits,
         viralRate,
       };
