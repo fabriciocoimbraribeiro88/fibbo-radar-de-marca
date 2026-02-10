@@ -1,153 +1,245 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Users, BarChart3, Megaphone, Search } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Loader2, Users, Heart, MessageCircle, Eye, BarChart3, Instagram, TrendingUp, Hash } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useMemo, useCallback } from "react";
-import DashboardFilters, {
-  type PeriodRange, type SourceMode, type EntityOption, getPresetRange,
-} from "@/components/dashboard/DashboardFilters";
-import SocialTab, { type PostData } from "@/components/dashboard/SocialTab";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { formatNum } from "@/lib/formatNumber";
+import {
+  useProjectDashboardData,
+  useFilteredPosts,
+  useEntityMetrics,
+  type DateRange,
+  type EntityInfo,
+  type EntityMetrics as EntityMetricsType,
+} from "@/hooks/useProjectDashboardData";
 
-/* ── initial period ── */
-const initialPeriod: PeriodRange = {
-  ...getPresetRange("this_year"),
-  preset: "this_year",
-};
+import EngagementRateChart from "@/components/dashboard/EngagementRateChart";
+import AvgLikesChart from "@/components/dashboard/AvgLikesChart";
+import AvgCommentsChart from "@/components/dashboard/AvgCommentsChart";
+import ContentMixChart from "@/components/dashboard/ContentMixChart";
+import RadarComparisonChart from "@/components/dashboard/RadarComparisonChart";
+import VolumeEngagementScatter from "@/components/dashboard/VolumeEngagementScatter";
+import ContentTypePieChart from "@/components/dashboard/ContentTypePieChart";
+import PerformanceByTypeChart from "@/components/dashboard/PerformanceByTypeChart";
+import PostsVolumeChart from "@/components/dashboard/PostsVolumeChart";
+import TopHashtagsChart from "@/components/dashboard/TopHashtagsChart";
+import LikesTimelineChart from "@/components/dashboard/LikesTimelineChart";
+import ThemeDistributionChart from "@/components/dashboard/ThemeDistributionChart";
 
-/* ── data hook ── */
-function useDashboardData(projectId: string | undefined) {
-  return useQuery({
-    queryKey: ["project-dashboard-v2", projectId],
-    queryFn: async () => {
-      const { data: project } = await supabase
-        .from("projects")
-        .select("instagram_handle, brand_name")
-        .eq("id", projectId!)
-        .single();
+/* ── Period Presets ── */
+const PERIOD_PRESETS = [
+  { label: "Últimos 30 dias", value: "30d" },
+  { label: "Últimos 90 dias", value: "90d" },
+  { label: "Último semestre", value: "6m" },
+  { label: "Este ano", value: "ytd" },
+  { label: "Todo o período", value: "all" },
+];
 
-      const { data: projectEntities } = await supabase
-        .from("project_entities")
-        .select("entity_id, entity_role, monitored_entities(id, name, instagram_handle, type)")
-        .eq("project_id", projectId!);
-
-      if (!projectEntities?.length) return { entities: [], posts: [], profiles: [], brandEntityId: null };
-
-      const brandHandle = project?.instagram_handle?.replace("@", "").toLowerCase() ?? null;
-      const entityIds = projectEntities.map((pe) => pe.entity_id);
-
-      // Find brand entity
-      let brandEntityId: string | null = null;
-      const entityMap: EntityOption[] = [];
-      for (const pe of projectEntities) {
-        const entity = pe.monitored_entities as unknown as {
-          id: string; name: string; instagram_handle: string | null; type: string;
-        };
-        if (!entity) continue;
-        const handleNorm = entity.instagram_handle?.replace("@", "").toLowerCase() ?? "";
-        if (brandHandle && handleNorm === brandHandle) brandEntityId = pe.entity_id;
-        entityMap.push({
-          id: pe.entity_id,
-          name: entity.name,
-          handle: entity.instagram_handle,
-          role: pe.entity_role,
-        });
-      }
-
-      const [{ data: posts }, { data: profiles }] = await Promise.all([
-        supabase.from("instagram_posts")
-          .select("entity_id, likes_count, comments_count, views_count, engagement_total, post_type, hashtags, posted_at")
-          .in("entity_id", entityIds)
-          .order("posted_at", { ascending: true }),
-        supabase.from("instagram_profiles")
-          .select("entity_id, followers_count, snapshot_date")
-          .in("entity_id", entityIds)
-          .order("snapshot_date", { ascending: false }),
-      ]);
-
-      // Build entity name map & latest followers
-      const nameMap: Record<string, string> = {};
-      const followersMap: Record<string, number> = {};
-      for (const eo of entityMap) {
-        nameMap[eo.id] = eo.name;
-      }
-      for (const p of profiles ?? []) {
-        if (p.entity_id && !followersMap[p.entity_id]) {
-          followersMap[p.entity_id] = p.followers_count ?? 0;
-        }
-      }
-
-      // Enrich posts with entity name
-      const enrichedPosts: PostData[] = (posts ?? []).map((p) => ({
-        entity_id: p.entity_id ?? "",
-        entity_name: nameMap[p.entity_id ?? ""] ?? "?",
-        post_type: p.post_type,
-        likes_count: p.likes_count ?? 0,
-        comments_count: p.comments_count ?? 0,
-        views_count: p.views_count ?? 0,
-        engagement_total: p.engagement_total ?? 0,
-        hashtags: p.hashtags,
-        posted_at: p.posted_at,
-        followers: followersMap[p.entity_id ?? ""] ?? null,
-      }));
-
-      return { entities: entityMap, posts: enrichedPosts, brandEntityId };
-    },
-    enabled: !!projectId,
-  });
+function getPresetRange(preset: string): DateRange {
+  const now = new Date();
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  switch (preset) {
+    case "30d": return { from: new Date(now.getTime() - 30 * 86400000), to };
+    case "90d": return { from: new Date(now.getTime() - 90 * 86400000), to };
+    case "6m": return { from: new Date(now.getTime() - 180 * 86400000), to };
+    case "ytd": return { from: new Date(now.getFullYear(), 0, 1), to };
+    default: return { from: new Date(2020, 0, 1), to };
+  }
 }
 
-/* ── main component ── */
+/* ── Big Number Card ── */
+function BigNumberCard({ icon: Icon, label, value }: { icon: any; label: string; value: number }) {
+  return (
+    <Card className="border border-border">
+      <CardContent className="flex flex-col items-center p-4">
+        <div className="rounded-lg bg-accent p-2 mb-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <p className="text-xl font-bold font-mono text-foreground">{formatNum(value)}</p>
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Followers Timeline Chart (inline) ── */
+function FollowersTimelineChart({ profiles, entities }: { profiles: any[]; entities: EntityInfo[] }) {
+  const data = useMemo(() => {
+    const dateMap: Record<string, Record<string, number>> = {};
+    for (const p of profiles) {
+      const entity = entities.find((e) => e.id === p.entity_id);
+      if (!entity || !p.snapshot_date) continue;
+      if (!dateMap[p.snapshot_date]) dateMap[p.snapshot_date] = {};
+      dateMap[p.snapshot_date][entity.name] = p.followers_count ?? 0;
+    }
+    return Object.entries(dateMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, vals]) => ({ date, ...vals }));
+  }, [profiles, entities]);
+
+  if (!data.length) return null;
+
+  return (
+    <Card className="border border-border">
+      <CardContent className="p-4">
+        <p className="text-sm font-medium text-foreground mb-3 text-center">Evolução de Seguidores</p>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <XAxis dataKey="date" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => formatNum(v)} />
+            <Tooltip formatter={(v: number) => v.toLocaleString("pt-BR")} />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+            {entities.map((e) => (
+              <Line key={e.id} dataKey={e.name} stroke={e.color} strokeWidth={2} dot={false} />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Weekly Engagement Chart (inline) ── */
+function WeeklyEngagementChart({ posts, entities }: { posts: any[]; entities: EntityInfo[] }) {
+  const data = useMemo(() => {
+    const weekMap: Record<string, Record<string, { total: number; count: number }>> = {};
+    for (const p of posts) {
+      if (!p.posted_at) continue;
+      const d = new Date(p.posted_at);
+      const weekStart = new Date(d);
+      weekStart.setDate(d.getDate() - d.getDay());
+      const key = weekStart.toISOString().slice(0, 10);
+      const entity = entities.find((e) => e.id === p.entity_id);
+      if (!entity) continue;
+      if (!weekMap[key]) weekMap[key] = {};
+      if (!weekMap[key][entity.name]) weekMap[key][entity.name] = { total: 0, count: 0 };
+      weekMap[key][entity.name].total += (p.likes_count + p.comments_count);
+      weekMap[key][entity.name].count++;
+    }
+    return Object.entries(weekMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week, vals]) => {
+        const row: Record<string, any> = { week };
+        for (const [name, { total, count }] of Object.entries(vals)) {
+          row[name] = Math.round(total / count);
+        }
+        return row;
+      });
+  }, [posts, entities]);
+
+  if (!data.length) return null;
+
+  return (
+    <Card className="border border-border">
+      <CardContent className="p-4">
+        <p className="text-sm font-medium text-foreground mb-3 text-center">Engajamento Médio Semanal</p>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <XAxis dataKey="week" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => formatNum(v)} />
+            <Tooltip formatter={(v: number) => v.toLocaleString("pt-BR")} />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+            {entities.map((e) => (
+              <Line key={e.id} dataKey={e.name} stroke={e.color} strokeWidth={2} dot={false} />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Entity Card ── */
+function EntitySummaryCard({ m }: { m: EntityMetricsType }) {
+  const roleBadge: Record<string, string> = {
+    brand: "bg-primary/15 text-primary",
+    competitor: "bg-destructive/15 text-destructive",
+    influencer: "bg-violet-500/15 text-violet-600",
+    inspiration: "bg-pink-500/15 text-pink-600",
+  };
+  const roleLabel: Record<string, string> = {
+    brand: "Marca",
+    competitor: "Concorrente",
+    influencer: "Influencer",
+    inspiration: "Inspiração",
+  };
+
+  return (
+    <Card className="border border-border">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white shrink-0" style={{ backgroundColor: m.color }}>
+            {(m.name ?? "??").slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
+            {m.handle && <p className="text-[10px] text-muted-foreground">@{m.handle.replace("@", "")}</p>}
+          </div>
+          <Badge className={`ml-auto text-[9px] ${roleBadge[m.role] ?? roleBadge.competitor}`}>
+            {roleLabel[m.role] ?? m.role}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div>
+            <p className="text-sm font-bold font-mono text-foreground">{formatNum(m.followers)}</p>
+            <p className="text-[9px] text-muted-foreground">Seguidores</p>
+          </div>
+          <div>
+            <p className="text-sm font-bold font-mono text-foreground">{formatNum(m.totalPosts)}</p>
+            <p className="text-[9px] text-muted-foreground">Posts</p>
+          </div>
+          <div>
+            <p className="text-sm font-bold font-mono text-foreground">{formatNum(m.avgEngagement)}</p>
+            <p className="text-[9px] text-muted-foreground">Eng. Médio</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── MAIN PAGE ── */
 export default function ProjectDashboard() {
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading } = useDashboardData(id);
+  const { data, isLoading } = useProjectDashboardData(id);
 
-  const [period, setPeriod] = useState<PeriodRange>(initialPeriod);
-  const [sourceMode, setSourceMode] = useState<SourceMode>("brand_only");
-  const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState("social");
+  const [periodPreset, setPeriodPreset] = useState("all");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
-  const onToggleEntity = useCallback((entityId: string) => {
-    setSelectedEntityIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(entityId)) next.delete(entityId); else next.add(entityId);
-      return next;
-    });
-  }, []);
+  const dateRange = useMemo(() => getPresetRange(periodPreset), [periodPreset]);
 
-  const allPosts = data?.posts ?? [];
-  const brandEntityId = data?.brandEntityId ?? null;
+  const filteredPosts = useFilteredPosts(data?.posts ?? [], dateRange);
+  const entityMetrics = useEntityMetrics(filteredPosts, data?.profiles ?? [], data?.entities ?? []);
 
-  // Filter posts by period
-  const periodPosts = useMemo(() => {
-    return allPosts.filter((p) => {
-      if (!p.posted_at) return true; // include posts without date
-      const d = new Date(p.posted_at);
-      return d >= period.from && d <= period.to;
-    });
-  }, [allPosts, period]);
-
-  // Filter posts by source mode
-  const filteredPosts = useMemo(() => {
-    if (sourceMode === "brand_only") {
-      return periodPosts.filter((p) => p.entity_id === brandEntityId);
-    }
-    if (sourceMode === "brand_vs_all") {
-      return periodPosts;
-    }
-    // brand_vs_selected
-    return periodPosts.filter(
-      (p) => p.entity_id === brandEntityId || selectedEntityIds.has(p.entity_id)
+  // Totals
+  const totals = useMemo(() => {
+    return entityMetrics.reduce(
+      (acc, m) => ({
+        posts: acc.posts + m.totalPosts,
+        likes: acc.likes + m.totalLikes,
+        comments: acc.comments + m.totalComments,
+        views: acc.views + m.totalViews,
+        engagement: acc.engagement + m.totalLikes + m.totalComments,
+        followers: acc.followers + m.followers,
+      }),
+      { posts: 0, likes: 0, comments: 0, views: 0, engagement: 0, followers: 0 }
     );
-  }, [periodPosts, sourceMode, brandEntityId, selectedEntityIds]);
+  }, [entityMetrics]);
 
-  const isComparative = sourceMode !== "brand_only";
+  const avgEngPerPost = totals.posts > 0 ? Math.round(totals.engagement / totals.posts) : 0;
 
-  const activeEntityCount = useMemo(() => {
-    const ids = new Set(filteredPosts.map((p) => p.entity_id));
-    return ids.size;
-  }, [filteredPosts]);
+  // Selected entity for individual tab
+  const selectedEntity = useMemo(() => {
+    const eid = selectedEntityId ?? data?.entities?.[0]?.id ?? null;
+    return entityMetrics.find((m) => m.entityId === eid) ?? entityMetrics[0] ?? null;
+  }, [selectedEntityId, entityMetrics, data?.entities]);
 
   if (isLoading) {
     return (
@@ -174,66 +266,143 @@ export default function ProjectDashboard() {
   return (
     <div className="mx-auto max-w-6xl animate-fade-in space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Dados quantitativos do projeto.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Dashboard do Projeto</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{data.projectName}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="text-xs gap-1">
+            <BarChart3 className="h-3 w-3" />
+            {totals.posts} posts
+          </Badge>
+          <Badge variant="secondary" className="text-xs gap-1">
+            <Users className="h-3 w-3" />
+            {data.entities.length} entidades
+          </Badge>
+          <Select value={periodPreset} onValueChange={setPeriodPreset}>
+            <SelectTrigger className="h-8 w-44 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_PRESETS.map((p) => (
+                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Filters: Period + Sources */}
-      <DashboardFilters
-        period={period}
-        onPeriodChange={setPeriod}
-        sourceMode={sourceMode}
-        onSourceModeChange={setSourceMode}
-        selectedEntityIds={selectedEntityIds}
-        onToggleEntity={onToggleEntity}
-        entities={data.entities}
-        brandEntityId={brandEntityId}
-      />
-
-      {/* Tabs: Social | Ads | SEO */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-muted/50">
-          <TabsTrigger value="social" className="gap-1.5 text-xs">
+          <TabsTrigger value="overview" className="gap-1.5 text-xs">
             <BarChart3 className="h-3.5 w-3.5" />
-            Redes Sociais
+            Visão Geral
           </TabsTrigger>
-          <TabsTrigger value="ads" className="gap-1.5 text-xs">
-            <Megaphone className="h-3.5 w-3.5" />
-            Ads
+          <TabsTrigger value="comparative" className="gap-1.5 text-xs">
+            <Users className="h-3.5 w-3.5" />
+            Análise Comparativa
           </TabsTrigger>
-          <TabsTrigger value="seo" className="gap-1.5 text-xs">
-            <Search className="h-3.5 w-3.5" />
-            SEO
+          <TabsTrigger value="individual" className="gap-1.5 text-xs">
+            <Instagram className="h-3.5 w-3.5" />
+            Análise Individual
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="social" className="mt-6">
-          <SocialTab
-            posts={filteredPosts}
-            brandEntityId={brandEntityId}
-            isComparative={isComparative}
-          />
+        {/* TAB 1: VISÃO GERAL */}
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          {/* Big Numbers */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <BigNumberCard icon={BarChart3} label="Total de Posts" value={totals.posts} />
+            <BigNumberCard icon={Heart} label="Total de Curtidas" value={totals.likes} />
+            <BigNumberCard icon={MessageCircle} label="Total de Comentários" value={totals.comments} />
+            <BigNumberCard icon={Eye} label="Total de Visualizações" value={totals.views} />
+            <BigNumberCard icon={TrendingUp} label="Eng. Médio / Post" value={avgEngPerPost} />
+            <BigNumberCard icon={Users} label="Total de Seguidores" value={totals.followers} />
+          </div>
+
+          {/* Timeline charts */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <FollowersTimelineChart profiles={data.profiles} entities={data.entities} />
+            <WeeklyEngagementChart posts={filteredPosts} entities={data.entities} />
+          </div>
+
+          {/* Entity cards */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Entidades Monitoradas</p>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {entityMetrics.map((m) => <EntitySummaryCard key={m.entityId} m={m} />)}
+            </div>
+          </div>
         </TabsContent>
 
-        <TabsContent value="ads" className="mt-6">
-          <Card className="border-border/50">
-            <CardContent className="py-12 text-center">
-              <Megaphone className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-              <p className="text-sm font-medium text-foreground">Análise de Ads</p>
-              <p className="text-xs text-muted-foreground mt-1">Em breve — dados de bibliotecas de anúncios.</p>
-            </CardContent>
-          </Card>
+        {/* TAB 2: ANÁLISE COMPARATIVA */}
+        <TabsContent value="comparative" className="mt-6">
+          {entityMetrics.length < 2 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Users className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">Adicione pelo menos 2 entidades para a análise comparativa.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <EngagementRateChart metrics={entityMetrics} />
+              <AvgLikesChart metrics={entityMetrics} />
+              <AvgCommentsChart metrics={entityMetrics} />
+              <ContentMixChart metrics={entityMetrics} />
+              <RadarComparisonChart metrics={entityMetrics} />
+              <VolumeEngagementScatter metrics={entityMetrics} />
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="seo" className="mt-6">
-          <Card className="border-border/50">
-            <CardContent className="py-12 text-center">
-              <Search className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-              <p className="text-sm font-medium text-foreground">Análise de SEO</p>
-              <p className="text-xs text-muted-foreground mt-1">Em breve — dados de keywords e posicionamento.</p>
-            </CardContent>
-          </Card>
+        {/* TAB 3: ANÁLISE INDIVIDUAL */}
+        <TabsContent value="individual" className="mt-6 space-y-6">
+          {/* Entity selector */}
+          <div className="flex flex-wrap gap-2">
+            {data.entities.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => setSelectedEntityId(e.id)}
+                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition-all ${
+                  (selectedEntity?.entityId === e.id)
+                    ? "text-white shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                }`}
+                style={(selectedEntity?.entityId === e.id) ? { backgroundColor: e.color } : undefined}
+              >
+                {e.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedEntity && (
+            <>
+              {/* Big numbers */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <BigNumberCard icon={Users} label="Seguidores" value={selectedEntity.followers} />
+                <BigNumberCard icon={BarChart3} label="Posts no Período" value={selectedEntity.totalPosts} />
+                <BigNumberCard icon={TrendingUp} label="Eng. Médio" value={selectedEntity.avgEngagement} />
+                <BigNumberCard icon={Hash} label="Taxa de Engajamento" value={Number(selectedEntity.engagementRate.toFixed(2))} />
+              </div>
+
+              {/* Row 1: 3 charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <ContentTypePieChart metrics={selectedEntity} handle={selectedEntity.handle} />
+                <PerformanceByTypeChart posts={filteredPosts} entityId={selectedEntity.entityId} />
+                <PostsVolumeChart posts={filteredPosts} entityId={selectedEntity.entityId} color={selectedEntity.color} />
+              </div>
+
+              {/* Row 2: 3 charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <TopHashtagsChart metrics={selectedEntity} color={selectedEntity.color} />
+                <LikesTimelineChart posts={filteredPosts} entityId={selectedEntity.entityId} />
+                <ThemeDistributionChart metrics={selectedEntity} color={selectedEntity.color} />
+              </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>
