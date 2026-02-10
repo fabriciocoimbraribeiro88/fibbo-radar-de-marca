@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const response = await fetch('https://api.apify.com/v2/user/me', {
+    const response = await fetch('https://api.apify.com/v2/users/me', {
       headers: { 'Authorization': `Bearer ${apiToken}` },
     });
 
