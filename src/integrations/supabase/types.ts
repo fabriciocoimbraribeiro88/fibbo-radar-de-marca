@@ -1213,7 +1213,31 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_entity_dashboard_metrics: {
+        Row: {
+          avg_engagement: number | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: Database["public"]["Enums"]["entity_type"] | null
+          followers: number | null
+          following: number | null
+          instagram_handle: string | null
+          posts_count: number | null
+          total_comments: number | null
+          total_engagement: number | null
+          total_likes: number | null
+          total_views: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_posts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_dashboard_stats: { Args: { _user_id: string }; Returns: Json }
