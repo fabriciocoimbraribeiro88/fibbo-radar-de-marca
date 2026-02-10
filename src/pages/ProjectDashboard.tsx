@@ -24,8 +24,6 @@ import DashboardFilters, {
 import EngagementRateChart from "@/components/dashboard/EngagementRateChart";
 import AvgLikesChart from "@/components/dashboard/AvgLikesChart";
 import AvgCommentsChart from "@/components/dashboard/AvgCommentsChart";
-import AvgSavesChart from "@/components/dashboard/AvgSavesChart";
-import AvgSharesChart from "@/components/dashboard/AvgSharesChart";
 import ContentMixChart from "@/components/dashboard/ContentMixChart";
 import RadarComparisonChart from "@/components/dashboard/RadarComparisonChart";
 import VolumeEngagementScatter from "@/components/dashboard/VolumeEngagementScatter";
@@ -265,10 +263,6 @@ export default function ProjectDashboard() {
             <AvgCommentsChart metrics={entityMetrics} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <AvgSavesChart metrics={entityMetrics} />
-            <AvgSharesChart metrics={entityMetrics} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <ContentMixChart metrics={entityMetrics} />
             <RadarComparisonChart metrics={entityMetrics} />
             <VolumeEngagementScatter metrics={entityMetrics} />
@@ -296,17 +290,16 @@ export default function ProjectDashboard() {
           </div>
 
           {/* Entity big numbers */}
-          <div className="grid grid-cols-5 sm:grid-cols-10 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-9 gap-3">
             {[
               { label: "Seguidores", value: fmt(em.followers) },
               { label: "Posts", value: fmt(em.totalPosts) },
               { label: "Média Likes", value: fmt(em.avgLikes) },
               { label: "Média Coment.", value: fmt(em.avgComments) },
-              { label: "Saves", value: fmt(em.totalSaves) },
-              { label: "Shares", value: fmt(em.totalShares) },
               { label: "Taxa Eng.", value: `${em.engagementRate.toFixed(2)}%` },
               { label: "Views", value: fmt(em.totalViews) },
-              { label: "Hits Virais", value: fmt(em.viralHits) },
+              { label: "Hits", value: fmt(em.hits) },
+              { label: "Virais", value: fmt(em.viralHits) },
               { label: "% Viral", value: `${em.viralRate.toFixed(1)}%` },
             ].map((item) => (
               <Card key={item.label} className="border border-border">
