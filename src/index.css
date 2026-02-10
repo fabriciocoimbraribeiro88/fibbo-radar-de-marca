@@ -4,58 +4,98 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fibbo Radar Design System — Dark-first, Claude Code inspired.
-   Brand accent: Coral #E87040 → hsl(18, 79%, 58%)
+/* Fibbo Radar Design System — Light-first, Claude Code inspired.
+   Brand accent: Coral #E87040
    All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Default = dark mode */
+    /* Default = light mode */
+    --brand: 18 79% 50%;
+    --brand-foreground: 0 0% 100%;
+    --brand-light: 18 85% 60%;
+    --brand-dark: 18 79% 42%;
+
+    --background: 220 14% 96%;
+    --foreground: 224 24% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 24% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 24% 12%;
+
+    --primary: 18 79% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 224 14% 30%;
+
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 10% 42%;
+
+    --accent: 18 30% 96%;
+    --accent-foreground: 224 24% 12%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 18 79% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 224 14% 30%;
+    --sidebar-primary: 18 79% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 224 14% 30%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 18 79% 50%;
+
+    --success: 152 69% 40%;
+    --info: 218 80% 50%;
+    --warning: 45 93% 47%;
+  }
+
+  /* Dark mode override */
+  .dark {
     --brand: 18 79% 58%;
     --brand-foreground: 0 0% 100%;
     --brand-light: 18 85% 65%;
     --brand-dark: 18 79% 48%;
 
-    /* Page: #0B0B0F → hsl(240 18% 4%) */
     --background: 240 18% 4%;
     --foreground: 0 0% 100%;
 
-    /* Card: #16161F → hsl(240 14% 10%) */
     --card: 240 14% 10%;
     --card-foreground: 0 0% 100%;
 
-    /* Popover same as card */
     --popover: 240 14% 10%;
     --popover-foreground: 0 0% 100%;
 
-    /* Primary = Coral */
     --primary: 18 79% 58%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary = subtle surface */
     --secondary: 240 12% 13%;
     --secondary-foreground: 240 10% 75%;
 
-    /* Muted text/bg */
     --muted: 240 12% 13%;
     --muted-foreground: 240 10% 50%;
 
-    /* Accent = slightly lighter surface for hovers */
     --accent: 240 12% 15%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders: very subtle white alpha */
     --border: 240 10% 14%;
     --input: 240 10% 14%;
     --ring: 18 79% 58%;
 
-    --radius: 0.5rem;
-
-    /* Sidebar: #101017 → hsl(240 18% 5%) */
     --sidebar-background: 240 18% 5%;
     --sidebar-foreground: 240 10% 75%;
     --sidebar-primary: 18 79% 58%;
@@ -65,41 +105,9 @@
     --sidebar-border: 240 10% 10%;
     --sidebar-ring: 18 79% 58%;
 
-    /* Extended tokens */
     --success: 152 69% 62%;
     --info: 218 91% 71%;
     --warning: 45 93% 56%;
-  }
-
-  /* Light mode override (optional) */
-  .light {
-    --background: 0 0% 97.6%;
-    --foreground: 0 0% 0%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
-    --primary: 18 79% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 20%;
-    --muted: 0 0% 93%;
-    --muted-foreground: 0 0% 39%;
-    --accent: 18 30% 96%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 18 79% 50%;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 18 79% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 20%;
-    --sidebar-border: 0 0% 93%;
-    --sidebar-ring: 18 79% 50%;
   }
 }
 
@@ -113,31 +121,26 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
-  /* Mono font for metrics/data */
   .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
 
-  /* Selection color */
   ::selection {
-    background: hsl(18 79% 58% / 0.3);
-    color: white;
+    background: hsl(18 79% 50% / 0.2);
+    color: hsl(224 24% 12%);
   }
 }
 
 @layer utilities {
-  /* Glassmorphism */
   .glass {
     @apply bg-card/80 backdrop-blur-md border border-border/50;
   }
 
-  /* Coral gradient for buttons / accents */
   .gradient-coral {
-    background: linear-gradient(135deg, hsl(18, 79%, 58%), hsl(10, 68%, 48%));
+    background: linear-gradient(135deg, hsl(18, 79%, 50%), hsl(10, 68%, 42%));
   }
 
-  /* Glow effect */
   .glow-coral {
-    box-shadow: 0 0 40px hsl(18 79% 58% / 0.12);
+    box-shadow: 0 0 40px hsl(18 79% 50% / 0.1);
   }
 }
