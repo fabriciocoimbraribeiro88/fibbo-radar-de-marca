@@ -29,10 +29,6 @@ Deno.serve(async (req) => {
     const {
       entity_id,
       results_limit = 30,
-      date_from,
-      date_to,
-      collect_ads = false,
-      collect_seo = false,
     } = body;
 
     if (!entity_id) {
@@ -106,36 +102,19 @@ Deno.serve(async (req) => {
         console.log(`Profile saved for @${handle}`);
       }
 
-      // 2. Fetch posts with options
-      console.log(`Fetching posts for @${handle} (limit: ${results_limit}, dateFrom: ${date_from || 'none'}, dateTo: ${date_to || 'none'})...`);
+      // 2. Fetch posts
+      const effectiveLimit = (!results_limit || results_limit <= 0) ? 50000 : results_limit;
+      console.log(`Fetching posts for @${handle} (limit: ${effectiveLimit})...`);
       
       const postInput: Record<string, unknown> = {
         username: [handle],
-        resultsLimit: results_limit,
+        resultsLimit: effectiveLimit,
       };
-
-      // If date mode, fetch a large batch so we can filter by date after
-      if (date_from || date_to) {
-        postInput.resultsLimit = 10000;
-      }
 
       const postsRun = await runApifyActor(apifyToken, "apify~instagram-post-scraper", postInput);
 
       if (postsRun && postsRun.length > 0) {
-        let filteredPosts = postsRun;
-
-        // Filter by date if provided
-        if (date_from || date_to) {
-          const from = date_from ? new Date(date_from).getTime() : 0;
-          const to = date_to ? new Date(date_to + "T23:59:59").getTime() : Date.now();
-          filteredPosts = postsRun.filter((post: any) => {
-            if (!post.timestamp) return true;
-            const postTime = new Date(post.timestamp).getTime();
-            return postTime >= from && postTime <= to;
-          });
-        }
-
-        const posts = filteredPosts.map((post: any) => ({
+        const posts = postsRun.map((post: any) => ({
           entity_id,
           post_id_instagram: post.id || post.shortCode || `${handle}_${post.timestamp}`,
           shortcode: post.shortCode ?? null,
@@ -166,16 +145,6 @@ Deno.serve(async (req) => {
         }
         totalRecords += posts.length;
         console.log(`${posts.length} posts saved for @${handle}`);
-      }
-
-      // 3. Collect Ads (placeholder - log intent for now)
-      if (collect_ads) {
-        console.log(`Ads collection requested for @${handle} — feature pending integration`);
-      }
-
-      // 4. Collect SEO (placeholder - log intent for now)
-      if (collect_seo) {
-        console.log(`SEO collection requested for @${handle} — feature pending integration`);
       }
 
       // Update fetch log as completed
