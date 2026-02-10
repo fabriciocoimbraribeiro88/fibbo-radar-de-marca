@@ -56,7 +56,10 @@ import {
   // Search removed - not needed
   MoreHorizontal,
   ExternalLink,
+  Upload,
+  FileJson,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import type { Database } from "@/integrations/supabase/types";
 
 type EntityType = Database["public"]["Enums"]["entity_type"];
@@ -82,7 +85,7 @@ const AD_PLATFORMS = [
 import { FetchProgressBar } from "@/components/FetchProgressBar";
 
 interface CollectOptions {
-  mode: "all" | "count";
+  mode: "all" | "count" | "json";
   postsCount: number;
 }
 
@@ -90,6 +93,8 @@ const defaultCollectOptions: CollectOptions = {
   mode: "all",
   postsCount: 30,
 };
+
+const IMPORT_BATCH_SIZE = 500;
 
 export default function ProjectSources() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -114,7 +119,8 @@ export default function ProjectSources() {
     isBrand?: boolean;
   } | null>(null);
   const [collectOpts, setCollectOpts] = useState<CollectOptions>(defaultCollectOptions);
-
+  const [jsonFile, setJsonFile] = useState<{ name: string; posts: any[] } | null>(null);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
   // Expanded card
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -262,17 +268,98 @@ export default function ProjectSources() {
 
   const openCollectDialog = (entityId: string, handle: string, isBrand?: boolean) => {
     setCollectOpts({ ...defaultCollectOptions });
+    setJsonFile(null);
+    setImportProgress(null);
     setCollectDialog({ entityId, handle, isBrand });
   };
 
   const executeWithOptions = async () => {
     if (!collectDialog) return;
     const { entityId, handle, isBrand } = collectDialog;
+
+    if (collectOpts.mode === "json") {
+      await executeJsonImport(entityId, isBrand);
+      return;
+    }
+
     setCollectDialog(null);
     if (isBrand) {
       await executeBrand(handle, collectOpts);
     } else {
       await executeNow(entityId, handle, collectOpts);
+    }
+  };
+
+  const handleJsonFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        const posts = Array.isArray(parsed) ? parsed : [parsed];
+        setJsonFile({ name: file.name, posts });
+      } catch {
+        toast({ title: "Erro ao ler JSON", description: "O arquivo não é um JSON válido.", variant: "destructive" });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const executeJsonImport = async (entityId: string, isBrand?: boolean) => {
+    if (!jsonFile || !collectDialog) return;
+    
+    // For brand, ensure entity exists first
+    let targetEntityId = entityId;
+    if (isBrand) {
+      const cleanHandle = collectDialog.handle.replace("@", "");
+      const brandEntity = entities?.find(
+        (pe) => pe.monitored_entities?.instagram_handle?.replace("@", "") === cleanHandle
+      );
+      if (brandEntity) {
+        targetEntityId = brandEntity.entity_id;
+      } else if (projectId) {
+        const { data: newEntity, error: entErr } = await supabase
+          .from("monitored_entities")
+          .insert({ name: project?.brand_name ?? "Marca", instagram_handle: cleanHandle, type: "brand" as any })
+          .select("id")
+          .single();
+        if (entErr) { toast({ title: "Erro", description: entErr.message, variant: "destructive" }); return; }
+        targetEntityId = newEntity.id;
+        await supabase.from("project_entities").insert({ project_id: projectId, entity_id: targetEntityId, entity_role: "brand" as any });
+      }
+    }
+
+    const totalBatches = Math.ceil(jsonFile.posts.length / IMPORT_BATCH_SIZE);
+    setImportProgress({ current: 0, total: totalBatches });
+    let totalImported = 0;
+    let hasError = false;
+
+    for (let i = 0; i < jsonFile.posts.length; i += IMPORT_BATCH_SIZE) {
+      const batch = jsonFile.posts.slice(i, i + IMPORT_BATCH_SIZE);
+      setImportProgress({ current: Math.floor(i / IMPORT_BATCH_SIZE) + 1, total: totalBatches });
+
+      const { data, error } = await supabase.functions.invoke("import-instagram-json", {
+        body: { entity_id: targetEntityId, posts: batch },
+      });
+
+      if (error) {
+        toast({ title: "Erro na importação", description: error.message, variant: "destructive" });
+        hasError = true;
+        break;
+      }
+      totalImported += data?.total_imported ?? 0;
+    }
+
+    setImportProgress(null);
+    setCollectDialog(null);
+    setJsonFile(null);
+
+    if (!hasError) {
+      toast({ title: "Importação concluída!", description: `${totalImported} posts importados` });
+      queryClient.invalidateQueries({ queryKey: ["data-fetch-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["data-fetch-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["project-entities"] });
     }
   };
 
@@ -816,21 +903,24 @@ export default function ProjectSources() {
               </Label>
               <RadioGroup
                 value={collectOpts.mode}
-                onValueChange={(v) => setCollectOpts((o) => ({ ...o, mode: v as "all" | "count" }))}
+                onValueChange={(v) => {
+                  setCollectOpts((o) => ({ ...o, mode: v as "all" | "count" | "json" }));
+                  if (v !== "json") setJsonFile(null);
+                }}
                 className="space-y-2"
               >
                 <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="all" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">Todos os Posts</p>
-                    <p className="text-xs text-muted-foreground">Coletar todos os posts disponíveis</p>
+                    <p className="text-xs text-muted-foreground">Coletar todos os posts disponíveis via API</p>
                   </div>
                 </label>
                 <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="count" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">Por quantidade</p>
-                    <p className="text-xs text-muted-foreground">N posts mais recentes</p>
+                    <p className="text-xs text-muted-foreground">N posts mais recentes via API</p>
                   </div>
                   {collectOpts.mode === "count" && (
                     <Input
@@ -843,15 +933,71 @@ export default function ProjectSources() {
                     />
                   )}
                 </label>
+                <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="json" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                      <FileJson className="h-3.5 w-3.5" />
+                      Importar arquivo JSON
+                    </p>
+                    <p className="text-xs text-muted-foreground">Upload de arquivo exportado do Apify</p>
+                  </div>
+                </label>
               </RadioGroup>
+
+              {collectOpts.mode === "json" && (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept=".json"
+                      onChange={handleJsonFileSelect}
+                      className="text-xs h-9"
+                    />
+                  </div>
+                  {jsonFile && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/15">
+                      <FileJson className="h-4 w-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{jsonFile.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{jsonFile.posts.length.toLocaleString()} posts encontrados</p>
+                      </div>
+                    </div>
+                  )}
+                  {importProgress && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Importando batch {importProgress.current}/{importProgress.total}...
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {Math.round((importProgress.current / importProgress.total) * 100)}%
+                        </span>
+                      </div>
+                      <Progress value={(importProgress.current / importProgress.total) * 100} className="h-1" />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCollectDialog(null)} className="rounded-full">Cancelar</Button>
-            <Button onClick={executeWithOptions} className="rounded-full">
-              <Play className="mr-1.5 h-3.5 w-3.5" />
-              Iniciar Coleta
+            <Button variant="outline" onClick={() => { setCollectDialog(null); setJsonFile(null); setImportProgress(null); }} className="rounded-full" disabled={!!importProgress}>Cancelar</Button>
+            <Button
+              onClick={executeWithOptions}
+              className="rounded-full"
+              disabled={collectOpts.mode === "json" && (!jsonFile || !!importProgress)}
+            >
+              {importProgress ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : collectOpts.mode === "json" ? (
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+              ) : (
+                <Play className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              {collectOpts.mode === "json" ? "Importar" : "Iniciar Coleta"}
             </Button>
           </DialogFooter>
         </DialogContent>

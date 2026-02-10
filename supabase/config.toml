@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.fill-brand-context]
 verify_jwt = false
+
+[functions.import-instagram-json]
+verify_jwt = false
