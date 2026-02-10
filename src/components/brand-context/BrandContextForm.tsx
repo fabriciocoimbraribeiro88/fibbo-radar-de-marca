@@ -63,20 +63,9 @@ export default function BrandContextForm({ projectId, briefing }: Props) {
   const [form, setForm] = useState<BriefingData>(deepMerge(emptyBriefing, briefing));
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initialized = useRef(false);
-
+  // Single effect: sync form whenever briefing prop changes (including AI fill)
   useEffect(() => {
-    if (briefing && !initialized.current) {
-      setForm(deepMerge(emptyBriefing, briefing));
-      initialized.current = true;
-    }
-  }, [briefing]);
-
-  // Also update when briefing changes from AI fill
-  useEffect(() => {
-    if (briefing && initialized.current) {
-      setForm(deepMerge(emptyBriefing, briefing));
-    }
+    setForm(deepMerge(emptyBriefing, briefing));
   }, [briefing]);
 
   const save = useCallback(
