@@ -13,16 +13,76 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Sparkles,
+  Brain,
 } from "lucide-react";
+
+type ConnectionStatus = "idle" | "ok" | "error";
+
+function IntegrationCard({
+  name,
+  description,
+  icon: Icon,
+  status,
+  statusLabel,
+  testing,
+  onTest,
+}: {
+  name: string;
+  description: string;
+  icon: typeof Key;
+  status: ConnectionStatus;
+  statusLabel?: string;
+  testing: boolean;
+  onTest: () => void;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-accent p-2">
+              <Icon className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-medium text-foreground">{name}</h3>
+                {status === "ok" && (
+                  <Badge variant="secondary" className="gap-1 text-[10px]">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                    {statusLabel || "Conectado"}
+                  </Badge>
+                )}
+                {status === "error" && (
+                  <Badge variant="destructive" className="gap-1 text-[10px]">
+                    <XCircle className="h-3 w-3" />
+                    Erro
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">{description}</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={onTest} disabled={testing}>
+            {testing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            Testar Conexão
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SettingsPage() {
   const { toast } = useToast();
+
   const [testingApify, setTestingApify] = useState(false);
-  const [apifyStatus, setApifyStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [apifyStatus, setApifyStatus] = useState<ConnectionStatus>("idle");
   const [apifyUser, setApifyUser] = useState("");
 
-  const testApifyConnection = async () => {
+  const [testingClaude, setTestingClaude] = useState(false);
+  const [claudeStatus, setClaudeStatus] = useState<ConnectionStatus>("idle");
+
+  const testApify = async () => {
     setTestingApify(true);
     setApifyStatus("idle");
     try {
@@ -31,16 +91,37 @@ export default function SettingsPage() {
       if (data?.success) {
         setApifyStatus("ok");
         setApifyUser(data.username || "");
-        toast({ title: "Conexão OK!", description: `Apify conectado como ${data.username}` });
+        toast({ title: "Apify conectado!", description: `Usuário: ${data.username}` });
       } else {
         setApifyStatus("error");
-        toast({ title: "Erro", description: data?.error || "Falha na conexão", variant: "destructive" });
+        toast({ title: "Erro Apify", description: data?.error, variant: "destructive" });
       }
     } catch (err: any) {
       setApifyStatus("error");
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setTestingApify(false);
+    }
+  };
+
+  const testClaude = async () => {
+    setTestingClaude(true);
+    setClaudeStatus("idle");
+    try {
+      const { data, error } = await supabase.functions.invoke("test-anthropic");
+      if (error) throw error;
+      if (data?.success) {
+        setClaudeStatus("ok");
+        toast({ title: "Claude conectado!", description: "API key válida." });
+      } else {
+        setClaudeStatus("error");
+        toast({ title: "Erro Claude", description: data?.error, variant: "destructive" });
+      }
+    } catch (err: any) {
+      setClaudeStatus("error");
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setTestingClaude(false);
     }
   };
 
@@ -68,81 +149,30 @@ export default function SettingsPage() {
           <Card>
             <CardContent className="p-6">
               <h2 className="mb-4 text-base font-medium text-foreground">Membros da equipe</h2>
-              <p className="text-sm text-muted-foreground">
-                Gerencie os membros e suas permissões. Em breve.
-              </p>
+              <p className="text-sm text-muted-foreground">Em breve.</p>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="integrations">
           <div className="space-y-4">
-            {/* Apify */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-accent p-2">
-                      <Key className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-foreground">Apify</h3>
-                        {apifyStatus === "ok" && (
-                          <Badge variant="secondary" className="gap-1 text-[10px]">
-                            <CheckCircle2 className="h-3 w-3 text-green-500" />
-                            Conectado{apifyUser ? ` (${apifyUser})` : ""}
-                          </Badge>
-                        )}
-                        {apifyStatus === "error" && (
-                          <Badge variant="destructive" className="gap-1 text-[10px]">
-                            <XCircle className="h-3 w-3" />
-                            Erro
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Coleta de dados do Instagram, ads e SEO
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={testApifyConnection}
-                    disabled={testingApify}
-                  >
-                    {testingApify && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                    Testar Conexão
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Lovable AI */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-accent p-2">
-                      <Sparkles className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-foreground">IA (Lovable Cloud)</h3>
-                        <Badge variant="secondary" className="gap-1 text-[10px]">
-                          <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          Ativo
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Gemini, GPT-5 e outros modelos — sem chave extra necessária
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <IntegrationCard
+              name="Apify"
+              description="Coleta de dados do Instagram, ads e SEO"
+              icon={Key}
+              status={apifyStatus}
+              statusLabel={apifyUser ? `Conectado (${apifyUser})` : "Conectado"}
+              testing={testingApify}
+              onTest={testApify}
+            />
+            <IntegrationCard
+              name="Anthropic (Claude)"
+              description="Análises de inteligência competitiva com IA"
+              icon={Brain}
+              status={claudeStatus}
+              testing={testingClaude}
+              onTest={testClaude}
+            />
           </div>
         </TabsContent>
 
@@ -150,9 +180,7 @@ export default function SettingsPage() {
           <Card>
             <CardContent className="p-6">
               <h2 className="mb-4 text-base font-medium text-foreground">Consumo</h2>
-              <p className="text-sm text-muted-foreground">
-                Dashboard de consumo de tokens e custos. Em breve.
-              </p>
+              <p className="text-sm text-muted-foreground">Em breve.</p>
             </CardContent>
           </Card>
         </TabsContent>
