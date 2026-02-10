@@ -17,8 +17,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   FolderOpen,
-  BarChart3,
-  FileText,
   Settings,
   Bell,
   Search,
@@ -41,8 +39,6 @@ import fibboLogo from "@/assets/fibbo-logo.png";
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Projetos", url: "/projects", icon: FolderOpen },
-  { title: "Análises", url: "/analyses", icon: BarChart3 },
-  { title: "Relatórios", url: "/reports", icon: FileText },
   { title: "Configurações", url: "/settings", icon: Settings },
 ];
 

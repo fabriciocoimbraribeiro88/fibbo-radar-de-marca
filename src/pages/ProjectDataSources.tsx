@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -20,12 +21,12 @@ import {
   Megaphone,
   Search,
   Database,
-  Download,
   Loader2,
   CheckCircle2,
   XCircle,
   Clock,
   Play,
+  Crown,
 } from "lucide-react";
 
 const SOURCE_ICONS: Record<string, typeof Instagram> = {
@@ -44,17 +45,78 @@ const SOURCE_LABELS: Record<string, string> = {
   website: "Website",
 };
 
-const SCHEDULE_LABELS: Record<string, string> = {
-  manual: "Manual",
-  weekly: "Semanal",
-  monthly: "Mensal",
-};
+const PROGRESS_STEPS = [
+  { label: "Conectando ao Apify...", target: 15 },
+  { label: "Baixando perfil...", target: 35 },
+  { label: "Baixando posts...", target: 60 },
+  { label: "Processando dados...", target: 80 },
+  { label: "Salvando no banco...", target: 92 },
+];
+
+function FetchProgressBar({ active }: { active: boolean }) {
+  const [step, setStep] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+
+  useEffect(() => {
+    if (!active) {
+      if (progress > 0) {
+        setProgress(100);
+        const t = setTimeout(() => { setProgress(0); setStep(0); }, 1200);
+        return () => clearTimeout(t);
+      }
+      return;
+    }
+    setStep(0);
+    setProgress(5);
+
+    intervalRef.current = setInterval(() => {
+      setStep((prev) => {
+        const next = Math.min(prev + 1, PROGRESS_STEPS.length - 1);
+        setProgress(PROGRESS_STEPS[next].target);
+        return next;
+      });
+    }, 3500);
+
+    return () => clearInterval(intervalRef.current);
+  }, [active]);
+
+  if (progress === 0) return null;
+
+  return (
+    <div className="mt-3 border-t border-border pt-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          {progress >= 100 ? "Concluído!" : PROGRESS_STEPS[step]?.label}
+        </span>
+        <span className="text-[10px] font-mono text-muted-foreground">{Math.round(progress)}%</span>
+      </div>
+      <Progress value={progress} className="h-1.5" />
+    </div>
+  );
+}
 
 export default function ProjectDataSources() {
   const { id: projectId } = useParams<{ id: string }>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [executingId, setExecutingId] = useState<string | null>(null);
+
+  // Fetch project for brand info
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", projectId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
 
   // Fetch entities for this project
   const { data: entities } = useQuery({
@@ -70,7 +132,7 @@ export default function ProjectDataSources() {
     enabled: !!projectId,
   });
 
-  // Fetch data fetch configs for all entities in the project
+  // Fetch data fetch configs
   const entityIds = entities?.map((e) => e.entity_id) ?? [];
   const { data: configs, isLoading: configsLoading } = useQuery({
     queryKey: ["data-fetch-configs", projectId, entityIds],
@@ -142,6 +204,55 @@ export default function ProjectDataSources() {
     }
   };
 
+  const executeBrand = async () => {
+    if (!project?.instagram_handle || !projectId) return;
+    const handle = project.instagram_handle.replace("@", "");
+
+    // Find or create a monitored_entity for the brand
+    setExecutingId("brand");
+    try {
+      // Check if entity already linked
+      const brandEntity = entities?.find(
+        (pe) => pe.monitored_entities?.instagram_handle?.replace("@", "") === handle
+      );
+
+      let entityId: string;
+
+      if (brandEntity) {
+        entityId = brandEntity.entity_id;
+      } else {
+        // Create entity
+        const { data: newEntity, error: entErr } = await supabase
+          .from("monitored_entities")
+          .insert({
+            name: project.brand_name,
+            instagram_handle: handle,
+            type: "competitor" as const,
+          })
+          .select("id")
+          .single();
+        if (entErr) throw entErr;
+        entityId = newEntity.id;
+
+        // Link to project
+        const { error: linkErr } = await supabase
+          .from("project_entities")
+          .insert({
+            project_id: projectId,
+            entity_id: entityId,
+            entity_role: "competitor" as const,
+          });
+        if (linkErr) throw linkErr;
+      }
+
+      await executeNow(entityId, handle);
+      queryClient.invalidateQueries({ queryKey: ["project-entities"] });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      setExecutingId(null);
+    }
+  };
+
   const getLogsForConfig = (configId: string) =>
     logs?.filter((l) => l.config_id === configId).slice(0, 3) ?? [];
 
@@ -154,24 +265,20 @@ export default function ProjectDataSources() {
     );
   }
 
-  // Build a flat list of entity + source combos  
+  // Build entity source rows
   const sourceRows = entities?.flatMap((pe) => {
     const e = pe.monitored_entities;
     if (!e) return [];
     const entityConfigs = configs?.filter((c) => c.entity_id === e.id) ?? [];
 
-    if (entityConfigs.length === 0) {
-      // If no configs, show a row for Instagram if handle exists
-      if (e.instagram_handle) {
-        return [{
-          entityId: e.id,
-          entityName: e.name,
-          handle: e.instagram_handle,
-          sourceType: "instagram_posts" as string,
-          config: null,
-        }];
-      }
-      return [];
+    if (entityConfigs.length === 0 && e.instagram_handle) {
+      return [{
+        entityId: e.id,
+        entityName: e.name,
+        handle: e.instagram_handle,
+        sourceType: "instagram_posts" as string,
+        config: null,
+      }];
     }
 
     return entityConfigs.map((c) => ({
@@ -183,6 +290,11 @@ export default function ProjectDataSources() {
     }));
   }) ?? [];
 
+  const brandHandle = project?.instagram_handle?.replace("@", "");
+  const brandAlreadyInList = brandHandle && sourceRows.some(
+    (r) => r.handle?.replace("@", "") === brandHandle
+  );
+
   return (
     <div className="max-w-4xl animate-fade-in">
       <div className="mb-6">
@@ -192,22 +304,64 @@ export default function ProjectDataSources() {
         </p>
       </div>
 
-      {sourceRows.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center py-16">
-            <Database className="mb-3 h-10 w-10 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">Nenhuma fonte configurada</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Adicione entidades com handles do Instagram para começar a coletar dados.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {sourceRows.map((row, idx) => {
+      <div className="space-y-3">
+        {/* Brand row */}
+        {brandHandle && !brandAlreadyInList && (
+          <Card className="ring-1 ring-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                    <Crown className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{project?.brand_name}</p>
+                      <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary">
+                        Marca
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      Instagram • @{brandHandle}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={executingId === "brand"}
+                  onClick={executeBrand}
+                >
+                  {executingId === "brand" ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Play className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Executar
+                </Button>
+              </div>
+              <FetchProgressBar active={executingId === "brand"} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Entity rows */}
+        {sourceRows.length === 0 && !brandHandle ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center py-16">
+              <Database className="mb-3 h-10 w-10 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">Nenhuma fonte configurada</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Adicione entidades com handles do Instagram para começar a coletar dados.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          sourceRows.map((row, idx) => {
             const Icon = SOURCE_ICONS[row.sourceType] ?? Database;
             const recentLogs = row.config ? getLogsForConfig(row.config.id) : [];
             const lastLog = recentLogs[0];
+            const isExecuting = executingId === row.entityId;
 
             return (
               <Card key={`${row.entityId}-${row.sourceType}-${idx}`}>
@@ -231,7 +385,6 @@ export default function ProjectDataSources() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {/* Schedule selector */}
                       {row.config && (
                         <Select
                           value={row.config.schedule ?? "manual"}
@@ -250,7 +403,6 @@ export default function ProjectDataSources() {
                         </Select>
                       )}
 
-                      {/* Last execution status */}
                       {lastLog && (
                         <Badge
                           variant="secondary"
@@ -273,15 +425,14 @@ export default function ProjectDataSources() {
                         </Badge>
                       )}
 
-                      {/* Execute button */}
                       {row.handle && (
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={executingId === row.entityId}
+                          disabled={isExecuting}
                           onClick={() => executeNow(row.entityId, row.handle!)}
                         >
-                          {executingId === row.entityId ? (
+                          {isExecuting ? (
                             <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                           ) : (
                             <Play className="mr-1.5 h-3.5 w-3.5" />
@@ -292,8 +443,10 @@ export default function ProjectDataSources() {
                     </div>
                   </div>
 
-                  {/* Recent logs */}
-                  {recentLogs.length > 0 && (
+                  <FetchProgressBar active={isExecuting} />
+
+                  {/* Recent logs (only when not executing) */}
+                  {!isExecuting && recentLogs.length > 0 && (
                     <div className="mt-3 border-t border-border pt-3">
                       <p className="text-[10px] font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
                         Últimas execuções
@@ -329,9 +482,9 @@ export default function ProjectDataSources() {
                 </CardContent>
               </Card>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
     </div>
   );
 }
