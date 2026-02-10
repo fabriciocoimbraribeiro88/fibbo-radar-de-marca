@@ -176,7 +176,7 @@ export default function ProjectPlanning() {
         .insert({
           project_id: projectId!,
           title: `Planejamento — ${analysis.title}`,
-          type: "content",
+          type: "integrated",
           generated_from_analysis: analysisId,
           period_start: analysis.period_start,
           period_end: analysis.period_end,
