@@ -227,12 +227,12 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
             </Select>
             <div className="flex gap-1.5 flex-wrap">
               {Object.entries(totalByType).map(([type, count]) => (
-                <Badge key={type} variant="outline" className={`text-[10px] ${TYPE_CONFIG[type]?.className ?? ""}`}>
+                <span key={type} className={`text-[10px] rounded px-1.5 py-0.5 border ${TYPE_CONFIG[type]?.className ?? ""}`}>
                   {TYPE_CONFIG[type]?.emoji} {TYPE_CONFIG[type]?.label ?? type}: {count}
-                </Badge>
+                </span>
               ))}
               {dates.length > 0 && (
-                <Badge variant="outline" className="text-[10px]">{dates.length} total</Badge>
+                <span className="text-[10px] rounded px-1.5 py-0.5 border">{dates.length} total</span>
               )}
             </div>
           </div>
@@ -274,10 +274,32 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                 <CollapsibleContent className="pl-6 pr-1 space-y-0.5 pb-2">
                   {monthDates.map((d) => (
                     <div key={d.id} className="flex items-center gap-2 py-1 group">
-                      <Badge variant="outline" className={`text-[10px] shrink-0 w-20 justify-center ${TYPE_CONFIG[d.type]?.className ?? ""}`}>
+                      <span className={`text-[10px] shrink-0 w-20 text-center rounded px-1 py-0.5 ${TYPE_CONFIG[d.type]?.className ?? ""}`}>
                         {TYPE_CONFIG[d.type]?.emoji} {TYPE_CONFIG[d.type]?.label ?? d.type}
-                      </Badge>
-                      <span className="text-sm flex-1 truncate">{d.name || "Sem nome"}</span>
+                      </span>
+                      {!d.name ? (
+                        <Input
+                          autoFocus
+                          placeholder="Nome da data..."
+                          className="h-6 text-sm flex-1"
+                          onBlur={(e) => {
+                            if (!e.target.value.trim()) {
+                              removeDate(d.id);
+                            } else {
+                              updateDate(d.id, "name", e.target.value.trim());
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              (e.target as HTMLInputElement).blur();
+                            } else if (e.key === "Escape") {
+                              removeDate(d.id);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="text-sm flex-1 truncate">{d.name}</span>
+                      )}
                       <span className="text-xs text-muted-foreground shrink-0">{d.date_start?.slice(8)}/{d.date_start?.slice(5, 7)}</span>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 shrink-0" onClick={() => removeDate(d.id)}>
                         <X className="h-3 w-3" />
