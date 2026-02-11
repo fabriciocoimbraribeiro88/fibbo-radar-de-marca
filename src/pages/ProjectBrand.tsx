@@ -70,7 +70,6 @@ export default function ProjectBrand() {
     { value: "content", label: "Conteúdo", icon: LayoutGrid },
     { value: "brandbook", label: "Brand Book", icon: Palette },
     { value: "products", label: "Produtos", icon: Package },
-    { value: "references", label: "Referências", icon: ImageIcon },
     { value: "memory", label: "Memória", icon: Brain },
     { value: "sources", label: "Fontes", icon: FileText },
   ];
@@ -102,6 +101,7 @@ export default function ProjectBrand() {
           <ContentPillars projectId={id!} briefing={project?.briefing} />
           <HashtagStrategy projectId={id!} briefing={project?.briefing} />
           <SeasonalCalendar projectId={id!} briefing={project?.briefing} segment={project?.segment} />
+          <BrandReferences projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
         <TabsContent value="brandbook">
@@ -110,10 +110,6 @@ export default function ProjectBrand() {
 
         <TabsContent value="products">
           <ProductsCatalog projectId={id!} briefing={project?.briefing} />
-        </TabsContent>
-
-        <TabsContent value="references">
-          <BrandReferences projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
         <TabsContent value="memory">
