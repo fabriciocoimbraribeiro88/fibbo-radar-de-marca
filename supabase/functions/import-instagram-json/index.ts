@@ -71,6 +71,7 @@ function mapApifyPost(post: any, entityId: string) {
     media_urls: mediaUrls,
     is_pinned: post.isPinned ?? false,
     fetched_at: new Date().toISOString(),
+    metadata: post,
   };
 }
 
