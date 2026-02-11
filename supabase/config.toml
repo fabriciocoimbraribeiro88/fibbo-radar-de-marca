@@ -32,3 +32,12 @@ verify_jwt = false
 
 [functions.generate-hashtag-strategy]
 verify_jwt = false
+
+[functions.generate-planning-titles]
+verify_jwt = false
+
+[functions.generate-planning-briefings]
+verify_jwt = false
+
+[functions.generate-seasonal-calendar]
+verify_jwt = false
