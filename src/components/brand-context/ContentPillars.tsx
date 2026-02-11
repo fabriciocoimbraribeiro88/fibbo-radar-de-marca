@@ -305,6 +305,9 @@ export default function ContentPillars({ projectId, briefing }: Props) {
                 <div className="flex-1">
                   <p className="text-sm font-medium">{s.name} ({s.percentage}%)</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{s.description}</p>
+                  {(s as any).justification && (
+                    <p className="text-xs text-primary/80 mt-1 italic">💡 {(s as any).justification}</p>
+                  )}
                   {s.preferred_formats.length > 0 && (
                     <div className="flex gap-1 mt-1.5 flex-wrap">
                       {s.preferred_formats.map((f) => (

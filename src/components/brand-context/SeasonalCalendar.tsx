@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, X, Loader2, CheckCircle2, CalendarDays } from "lucide-react";
+import { Plus, X, Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface SeasonalDate {
@@ -28,42 +28,6 @@ interface Props {
   segment?: string | null;
 }
 
-const SEASONAL_DATES: Record<string, Array<Omit<SeasonalDate, "id">>> = {
-  default: [
-    { name: "Carnaval", date_start: "2025-03-01", recurrence: "annual", relevance: "medium", type: "cultural" },
-    { name: "Dia das Mães", date_start: "2025-05-11", recurrence: "annual", relevance: "high", type: "commercial" },
-    { name: "Dia dos Namorados", date_start: "2025-06-12", recurrence: "annual", relevance: "high", type: "commercial" },
-    { name: "Dia dos Pais", date_start: "2025-08-10", recurrence: "annual", relevance: "high", type: "commercial" },
-    { name: "Dia do Cliente", date_start: "2025-09-15", recurrence: "annual", relevance: "medium", type: "commercial" },
-    { name: "Black Friday", date_start: "2025-11-28", recurrence: "annual", relevance: "high", type: "commercial" },
-    { name: "Natal", date_start: "2025-12-25", recurrence: "annual", relevance: "high", type: "commercial" },
-    { name: "Ano Novo", date_start: "2026-01-01", recurrence: "annual", relevance: "medium", type: "cultural" },
-  ],
-  Educação: [
-    { name: "Volta às Aulas", date_start: "2025-02-03", recurrence: "annual", relevance: "high", type: "commercial" },
-    { name: "Dia do Professor", date_start: "2025-10-15", recurrence: "annual", relevance: "high", type: "institutional" },
-    { name: "ENEM", date_start: "2025-11-02", recurrence: "annual", relevance: "high", type: "commercial" },
-    { name: "Período de Matrículas", date_start: "2025-11-15", date_end: "2026-01-31", recurrence: "annual", relevance: "high", type: "commercial" },
-  ],
-  Moda: [
-    { name: "SPFW", date_start: "2025-04-14", date_end: "2025-04-18", recurrence: "annual", relevance: "high", type: "cultural" },
-    { name: "Dia do Consumidor", date_start: "2025-03-15", recurrence: "annual", relevance: "medium", type: "commercial" },
-  ],
-  Tecnologia: [
-    { name: "CES Las Vegas", date_start: "2025-01-07", date_end: "2025-01-10", recurrence: "annual", relevance: "medium", type: "cultural" },
-    { name: "Web Summit", date_start: "2025-11-11", date_end: "2025-11-14", recurrence: "annual", relevance: "medium", type: "cultural" },
-  ],
-  Saúde: [
-    { name: "Dia Mundial da Saúde", date_start: "2025-04-07", recurrence: "annual", relevance: "high", type: "institutional" },
-    { name: "Outubro Rosa", date_start: "2025-10-01", date_end: "2025-10-31", recurrence: "annual", relevance: "high", type: "social" },
-    { name: "Novembro Azul", date_start: "2025-11-01", date_end: "2025-11-30", recurrence: "annual", relevance: "high", type: "social" },
-  ],
-  Beleza: [
-    { name: "Dia da Mulher", date_start: "2025-03-08", recurrence: "annual", relevance: "high", type: "social" },
-    { name: "Beauty Fair", date_start: "2025-09-06", date_end: "2025-09-09", recurrence: "annual", relevance: "medium", type: "cultural" },
-  ],
-};
-
 const RELEVANCE_BADGE: Record<string, { label: string; className: string }> = {
   high: { label: "🔴 Alta", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
   medium: { label: "🟡 Média", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
@@ -78,8 +42,9 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
   const queryClient = useQueryClient();
   const [dates, setDates] = useState<SeasonalDate[]>(briefing?.seasonal_calendar ?? []);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<Array<Omit<SeasonalDate, "id"> & { selected: boolean }>>([]);
+  const [suggestions, setSuggestions] = useState<Array<any>>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -120,21 +85,43 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
     schedSave(next);
   };
 
-  const openSuggestions = () => {
-    const existingNames = new Set(dates.map((d) => d.name.toLowerCase()));
-    const segDates = SEASONAL_DATES[segment ?? ""] ?? [];
-    const defaultDates = SEASONAL_DATES.default;
-    const all = [...segDates, ...defaultDates];
-    const unique = all.filter((d, i) => all.findIndex((x) => x.name === d.name) === i);
-    setSuggestions(unique.map((d) => ({ ...d, selected: !existingNames.has(d.name.toLowerCase()) })));
-    setDialogOpen(true);
+  const handleGenerateAI = async () => {
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-seasonal-calendar", {
+        body: { project_id: projectId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const existingNames = new Set(dates.map((d) => d.name.toLowerCase()));
+      const incoming = (data.dates ?? []).map((d: any) => ({
+        ...d,
+        selected: !existingNames.has(d.name.toLowerCase()),
+      }));
+      setSuggestions(incoming);
+      setDialogOpen(true);
+    } catch (e) {
+      toast.error("Erro ao gerar datas: " + (e as Error).message);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const applySuggestions = () => {
     const existingNames = new Set(dates.map((d) => d.name.toLowerCase()));
     const toAdd = suggestions
       .filter((s) => s.selected && !existingNames.has(s.name.toLowerCase()))
-      .map((s) => ({ ...s, id: crypto.randomUUID() }));
+      .map((s) => ({
+        id: crypto.randomUUID(),
+        name: s.name,
+        date_start: s.date_start,
+        date_end: s.date_end || undefined,
+        recurrence: s.recurrence,
+        relevance: s.relevance,
+        type: s.type,
+        notes: s.justification || undefined,
+      }));
     const next = [...dates, ...toAdd].sort((a, b) => a.date_start.localeCompare(b.date_start));
     setDates(next);
     save(next);
@@ -159,8 +146,9 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
               <Button variant="outline" size="sm" onClick={addDate}>
                 <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar Data
               </Button>
-              <Button variant="secondary" size="sm" onClick={openSuggestions}>
-                <CalendarDays className="mr-1 h-3.5 w-3.5" /> Sugerir Datas
+              <Button size="sm" onClick={handleGenerateAI} disabled={generating}>
+                {generating ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
+                Sugerir com IA
               </Button>
             </div>
           </div>
@@ -168,23 +156,9 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
         <CardContent className="space-y-2">
           {sorted.map((d) => (
             <div key={d.id} className="flex items-center gap-2 rounded-lg border p-3 flex-wrap">
-              <Input
-                value={d.name}
-                onChange={(e) => updateDate(d.id, "name", e.target.value)}
-                placeholder="Nome"
-                className="h-8 text-sm w-40 flex-shrink-0"
-              />
-              <Input
-                type="date" value={d.date_start}
-                onChange={(e) => updateDate(d.id, "date_start", e.target.value)}
-                className="h-8 text-sm w-36 flex-shrink-0"
-              />
-              <Input
-                type="date" value={d.date_end ?? ""}
-                onChange={(e) => updateDate(d.id, "date_end", e.target.value)}
-                placeholder="Fim"
-                className="h-8 text-sm w-36 flex-shrink-0"
-              />
+              <Input value={d.name} onChange={(e) => updateDate(d.id, "name", e.target.value)} placeholder="Nome" className="h-8 text-sm w-40 flex-shrink-0" />
+              <Input type="date" value={d.date_start} onChange={(e) => updateDate(d.id, "date_start", e.target.value)} className="h-8 text-sm w-36 flex-shrink-0" />
+              <Input type="date" value={d.date_end ?? ""} onChange={(e) => updateDate(d.id, "date_end", e.target.value)} placeholder="Fim" className="h-8 text-sm w-36 flex-shrink-0" />
               <Select value={d.recurrence} onValueChange={(v) => updateDate(d.id, "recurrence", v)}>
                 <SelectTrigger className="h-8 text-xs w-24"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-card">
@@ -209,12 +183,7 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                   <SelectItem value="cultural">Cultural</SelectItem>
                 </SelectContent>
               </Select>
-              <Input
-                value={d.notes ?? ""}
-                onChange={(e) => updateDate(d.id, "notes", e.target.value)}
-                placeholder="Notas..."
-                className="h-8 text-sm flex-1 min-w-[100px]"
-              />
+              <Input value={d.notes ?? ""} onChange={(e) => updateDate(d.id, "notes", e.target.value)} placeholder="Notas..." className="h-8 text-sm flex-1 min-w-[100px]" />
               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeDate(d.id)}>
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -222,7 +191,7 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
           ))}
           {dates.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Nenhuma data adicionada. Use "Sugerir Datas" para começar.
+              Nenhuma data adicionada. Use "Sugerir com IA" para começar.
             </p>
           )}
         </CardContent>
@@ -231,28 +200,34 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Sugerir Datas Sazonais</DialogTitle>
+            <DialogTitle>Datas Sugeridas pela IA</DialogTitle>
             <DialogDescription>
-              {segment ? `Datas para o segmento "${segment}" + datas gerais.` : "Datas gerais para o calendário."}
+              Datas específicas para o setor e posicionamento da marca.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             {suggestions.map((s, i) => (
-              <label key={s.name} className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+              <label key={i} className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
                 <Checkbox
                   checked={s.selected}
                   onCheckedChange={(checked) => {
                     setSuggestions((prev) => prev.map((x, j) => j === i ? { ...x, selected: !!checked } : x));
                   }}
+                  className="mt-0.5"
                 />
-                <div className="flex-1 flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium">{s.name}</span>
-                  <span className="text-xs text-muted-foreground">{s.date_start}</span>
-                  {s.date_end && <span className="text-xs text-muted-foreground">→ {s.date_end}</span>}
-                  <Badge variant="outline" className={`text-[10px] ${RELEVANCE_BADGE[s.relevance]?.className}`}>
-                    {RELEVANCE_BADGE[s.relevance]?.label}
-                  </Badge>
-                  <Badge variant="outline" className="text-[10px]">{s.type}</Badge>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium">{s.name}</span>
+                    <span className="text-xs text-muted-foreground">{s.date_start}</span>
+                    {s.date_end && <span className="text-xs text-muted-foreground">→ {s.date_end}</span>}
+                    <Badge variant="outline" className={`text-[10px] ${RELEVANCE_BADGE[s.relevance]?.className}`}>
+                      {RELEVANCE_BADGE[s.relevance]?.label}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px]">{s.type}</Badge>
+                  </div>
+                  {s.justification && (
+                    <p className="text-xs text-primary/80 mt-1 italic">💡 {s.justification}</p>
+                  )}
                 </div>
               </label>
             ))}
