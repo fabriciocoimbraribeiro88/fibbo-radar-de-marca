@@ -271,33 +271,15 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                   </Button>
                 </div>
 
-                <CollapsibleContent className="pl-4 pr-1 space-y-1.5 pb-2">
+                <CollapsibleContent className="pl-6 pr-1 space-y-0.5 pb-2">
                   {monthDates.map((d) => (
-                    <div key={d.id} className={`flex items-center gap-2 rounded-lg border p-2.5 flex-wrap ${d.type === "ideias" ? "border-dashed border-green-500/40" : ""}`}>
-                      <Badge variant="outline" className={`text-[10px] shrink-0 ${TYPE_CONFIG[d.type]?.className ?? ""}`}>
+                    <div key={d.id} className="flex items-center gap-2 py-1 group">
+                      <Badge variant="outline" className={`text-[10px] shrink-0 w-20 justify-center ${TYPE_CONFIG[d.type]?.className ?? ""}`}>
                         {TYPE_CONFIG[d.type]?.emoji} {TYPE_CONFIG[d.type]?.label ?? d.type}
                       </Badge>
-                      <Input value={d.name} onChange={(e) => updateDate(d.id, "name", e.target.value)} placeholder="Nome da data" className="h-7 text-sm w-36 flex-shrink-0" />
-                      <Input type="date" value={d.date_start} onChange={(e) => updateDate(d.id, "date_start", e.target.value)} className="h-7 text-xs w-32 flex-shrink-0" />
-                      <Input type="date" value={d.date_end ?? ""} onChange={(e) => updateDate(d.id, "date_end", e.target.value)} placeholder="Fim" className="h-7 text-xs w-32 flex-shrink-0" />
-                      <Select value={d.type} onValueChange={(v) => updateDate(d.id, "type", v)}>
-                        <SelectTrigger className="h-7 text-[10px] w-28"><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-card">
-                          {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
-                            <SelectItem key={key} value={key}>{cfg.emoji} {cfg.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={d.relevance} onValueChange={(v) => updateDate(d.id, "relevance", v)}>
-                        <SelectTrigger className="h-7 text-[10px] w-24"><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-card">
-                          <SelectItem value="high">🔴 Alta</SelectItem>
-                          <SelectItem value="medium">🟡 Média</SelectItem>
-                          <SelectItem value="low">🟢 Baixa</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input value={d.notes ?? ""} onChange={(e) => updateDate(d.id, "notes", e.target.value)} placeholder="Notas..." className="h-7 text-xs flex-1 min-w-[80px]" />
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeDate(d.id)}>
+                      <span className="text-sm flex-1 truncate">{d.name || "Sem nome"}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">{d.date_start?.slice(8)}/{d.date_start?.slice(5, 7)}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 shrink-0" onClick={() => removeDate(d.id)}>
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
