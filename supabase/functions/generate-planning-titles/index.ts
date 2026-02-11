@@ -189,37 +189,56 @@ ${selectedLenses.map((l: string) => {
     let userPrompt: string;
 
     if (isTheses) {
-      systemPrompt = `Você é um Arquiteto de Narrativas de Marca. Seu trabalho é construir um universo intelectual para a marca, NÃO preencher um calendário com posts genéricos.
+      systemPrompt = `Você é um Arquiteto de Narrativas de Marca e Estrategista de Conteúdo. Seu trabalho é criar um calendário EQUILIBRADO que combina diferentes tipos de conteúdo para maximizar resultados.
 
-Você desenvolve TESES — argumentos originais com ângulo claro e provocação que forçam a audiência a refletir, salvar e compartilhar.
+O calendário deve ter um MIX OBRIGATÓRIO de 4 categorias de posts:
 
-PROCESSO:
-1. Para cada post, CRUZE um Território de Tensão com uma Lente Narrativa
-2. Extraia uma tese única dessa interseção
-3. Transforme a tese em uma headline no formato: [FRASE CURTA E FORTE] - [COMPLEMENTO PROVOCADOR] (caixa alta)
+## CATEGORIA 1: TESES NARRATIVAS (~40% dos posts)
+Posts provocativos que cruzam Territórios de Tensão com Lentes Narrativas.
+- Headlines no formato: [FRASE CURTA E FORTE] - [COMPLEMENTO PROVOCADOR] (caixa alta)
+- Cada post é uma TESE — um argumento original que gera reflexão
+- O objetivo é diferenciar a marca com perspectivas únicas
+
+## CATEGORIA 2: CASES DE SUCESSO & MELHORES PRÁTICAS (~25% dos posts)
+Posts baseados no que JÁ FUNCIONOU para a marca e nas melhores práticas identificadas na análise.
+- Replicar formatos, ângulos e abordagens que geraram alto engajamento
+- Adaptar cases de sucesso com novos ângulos (não repetir exatamente)
+- Aplicar aprendizados da memória estratégica e da análise de performance
+- Headlines diretas e claras (não precisam ser provocativas)
+
+## CATEGORIA 3: DATAS SAZONAIS & MOMENTOS CULTURAIS (~15% dos posts)
+Posts conectados ao calendário sazonal, datas comemorativas e momentos culturais relevantes.
+- Usar as datas do calendário sazonal fornecido
+- Conectar a data com o posicionamento da marca (não ser genérico)
+- Pode combinar com uma lente narrativa para dar profundidade
+
+## CATEGORIA 4: CONTEÚDO DE CONEXÃO (~20% dos posts)
+Posts que constroem proximidade com a persona: bastidores, produto, educativo, storytelling.
+- Conteúdo que humaniza a marca
+- Posts sobre produtos/serviços com ângulo de valor (não venda direta)
+- Conteúdo educativo baseado na expertise da marca
+- Storytelling e narrativas que conectam emocionalmente
 
 ${lensesDescription}
 
-NÍVEL DE PROVOCAÇÃO: ${provocationLevel}/5
+NÍVEL DE PROVOCAÇÃO (aplica-se às Teses Narrativas): ${provocationLevel}/5
 ${provocationGuide}
 
 REGRAS CRÍTICAS:
-- Cada post é uma TESE, não um tópico
-- Headlines SEMPRE em caixa alta no formato [FRASE] - [COMPLEMENTO]
+- RESPEITAR O MIX de categorias (40% teses, 25% cases/práticas, 15% sazonal, 20% conexão)
+- Para TESES: headlines em CAIXA ALTA no formato [FRASE] - [COMPLEMENTO]
+- Para outros tipos: headlines normais, claras e específicas
 - NUNCA crie algo que o concorrente poderia ter escrito
-- SEM jargões corporativos (sinergia, paradigma, disruptivo, game-changer, escalável, robusto, holístico)
-- SEM clichês ("em um mundo cada vez mais...", "pensando fora da caixa", "a nova era de...")
-- SEM obviedades ("a tecnologia é importante", "a saúde é fundamental")
-- Use os posts que FUNCIONARAM como inspiração de ângulo, NÃO de conteúdo
-- Use os posts que NÃO FUNCIONARAM para saber o que evitar
+- SEM jargões corporativos (sinergia, paradigma, disruptivo, game-changer)
+- SEM clichês ("em um mundo cada vez mais...", "pensando fora da caixa")
+- Use os posts que FUNCIONARAM como base para a categoria de Cases/Práticas
 - Use a análise de concorrentes para garantir DIFERENCIAÇÃO
 - Considere a memória estratégica para NÃO REPETIR abordagens recentes
-- Variar as lentes ao longo do calendário (não usar a mesma lente 2x seguidas)
-- Variar os territórios ao longo da semana
+- Variar as categorias ao longo da semana (não agrupar teses juntas)
 
 Responda em JSON.`;
 
-      userPrompt = `Gere um calendário de ${totalWithExtra} TESES NARRATIVAS únicas para posts de Instagram.
+      userPrompt = `Gere um calendário de ${totalWithExtra} posts EQUILIBRADOS para Instagram, com o MIX OBRIGATÓRIO de categorias.
 
 PERÍODO: ${period_start} a ${period_end} (${weeks} semanas)
 MARCA: ${brandName}
@@ -258,17 +277,18 @@ ${inspirationAnalysis ? `─── ANÁLISE DE INSPIRAÇÕES ───\n${inspir
 ${synthesisAnalysis ? `─── SÍNTESE ESTRATÉGICA ───\n${synthesisAnalysis.slice(0, 3000)}` : ""}
 
 REGRAS:
-1. content_type = NOME COMPLETO do pilar relacionado ao território
-2. Cada post CRUZA um território com uma lente para gerar uma TESE ÚNICA
-3. Headlines em CAIXA ALTA no formato: [FRASE CURTA] - [COMPLEMENTO PROVOCADOR]
-4. Variar territórios e lentes ao longo da semana
-5. Respeitar distribuição de formatos e responsáveis
-6. Posts de fim de semana: lentes mais leves (Contraintuitiva, Histórica)
-7. Posts de dia útil: lentes mais densas (Sociológica, Econômica)
-8. Considerar datas sazonais quando relevantes
-9. NÃO repetir ângulos similares de posts anteriores
+1. content_type = NOME COMPLETO do pilar relacionado
+2. MIX OBRIGATÓRIO: ~40% teses narrativas, ~25% cases/melhores práticas, ~15% datas sazonais, ~20% conexão
+3. Para TESES: cruzar território + lente, headline em CAIXA ALTA
+4. Para CASES/PRÁTICAS: basear nos posts que funcionaram e nas análises de performance
+5. Para SAZONAL: usar datas do calendário sazonal, conectar com a marca
+6. Para CONEXÃO: humanizar, educar, mostrar bastidores ou produto com valor
+7. Variar categorias ao longo da semana (não agrupar)
+8. Respeitar distribuição de formatos e responsáveis
+9. Cada post deve indicar sua "category" no JSON
+10. NÃO repetir ângulos de posts anteriores
 
-${tensionTerritories.length === 0 ? `NOTA: Não há territórios de tensão definidos. GERE as teses transformando cada pilar em uma tensão/dualidade automaticamente. Pergunte-se: "Qual é a contradição ou o paradoxo que este pilar expõe?"` : ""}
+${tensionTerritories.length === 0 ? `NOTA: Não há territórios de tensão definidos. Para posts de TESES, gere as teses transformando cada pilar em uma tensão/dualidade automaticamente.` : ""}
 
 Responda APENAS com JSON válido:
 {
@@ -279,10 +299,11 @@ Responda APENAS com JSON válido:
       "content_type": "NOME COMPLETO DO PILAR",
       "format": "Reels|Carrossel|Estático|Stories",
       "responsible_code": "CODE",
-      "title": "HEADLINE EM CAIXA ALTA - COMPLEMENTO PROVOCADOR",
-      "territory": "Nome do Território (Polo A vs. Polo B)",
-      "lens": "Nome da Lente Narrativa",
-      "thesis": "A tese completa em 1-2 frases. O argumento central do post."
+      "title": "Título do post (CAIXA ALTA só para teses)",
+      "category": "thesis|best_practice|seasonal|connection",
+      "territory": "Nome do Território (só para category=thesis, null para outros)",
+      "lens": "Nome da Lente (só para category=thesis, null para outros)",
+      "thesis": "A tese em 1-2 frases (só para category=thesis, null para outros)"
     }
   ]
 }`;
@@ -383,6 +404,7 @@ Responda APENAS com JSON válido:
 
       // Add theses-specific metadata
       if (isTheses) {
+        metadata.category = item.category ?? "thesis";
         metadata.territory = item.territory ?? null;
         metadata.lens = item.lens ?? null;
         metadata.thesis = item.thesis ?? null;
