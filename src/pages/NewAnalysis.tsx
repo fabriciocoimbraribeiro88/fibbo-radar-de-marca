@@ -1,54 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
   ArrowRight,
-  Search,
-  Users,
-  Shuffle,
-  Sparkles,
-  Eye,
-  Loader2,
-  Calendar,
   Rocket,
-  Stethoscope,
+  Loader2,
+  Settings,
+  Users,
+  FileText,
+  Eye,
 } from "lucide-react";
+import AnalysisStep1 from "@/components/analysis/AnalysisStep1";
+import AnalysisStep2 from "@/components/analysis/AnalysisStep2";
+import AnalysisStep3 from "@/components/analysis/AnalysisStep3";
+import AnalysisStep4 from "@/components/analysis/AnalysisStep4";
+import {
+  ANALYSIS_TYPES,
+  getDefaultSections,
+  calculatePeriodFromPreset,
+  calculatePreviousPeriod,
+} from "@/lib/analysisSections";
 
-const ANALYSIS_TYPES = [
-  { value: "brand_diagnosis", label: "Diagnóstico da Marca", description: "Análise profunda da sua marca", icon: Stethoscope },
-  { value: "competitor_analysis", label: "Análise de Concorrentes", description: "Análise individual de cada concorrente", icon: Users },
-  { value: "cross_analysis", label: "Análise Cruzada", description: "Marca vs. Concorrentes vs. Influencers", icon: Shuffle },
-  { value: "influencer_analysis", label: "Análise de Influencers", description: "Análise de influenciadores", icon: Sparkles },
-  { value: "inspiration_analysis", label: "Análise de Inspirações", description: "Análise de marcas inspiradoras", icon: Eye },
-] as const;
-
-const REPORT_SECTIONS = [
-  { key: "big_numbers", label: "Big Numbers", always: true },
-  { key: "performance", label: "Análise de Performance", always: true },
-  { key: "sentiment", label: "Análise de Sentimento", always: true },
-  { key: "formats", label: "Análise de Formatos", always: true },
-  { key: "themes", label: "Análise de Temas", always: true },
-  { key: "temporal", label: "Análise Temporal / Sazonalidade", always: true },
-  { key: "hashtags", label: "Análise de Hashtags", always: true },
-  { key: "recommendations", label: "Recomendações Estratégicas", always: true },
-  { key: "content_bank", label: "Banco de Conteúdo", always: true },
-  { key: "creative_guidelines", label: "Diretrizes Criativas", onlyTypes: ["brand_diagnosis"] },
-  { key: "blue_oceans", label: "Oceanos Azuis", onlyTypes: ["cross_analysis"] },
-  { key: "differentiation_matrix", label: "Matriz de Diferenciação", onlyTypes: ["cross_analysis"] },
+const STEPS = [
+  { label: "Configurar", icon: Settings },
+  { label: "Fontes", icon: Users },
+  { label: "Seções", icon: FileText },
+  { label: "Prévia", icon: Eye },
 ];
-
-const STEPS = ["Tipo", "Entidades", "Período", "Parâmetros", "Revisar"];
 
 export default function NewAnalysis() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -57,14 +41,55 @@ export default function NewAnalysis() {
   const { toast } = useToast();
 
   const [step, setStep] = useState(0);
+  const [creating, setCreating] = useState(false);
+
+  // Step 1
+  const [channel, setChannel] = useState<"social" | "ads" | "seo">("social");
   const [analysisType, setAnalysisType] = useState("");
-  const [selectedEntities, setSelectedEntities] = useState<string[]>([]);
+  const [combinedTypes, setCombinedTypes] = useState<Set<string>>(new Set(["brand", "competitor"]));
+  const [periodMode, setPeriodMode] = useState<"date" | "count">("date");
+  const [periodPreset, setPeriodPreset] = useState("this_quarter");
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
-  const [selectedSections, setSelectedSections] = useState<string[]>(
-    REPORT_SECTIONS.filter((s) => s.always).map((s) => s.key)
-  );
-  const [creating, setCreating] = useState(false);
+  const [postsLimit, setPostsLimit] = useState(50);
+  const [comparePrevious, setComparePrevious] = useState(false);
+  const [largeDatasetAck, setLargeDatasetAck] = useState(false);
+
+  // Step 2
+  const [selectedEntities, setSelectedEntities] = useState<Set<string>>(new Set());
+
+  // Step 3
+  const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
+
+  // Step 4
+  const [title, setTitle] = useState("");
+
+  // Initialize period from preset
+  useEffect(() => {
+    if (periodPreset !== "custom") {
+      const { start, end } = calculatePeriodFromPreset(periodPreset);
+      setPeriodStart(start);
+      setPeriodEnd(end);
+    }
+  }, []);
+
+  // Reset sections when channel/type changes
+  useEffect(() => {
+    if (analysisType) {
+      setSelectedSections(getDefaultSections(channel, analysisType));
+    }
+  }, [channel, analysisType]);
+
+  // Generate title when entering step 4
+  useEffect(() => {
+    if (step === 3 && !title) {
+      const typeLabel = ANALYSIS_TYPES.find((t) => t.value === analysisType)?.label ?? "";
+      const channelLabel = channel === "social" ? "Social" : channel === "ads" ? "Ads" : "SEO";
+      const now = new Date();
+      const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
+      setTitle(`${typeLabel} ${channelLabel} — ${quarter} ${now.getFullYear()}`);
+    }
+  }, [step]);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -76,8 +101,8 @@ export default function NewAnalysis() {
     enabled: !!projectId,
   });
 
-  const { data: entities } = useQuery({
-    queryKey: ["project-entities", projectId],
+  const { data: projectEntities } = useQuery({
+    queryKey: ["project-entities-full", projectId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("project_entities")
@@ -89,33 +114,56 @@ export default function NewAnalysis() {
     enabled: !!projectId,
   });
 
-  const toggleEntity = (id: string) => {
-    setSelectedEntities((prev) =>
-      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
-    );
-  };
+  // Check data availability
+  const { data: hasAdsData } = useQuery({
+    queryKey: ["has-ads-data", projectId],
+    queryFn: async () => {
+      const entityIds = projectEntities?.map((pe) => pe.entity_id) ?? [];
+      if (!entityIds.length) return false;
+      const { count } = await supabase.from("ads_library").select("id", { count: "exact", head: true }).in("entity_id", entityIds);
+      return (count ?? 0) > 0;
+    },
+    enabled: !!projectEntities,
+  });
 
-  const toggleSection = (key: string) => {
-    setSelectedSections((prev) =>
-      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
-    );
-  };
+  const { data: hasSeoData } = useQuery({
+    queryKey: ["has-seo-data", projectId],
+    queryFn: async () => {
+      const entityIds = projectEntities?.map((pe) => pe.entity_id) ?? [];
+      if (!entityIds.length) return false;
+      const { count } = await supabase.from("seo_data").select("id", { count: "exact", head: true }).in("entity_id", entityIds);
+      return (count ?? 0) > 0;
+    },
+    enabled: !!projectEntities,
+  });
 
-  const visibleSections = REPORT_SECTIONS.filter(
-    (s) => s.always || s.onlyTypes?.includes(analysisType)
-  );
+  const brandEntity = projectEntities?.find((pe) => pe.entity_role === "brand");
+  const entities = (projectEntities ?? []).map((pe) => ({
+    id: pe.monitored_entities?.id ?? pe.entity_id,
+    name: pe.monitored_entities?.name ?? "",
+    instagram_handle: pe.monitored_entities?.instagram_handle,
+    entity_role: pe.entity_role,
+  }));
 
-  const typeLabel = ANALYSIS_TYPES.find((t) => t.value === analysisType)?.label ?? "";
+  const isLargeDataset =
+    analysisType === "cross_analysis" &&
+    periodMode === "date" &&
+    periodStart &&
+    periodEnd &&
+    (new Date(periodEnd).getTime() - new Date(periodStart).getTime()) / 86400000 > 90;
 
   const canNext = () => {
-    if (step === 0) return !!analysisType;
-    if (step === 1) {
-      // Brand diagnosis doesn't require additional entities
-      if (analysisType === "brand_diagnosis") return true;
-      return selectedEntities.length > 0;
+    if (step === 0) {
+      if (!analysisType) return false;
+      if (periodMode === "date" && (!periodStart || !periodEnd)) return false;
+      if (isLargeDataset && !largeDatasetAck) return false;
+      return true;
     }
-    if (step === 2) return !!periodStart && !!periodEnd;
-    if (step === 3) return selectedSections.length > 0;
+    if (step === 1) {
+      if (analysisType === "brand_diagnosis") return true;
+      return selectedEntities.size > 0;
+    }
+    if (step === 2) return selectedSections.size > 0;
     return true;
   };
 
@@ -123,7 +171,10 @@ export default function NewAnalysis() {
     if (!projectId || !user) return;
     setCreating(true);
     try {
-      const title = `${typeLabel} — ${new Date().toLocaleDateString("pt-BR")}`;
+      const prevPeriod = comparePrevious && periodStart && periodEnd
+        ? calculatePreviousPeriod(periodStart, periodEnd)
+        : null;
+
       const { data, error } = await supabase
         .from("analyses")
         .insert({
@@ -131,25 +182,40 @@ export default function NewAnalysis() {
           title,
           type: analysisType,
           status: "draft",
-          period_start: periodStart,
-          period_end: periodEnd,
-          entities_included: selectedEntities,
-          parameters: { sections: selectedSections } as any,
+          period_start: periodMode === "date" ? periodStart : null,
+          period_end: periodMode === "date" ? periodEnd : null,
+          entities_included: [brandEntity?.entity_id, ...Array.from(selectedEntities)].filter(Boolean) as string[],
+          parameters: {
+            channel,
+            sections: Array.from(selectedSections),
+            posts_limit: periodMode === "count" ? postsLimit : null,
+            compare_previous: comparePrevious,
+            previous_period_start: prevPeriod?.start ?? null,
+            previous_period_end: prevPeriod?.end ?? null,
+            combined_types: analysisType === "cross_analysis" ? Array.from(combinedTypes) : null,
+            large_dataset_ack: largeDatasetAck,
+          } as any,
           created_by: user.id,
         })
         .select()
         .single();
       if (error) throw error;
 
-      // Trigger the pipeline
       const { error: fnErr } = await supabase.functions.invoke("run-analysis-pipeline", {
         body: { analysis_id: data.id },
       });
 
       if (fnErr) {
-        toast({ title: "Análise criada, mas pipeline falhou", description: fnErr.message, variant: "destructive" });
+        toast({
+          title: "Análise criada, mas pipeline falhou",
+          description: fnErr.message,
+          variant: "destructive",
+        });
       } else {
-        toast({ title: "Análise iniciada!", description: "Os agentes IA estão trabalhando." });
+        toast({
+          title: "Análise iniciada!",
+          description: "Acompanhe o progresso na próxima tela.",
+        });
       }
 
       navigate(`/projects/${projectId}/analyses/${data.id}`);
@@ -160,9 +226,6 @@ export default function NewAnalysis() {
     }
   };
 
-  const entitiesByType = (type: string) =>
-    entities?.filter((e) => e.entity_role === type) ?? [];
-
   return (
     <div className="max-w-3xl animate-fade-in">
       {/* Header */}
@@ -172,197 +235,110 @@ export default function NewAnalysis() {
 
       {/* Progress */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           {STEPS.map((s, i) => (
-            <span
-              key={s}
-              className={`text-xs font-medium ${i <= step ? "text-primary" : "text-muted-foreground"}`}
+            <div
+              key={s.label}
+              className={`flex items-center gap-1.5 ${
+                i <= step ? "text-primary" : "text-muted-foreground"
+              }`}
             >
-              {s}
-            </span>
+              <div
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
+                  i < step
+                    ? "bg-primary text-primary-foreground"
+                    : i === step
+                      ? "bg-primary/20 text-primary border-2 border-primary"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <s.icon className="h-3.5 w-3.5" />
+              </div>
+              <span className="text-xs font-medium hidden sm:inline">{s.label}</span>
+            </div>
           ))}
         </div>
         <Progress value={((step + 1) / STEPS.length) * 100} className="h-1.5" />
       </div>
 
-      {/* Step 0: Type */}
+      {/* Steps */}
       {step === 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {ANALYSIS_TYPES.map((t) => (
-            <Card
-              key={t.value}
-              className={`cursor-pointer transition-all ${
-                analysisType === t.value
-                  ? "ring-2 ring-primary bg-primary/5"
-                  : "hover:bg-accent/50"
-              }`}
-              onClick={() => setAnalysisType(t.value)}
-            >
-              <CardContent className="flex items-start gap-3 p-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <t.icon className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t.label}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <AnalysisStep1
+          channel={channel}
+          setChannel={setChannel}
+          analysisType={analysisType}
+          setAnalysisType={setAnalysisType}
+          combinedTypes={combinedTypes}
+          setCombinedTypes={setCombinedTypes}
+          periodMode={periodMode}
+          setPeriodMode={setPeriodMode}
+          periodPreset={periodPreset}
+          setPeriodPreset={setPeriodPreset}
+          periodStart={periodStart}
+          setPeriodStart={setPeriodStart}
+          periodEnd={periodEnd}
+          setPeriodEnd={setPeriodEnd}
+          postsLimit={postsLimit}
+          setPostsLimit={setPostsLimit}
+          comparePrevious={comparePrevious}
+          setComparePrevious={setComparePrevious}
+          largeDatasetAck={largeDatasetAck}
+          setLargeDatasetAck={setLargeDatasetAck}
+          hasAdsData={hasAdsData ?? false}
+          hasSeoData={hasSeoData ?? false}
+        />
       )}
 
-      {/* Step 1: Entities */}
       {step === 1 && (
-        <div className="space-y-6">
-          {/* Brand always included */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-2">Marca (sempre incluída)</p>
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
-                  {project?.brand_name?.slice(0, 2).toUpperCase() ?? "MR"}
-                </div>
-                <span className="text-sm font-medium text-foreground">{project?.brand_name ?? project?.name}</span>
-                <Badge className="ml-auto bg-primary/20 text-primary">Marca</Badge>
-              </CardContent>
-            </Card>
-          </div>
-
-          {(["competitor", "influencer", "inspiration"] as const).map((type) => {
-            const items = entitiesByType(type);
-            if (!items.length) return null;
-            const labels: Record<string, string> = {
-              competitor: "Concorrentes",
-              influencer: "Influencers",
-              inspiration: "Inspirações",
-            };
-            return (
-              <div key={type}>
-                <p className="text-xs font-medium text-muted-foreground mb-2">{labels[type]}</p>
-                <div className="space-y-2">
-                  {items.map((pe) => {
-                    const e = pe.monitored_entities;
-                    if (!e) return null;
-                    const checked = selectedEntities.includes(e.id);
-                    return (
-                      <Card
-                        key={pe.id}
-                        className={`cursor-pointer transition-all ${checked ? "ring-1 ring-primary/50 bg-primary/5" : "hover:bg-accent/50"}`}
-                        onClick={() => toggleEntity(e.id)}
-                      >
-                        <CardContent className="flex items-center gap-3 p-3">
-                          <Checkbox checked={checked} onCheckedChange={() => toggleEntity(e.id)} />
-                          <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-xs font-medium">
-                            {e.name.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{e.name}</p>
-                            {e.instagram_handle && (
-                              <p className="text-xs text-muted-foreground">{e.instagram_handle}</p>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <AnalysisStep2
+          channel={channel}
+          project={project ?? null}
+          entities={entities}
+          selectedEntities={selectedEntities}
+          setSelectedEntities={setSelectedEntities}
+          analysisType={analysisType}
+        />
       )}
 
-      {/* Step 2: Period */}
       {step === 2 && (
-        <Card>
-          <CardContent className="space-y-4 p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              <p className="text-sm font-medium text-foreground">Período da análise</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Data inicial</Label>
-                <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Data final</Label>
-                <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              A análise usará os dados coletados neste período. Certifique-se de que os dados já foram coletados.
-            </p>
-          </CardContent>
-        </Card>
+        <AnalysisStep3
+          channel={channel}
+          analysisType={analysisType}
+          selectedSections={selectedSections}
+          setSelectedSections={setSelectedSections}
+        />
       )}
 
-      {/* Step 3: Parameters */}
       {step === 3 && (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm font-medium text-foreground mb-4">Seções do relatório</p>
-            <div className="space-y-3">
-              {visibleSections.map((s) => (
-                <label
-                  key={s.key}
-                  className="flex items-center gap-3 cursor-pointer rounded-lg p-2 hover:bg-accent/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={selectedSections.includes(s.key)}
-                    onCheckedChange={() => toggleSection(s.key)}
-                  />
-                  <span className="text-sm text-foreground">{s.label}</span>
-                  {!s.always && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Exclusivo
-                    </Badge>
-                  )}
-                </label>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 4: Review */}
-      {step === 4 && (
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <p className="text-sm font-medium text-foreground mb-2">Resumo da Análise</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between py-1.5 border-b border-border">
-                <span className="text-muted-foreground">Tipo</span>
-                <span className="font-medium text-foreground">{typeLabel}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-border">
-                <span className="text-muted-foreground">Entidades</span>
-                <span className="font-medium text-foreground">{selectedEntities.length + 1} (incluindo marca)</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-border">
-                <span className="text-muted-foreground">Período</span>
-                <span className="font-medium text-foreground">
-                  {periodStart && new Date(periodStart).toLocaleDateString("pt-BR")} –{" "}
-                  {periodEnd && new Date(periodEnd).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-muted-foreground">Seções</span>
-                <span className="font-medium text-foreground">{selectedSections.length} selecionadas</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AnalysisStep4
+          channel={channel}
+          analysisType={analysisType}
+          periodMode={periodMode}
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          postsLimit={postsLimit}
+          comparePrevious={comparePrevious}
+          selectedEntities={selectedEntities}
+          selectedSections={selectedSections}
+          title={title}
+          setTitle={setTitle}
+          projectId={projectId!}
+          brandEntityId={brandEntity?.entity_id ?? null}
+          allEntities={entities}
+        />
       )}
 
       {/* Navigation */}
-      <div className="mt-6 flex justify-between">
-        <Button variant="outline" onClick={() => step > 0 && setStep(step - 1)} disabled={step === 0}>
+      <div className="mt-8 flex justify-between">
+        <Button
+          variant="outline"
+          onClick={() => step > 0 && setStep(step - 1)}
+          disabled={step === 0}
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        {step < 4 ? (
+        {step < 3 ? (
           <Button onClick={() => setStep(step + 1)} disabled={!canNext()}>
             Próximo
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -374,7 +350,7 @@ export default function NewAnalysis() {
             ) : (
               <Rocket className="mr-2 h-4 w-4" />
             )}
-            Iniciar Análise
+            Gerar Análise
           </Button>
         )}
       </div>
