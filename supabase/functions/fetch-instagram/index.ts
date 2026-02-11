@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -26,11 +26,14 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const {
-      entity_id,
-      results_limit = 30,
-    } = body;
+    const { entity_id, results_limit = 30, action = "start" } = body;
 
+    // ── CHECK action: poll for run status and import results ──
+    if (action === "check") {
+      return await handleCheck(body, supabase, apifyToken);
+    }
+
+    // ── START action: kick off Apify runs ──
     if (!entity_id) {
       return new Response(
         JSON.stringify({ success: false, error: "entity_id é obrigatório" }),
@@ -38,7 +41,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get entity
     const { data: entity, error: entityErr } = await supabase
       .from("monitored_entities")
       .select("*")
@@ -69,12 +71,11 @@ Deno.serve(async (req) => {
       .single();
 
     const logId = fetchLog?.id;
-    let totalRecords = 0;
 
     try {
-      // 1. Fetch profile
+      // 1. Fetch profile SYNCHRONOUSLY (fast, ~5-30s)
       console.log(`Fetching profile for @${handle}...`);
-      const profileRun = await runApifyActor(apifyToken, "apify~instagram-profile-scraper", {
+      const profileRun = await runApifyActorSync(apifyToken, "apify~instagram-profile-scraper", {
         usernames: [handle],
       });
 
@@ -98,63 +99,28 @@ Deno.serve(async (req) => {
           ignoreDuplicates: false,
         });
         if (profileErr) console.error("Profile upsert error:", profileErr.message);
-        totalRecords++;
         console.log(`Profile saved for @${handle}`);
       }
 
-      // 2. Fetch posts
+      // 2. Start post scraper ASYNCHRONOUSLY (returns immediately with runId)
       const effectiveLimit = (!results_limit || results_limit <= 0) ? 50000 : results_limit;
-      console.log(`Fetching posts for @${handle} (limit: ${effectiveLimit})...`);
-      
-      const postInput: Record<string, unknown> = {
+      console.log(`Starting async post scraper for @${handle} (limit: ${effectiveLimit})...`);
+
+      const postInput = {
         username: [handle],
         resultsLimit: effectiveLimit,
       };
 
-      const postsRun = await runApifyActor(apifyToken, "apify~instagram-post-scraper", postInput);
+      const runInfo = await startApifyActorAsync(apifyToken, "apify~instagram-post-scraper", postInput);
+      console.log(`Post scraper started: runId=${runInfo.id}, datasetId=${runInfo.defaultDatasetId}`);
 
-      if (postsRun && postsRun.length > 0) {
-        const posts = postsRun.map((post: any) => ({
-          entity_id,
-          post_id_instagram: post.id || post.shortCode || `${handle}_${post.timestamp}`,
-          shortcode: post.shortCode ?? null,
-          post_url: post.url ?? null,
-          post_type: post.type ?? null,
-          caption: post.caption ?? null,
-          posted_at: post.timestamp ? new Date(post.timestamp).toISOString() : null,
-          likes_count: post.likesCount ?? null,
-          comments_count: post.commentsCount ?? null,
-          views_count: post.videoViewCount ?? post.videoPlayCount ?? null,
-          shares_count: null,
-          saves_count: null,
-          hashtags: post.hashtags ?? null,
-          mentions: post.mentions ?? null,
-          thumbnail_url: post.displayUrl ?? null,
-          media_urls: post.images ?? post.displayUrls ?? null,
-          is_pinned: post.isPinned ?? false,
-          fetched_at: new Date().toISOString(),
-          metadata: post,
-        }));
-
-        for (const post of posts) {
-          const { error: postErr } = await supabase.from("instagram_posts").upsert(post, {
-            onConflict: "post_id_instagram",
-            ignoreDuplicates: false,
-          });
-          if (postErr) console.error("Post upsert error:", postErr.message);
-        }
-        totalRecords += posts.length;
-        console.log(`${posts.length} posts saved for @${handle}`);
-      }
-
-      // Update fetch log as completed
+      // Update fetch log with run info
       if (logId) {
         await supabase
           .from("data_fetch_logs")
           .update({
-            status: "completed",
-            completed_at: new Date().toISOString(),
-            records_fetched: totalRecords,
+            apify_run_id: runInfo.id,
+            status: "running",
           })
           .eq("id", logId);
       }
@@ -162,8 +128,12 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          message: `Coleta concluída para @${handle}`,
-          records: totalRecords,
+          status: "running",
+          message: `Perfil salvo. Coleta de posts iniciada para @${handle}`,
+          run_id: runInfo.id,
+          dataset_id: runInfo.defaultDatasetId,
+          log_id: logId,
+          entity_id,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -196,13 +166,180 @@ Deno.serve(async (req) => {
   }
 });
 
-async function runApifyActor(
+// ── Handle CHECK action: poll run status and import results ──
+async function handleCheck(
+  body: any,
+  supabase: any,
+  apifyToken: string
+) {
+  const { run_id, dataset_id, entity_id, log_id } = body;
+
+  if (!run_id) {
+    return new Response(
+      JSON.stringify({ success: false, error: "run_id é obrigatório para check" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    // Check run status
+    const statusRes = await fetch(
+      `https://api.apify.com/v2/actor-runs/${run_id}?token=${apifyToken}`
+    );
+    if (!statusRes.ok) {
+      throw new Error(`Failed to check run status: ${statusRes.status}`);
+    }
+    const runData = await statusRes.json();
+    const runStatus = runData.data?.status;
+
+    console.log(`Run ${run_id} status: ${runStatus}`);
+
+    if (runStatus === "RUNNING" || runStatus === "READY") {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: "running",
+          message: "Coleta em andamento...",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (runStatus === "FAILED" || runStatus === "ABORTED" || runStatus === "TIMED-OUT") {
+      if (log_id) {
+        await supabase.from("data_fetch_logs").update({
+          status: "failed",
+          completed_at: new Date().toISOString(),
+          error_message: `Apify run ${runStatus}`,
+        }).eq("id", log_id);
+      }
+      return new Response(
+        JSON.stringify({
+          success: false,
+          status: "failed",
+          error: `Apify run ${runStatus}`,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // SUCCEEDED - fetch dataset items and import
+    const effectiveDatasetId = dataset_id || runData.data?.defaultDatasetId;
+    if (!effectiveDatasetId) {
+      throw new Error("No dataset ID available");
+    }
+
+    console.log(`Fetching dataset items from ${effectiveDatasetId}...`);
+
+    // Fetch all items with pagination
+    const PAGE_SIZE = 1000;
+    let allItems: any[] = [];
+    let offset = 0;
+
+    while (true) {
+      const itemsRes = await fetch(
+        `https://api.apify.com/v2/datasets/${effectiveDatasetId}/items?token=${apifyToken}&limit=${PAGE_SIZE}&offset=${offset}`
+      );
+      if (!itemsRes.ok) {
+        throw new Error(`Failed to fetch dataset items: ${itemsRes.status}`);
+      }
+      const items = await itemsRes.json();
+      if (!items || items.length === 0) break;
+      allItems = allItems.concat(items);
+      if (items.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+
+    console.log(`Fetched ${allItems.length} items from dataset`);
+
+    // Import posts in batches
+    let totalImported = 0;
+    const BATCH = 200;
+
+    for (let i = 0; i < allItems.length; i += BATCH) {
+      const batch = allItems.slice(i, i + BATCH);
+      const posts = batch.map((post: any) => {
+        const handle = post.ownerUsername ?? "";
+        return {
+          entity_id,
+          post_id_instagram: post.id || post.shortCode || `${handle}_${post.timestamp}`,
+          shortcode: post.shortCode ?? null,
+          post_url: post.url ?? null,
+          post_type: post.type ?? null,
+          caption: post.caption ?? null,
+          posted_at: post.timestamp ? new Date(post.timestamp).toISOString() : null,
+          likes_count: post.likesCount ?? null,
+          comments_count: post.commentsCount ?? null,
+          views_count: post.videoViewCount ?? post.videoPlayCount ?? null,
+          shares_count: null,
+          saves_count: null,
+          hashtags: post.hashtags ?? null,
+          mentions: post.mentions ?? null,
+          thumbnail_url: post.displayUrl ?? null,
+          media_urls: post.images ?? post.displayUrls ?? null,
+          is_pinned: post.isPinned ?? false,
+          fetched_at: new Date().toISOString(),
+          metadata: post,
+        };
+      });
+
+      const { error: upsertErr } = await supabase
+        .from("instagram_posts")
+        .upsert(posts, { onConflict: "post_id_instagram", ignoreDuplicates: false });
+
+      if (upsertErr) {
+        console.error(`Batch upsert error at offset ${i}:`, upsertErr.message);
+      } else {
+        totalImported += posts.length;
+      }
+    }
+
+    console.log(`Imported ${totalImported} posts for entity ${entity_id}`);
+
+    // Update fetch log
+    if (log_id) {
+      await supabase.from("data_fetch_logs").update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        records_fetched: totalImported + 1, // +1 for profile
+      }).eq("id", log_id);
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        status: "completed",
+        message: `${totalImported} posts importados`,
+        records: totalImported,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("Check error:", msg);
+
+    if (log_id) {
+      await supabase.from("data_fetch_logs").update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        error_message: msg,
+      }).eq("id", log_id);
+    }
+
+    return new Response(
+      JSON.stringify({ success: false, status: "failed", error: msg }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// ── Sync call for fast actors (profile) ──
+async function runApifyActorSync(
   token: string,
   actorId: string,
   input: Record<string, unknown>
 ): Promise<any[]> {
   const runUrl = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
-
   const response = await fetch(runUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -215,4 +352,29 @@ async function runApifyActor(
   }
 
   return await response.json();
+}
+
+// ── Async call for slow actors (posts) ── returns run info immediately
+async function startApifyActorAsync(
+  token: string,
+  actorId: string,
+  input: Record<string, unknown>
+): Promise<{ id: string; defaultDatasetId: string }> {
+  const runUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}`;
+  const response = await fetch(runUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Apify actor ${actorId} start failed (${response.status}): ${text.substring(0, 300)}`);
+  }
+
+  const result = await response.json();
+  return {
+    id: result.data.id,
+    defaultDatasetId: result.data.defaultDatasetId,
+  };
 }

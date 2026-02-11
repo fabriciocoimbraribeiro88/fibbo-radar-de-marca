@@ -363,25 +363,90 @@ export default function ProjectSources() {
     }
   };
 
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [collectStatus, setCollectStatus] = useState<string | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
   const executeNow = async (entityId: string, handle: string, opts: CollectOptions) => {
     setExecutingId(entityId);
+    setCollectStatus("Iniciando coleta...");
     try {
-      const body: Record<string, unknown> = { entity_id: entityId };
+      const body: Record<string, unknown> = { entity_id: entityId, action: "start" };
       if (opts.mode === "count") body.results_limit = opts.postsCount;
       else body.results_limit = 0;
+
       const { data, error } = await supabase.functions.invoke("fetch-instagram", { body });
       if (error) throw error;
-      if (data?.success) {
+
+      if (!data?.success) {
+        toast({ title: "Erro na coleta", description: data?.error, variant: "destructive" });
+        setExecutingId(null);
+        setCollectStatus(null);
+        return;
+      }
+
+      if (data.status === "running" && data.run_id) {
+        // Profile saved, posts are being scraped async — start polling
+        setCollectStatus("Perfil salvo. Aguardando coleta de posts...");
+        toast({ title: "Perfil salvo!", description: "Coleta de posts em andamento..." });
+
+        const pollCheck = async () => {
+          try {
+            const { data: checkData, error: checkErr } = await supabase.functions.invoke("fetch-instagram", {
+              body: {
+                action: "check",
+                run_id: data.run_id,
+                dataset_id: data.dataset_id,
+                entity_id: entityId,
+                log_id: data.log_id,
+              },
+            });
+
+            if (checkErr) throw checkErr;
+
+            if (checkData?.status === "completed") {
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+              toast({ title: "Coleta concluída!", description: checkData.message });
+              setExecutingId(null);
+              setCollectStatus(null);
+              queryClient.invalidateQueries({ queryKey: ["data-fetch-configs"] });
+              queryClient.invalidateQueries({ queryKey: ["data-fetch-logs"] });
+              queryClient.invalidateQueries({ queryKey: ["project-dashboard-full"] });
+            } else if (checkData?.status === "failed") {
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+              toast({ title: "Erro na coleta", description: checkData.error, variant: "destructive" });
+              setExecutingId(null);
+              setCollectStatus(null);
+            } else {
+              setCollectStatus("Coletando posts... aguarde");
+            }
+          } catch (pollErr: any) {
+            console.error("Poll error:", pollErr);
+          }
+        };
+
+        // Poll every 15 seconds
+        pollIntervalRef.current = setInterval(pollCheck, 15000);
+      } else {
+        // Completed synchronously (shouldn't happen with new flow, but handle it)
         toast({ title: "Coleta concluída!", description: `${data.records} registros coletados` });
         queryClient.invalidateQueries({ queryKey: ["data-fetch-configs"] });
         queryClient.invalidateQueries({ queryKey: ["data-fetch-logs"] });
-      } else {
-        toast({ title: "Erro na coleta", description: data?.error, variant: "destructive" });
+        setExecutingId(null);
+        setCollectStatus(null);
       }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
       setExecutingId(null);
+      setCollectStatus(null);
     }
   };
 
@@ -650,6 +715,9 @@ export default function ProjectSources() {
                       </Button>
                     </div>
                     <FetchProgressBar active={executingId === "brand"} />
+                    {executingId === "brand" && collectStatus && (
+                      <p className="text-xs text-muted-foreground mt-1">{collectStatus}</p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -780,6 +848,9 @@ export default function ProjectSources() {
                         {isExecuting && (
                           <div className="px-5 pb-4">
                             <FetchProgressBar active />
+                            {collectStatus && (
+                              <p className="text-xs text-muted-foreground mt-1">{collectStatus}</p>
+                            )}
                           </div>
                         )}
 
