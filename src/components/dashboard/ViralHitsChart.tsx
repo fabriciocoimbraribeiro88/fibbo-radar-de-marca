@@ -19,7 +19,7 @@ export default function ViralHitsChart({ metrics }: Props) {
   return (
     <Card className="border border-border">
       <CardContent className="p-4">
-        <p className="text-sm font-medium text-foreground mb-3 text-center">Posts Virais (1M+ views)</p>
+        <p className="text-sm font-medium text-foreground mb-3 text-center">Posts Virais (&gt;10x média views)</p>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
             <XAxis dataKey="name" tick={{ fontSize: 10 }} />

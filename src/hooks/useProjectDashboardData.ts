@@ -65,6 +65,7 @@ export interface EntityMetrics {
   engagementRate: number;
   postTypes: Record<string, number>;
   hashtags: Record<string, number>;
+  avgViews: number;
   hits: number;
   viralHits: number;
   viralRate: number;
@@ -333,14 +334,17 @@ export function useEntityMetrics(
         });
       });
 
-      // Hit: posts with 5x more views than followers count
-      const hits = total > 0 && followers > 0
-        ? entityPosts.filter((p) => p.views_count > followers * 5).length
+      // Avg views
+      const avgViews = total > 0 ? totalViews / total : 0;
+
+      // Hit: posts with views > 2x avg views
+      const hits = total > 0 && avgViews > 0
+        ? entityPosts.filter((p) => p.views_count > avgViews * 2).length
         : 0;
 
-      // Viral: posts with 1M+ views
-      const viralHits = total > 0
-        ? entityPosts.filter((p) => p.views_count >= 1_000_000).length
+      // Viral: posts with views > 10x avg views
+      const viralHits = total > 0 && avgViews > 0
+        ? entityPosts.filter((p) => p.views_count > avgViews * 10).length
         : 0;
       const viralRate = total > 0 ? (viralHits / total) * 100 : 0;
 
@@ -363,6 +367,7 @@ export function useEntityMetrics(
         followers,
         following,
         engagementRate,
+        avgViews,
         postTypes,
         hashtags,
         hits,
