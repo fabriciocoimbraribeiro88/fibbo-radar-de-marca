@@ -125,6 +125,7 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
             content_type: i.content_type,
             responsible_code: (i.metadata as any)?.responsible_code,
             title: i.title,
+            metadata: i.metadata,
           })),
         },
       });
@@ -203,7 +204,7 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
                 <th className="p-2 text-left text-xs font-medium text-muted-foreground w-24">Pilar</th>
                 <th className="p-2 text-left text-xs font-medium text-muted-foreground w-24">Formato</th>
                 <th className="p-2 text-left text-xs font-medium text-muted-foreground w-16">Resp.</th>
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground">Tema</th>
+                <th className="p-2 text-left text-xs font-medium text-muted-foreground">Tema / Tese</th>
                 <th className="p-2 text-right text-xs font-medium text-muted-foreground w-28">Ações</th>
               </tr>
             </thead>
@@ -211,6 +212,9 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
               {items?.map((item) => {
                 const titleStatus = (item.metadata as any)?.title_status ?? "pending";
                 const respCode = (item.metadata as any)?.responsible_code ?? "";
+                const territory = (item.metadata as any)?.territory;
+                const lens = (item.metadata as any)?.lens;
+                const thesis = (item.metadata as any)?.thesis;
                 const date = item.scheduled_date ? new Date(item.scheduled_date + "T12:00:00") : null;
                 const isApproved = titleStatus === "approved";
                 const isRejected = titleStatus === "rejected";
@@ -229,7 +233,16 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
                     <td className="p-2"><Badge variant="secondary" className="text-[10px]">{item.content_type ?? "—"}</Badge></td>
                     <td className="p-2 text-xs">{item.format ?? "—"}</td>
                     <td className="p-2 text-xs font-mono">{respCode || "—"}</td>
-                    <td className="p-2 text-xs font-medium text-foreground">{item.title}</td>
+                    <td className="p-2">
+                      <p className={`text-xs font-medium text-foreground ${territory ? "uppercase" : ""}`}>{item.title}</p>
+                      {thesis && <p className="text-[10px] text-muted-foreground mt-0.5 italic">{thesis}</p>}
+                      {(territory || lens) && (
+                        <div className="flex gap-1 mt-0.5">
+                          {territory && <Badge variant="outline" className="text-[8px] px-1 py-0">{territory}</Badge>}
+                          {lens && <Badge variant="outline" className="text-[8px] px-1 py-0">{lens}</Badge>}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-2 text-right">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600" onClick={() => updateTitleStatus(item.id, "approved")}>

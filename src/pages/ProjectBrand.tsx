@@ -16,6 +16,7 @@ import BrandBook from "@/components/brand-context/BrandBook";
 import ProductsCatalog from "@/components/brand-context/ProductsCatalog";
 import BrandReferences from "@/components/brand-context/BrandReferences";
 import StrategicMemory from "@/components/brand-context/StrategicMemory";
+import TensionTerritories from "@/components/brand-context/TensionTerritories";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -99,6 +100,7 @@ export default function ProjectBrand() {
 
         <TabsContent value="content" className="space-y-6">
           <ContentPillars projectId={id!} briefing={project?.briefing} />
+          <TensionTerritories projectId={id!} briefing={project?.briefing} />
           <HashtagStrategy projectId={id!} briefing={project?.briefing} />
           <SeasonalCalendar projectId={id!} briefing={project?.briefing} segment={project?.segment} />
           <BrandReferences projectId={id!} briefing={project?.briefing} />

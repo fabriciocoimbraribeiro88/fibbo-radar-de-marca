@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -6,7 +8,8 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, Info, Zap, AlertTriangle } from "lucide-react";
 import type { WizardData, Responsible } from "@/pages/ProjectPlanning";
 
 const PERIOD_PRESETS = [
@@ -18,6 +21,8 @@ const PERIOD_PRESETS = [
 ];
 
 const FORMATS = ["Reels", "Carrossel", "Estático", "Stories"];
+const ALL_LENSES = ["Sociológica", "Psicológica", "Econômica", "Tecnológica", "Contraintuitiva", "Histórica/Futurista"];
+const PROVOCATION_LABELS: Record<number, string> = { 1: "Consultivo", 2: "Moderado", 3: "Assertivo", 4: "Provocativo", 5: "Confrontador" };
 
 function calculatePeriod(preset: string): { start: string; end: string } {
   const now = new Date();
@@ -49,9 +54,20 @@ function calculatePeriod(preset: string): { start: string; end: string } {
 interface Props {
   wizardData: WizardData;
   setWizardData: React.Dispatch<React.SetStateAction<WizardData>>;
+  projectId: string;
 }
 
-export default function SocialConfig({ wizardData, setWizardData }: Props) {
+export default function SocialConfig({ wizardData, setWizardData, projectId }: Props) {
+  const { data: project } = useQuery({
+    queryKey: ["project-briefing", projectId],
+    queryFn: async () => {
+      const { data } = await supabase.from("projects").select("briefing").eq("id", projectId).single();
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const tensionTerritories = (project?.briefing as any)?.tension_territories ?? [];
   const period = useMemo(() => {
     if (wizardData.periodPreset === "custom") return { start: wizardData.periodStart, end: wizardData.periodEnd };
     return calculatePeriod(wizardData.periodPreset);
@@ -95,6 +111,105 @@ export default function SocialConfig({ wizardData, setWizardData }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Content Approach - Theses vs Pillars */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-medium">Abordagem de Conteúdo</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${wizardData.contentApproach === "pillars" ? "font-medium text-foreground" : "text-muted-foreground"}`}>Pilares</span>
+              <Switch
+                checked={wizardData.contentApproach === "theses"}
+                onCheckedChange={(v) => setWizardData((d) => ({ ...d, contentApproach: v ? "theses" : "pillars" }))}
+              />
+              <span className={`text-xs ${wizardData.contentApproach === "theses" ? "font-medium text-foreground" : "text-muted-foreground"}`}>Teses Narrativas</span>
+            </div>
+          </div>
+
+          {wizardData.contentApproach === "theses" && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2 p-2 rounded bg-primary/5 border border-primary/10">
+                <Info className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                <p className="text-[10px] text-muted-foreground">
+                  Cada post será uma <strong>tese</strong> — um argumento original gerado pelo cruzamento de Territórios de Tensão × Lentes Narrativas. Muito mais diferenciado que pilares genéricos.
+                </p>
+              </div>
+
+              {/* Tension Territories status */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Territórios de Tensão</Label>
+                {tensionTerritories.length > 0 ? (
+                  <div className="space-y-1">
+                    {tensionTerritories.map((t: any) => (
+                      <div key={t.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/50">
+                        <Zap className="h-3 w-3 text-primary shrink-0" />
+                        <span className="font-medium">{t.name}</span>
+                        <span className="text-muted-foreground">— {t.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
+                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
+                    <p className="text-[10px] text-yellow-700">
+                      Nenhum Território de Tensão definido. Defina-os em <strong>Contexto de Marca → Conteúdo</strong> ou a IA gerará automaticamente a partir dos pilares.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Narrative Lenses */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Lentes Narrativas</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {ALL_LENSES.map((lens) => (
+                    <button
+                      key={lens}
+                      onClick={() => {
+                        setWizardData((d) => ({
+                          ...d,
+                          selectedLenses: d.selectedLenses.includes(lens)
+                            ? d.selectedLenses.filter((l) => l !== lens)
+                            : [...d.selectedLenses, lens],
+                        }));
+                      }}
+                      className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
+                        wizardData.selectedLenses.includes(lens)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-accent"
+                      }`}
+                    >
+                      {lens}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Provocation level */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Nível de Provocação</Label>
+                  <span className="text-xs font-medium text-primary">{PROVOCATION_LABELS[wizardData.provocationLevel]}</span>
+                </div>
+                <Slider
+                  value={[wizardData.provocationLevel]}
+                  min={1}
+                  max={5}
+                  step={1}
+                  onValueChange={([v]) => setWizardData((d) => ({ ...d, provocationLevel: v }))}
+                />
+                <div className="flex justify-between text-[9px] text-muted-foreground">
+                  <span>Consultivo</span>
+                  <span>Confrontador</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       {/* Period */}
       <Card>
         <CardContent className="p-4 space-y-3">

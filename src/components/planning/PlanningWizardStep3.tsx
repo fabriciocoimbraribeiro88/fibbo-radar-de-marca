@@ -112,6 +112,9 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
             preferred_times: wizardData.usePreferredTimes ? wizardData.preferredTimes : null,
             context_includes: wizardData.contextIncludes,
             special_instructions: wizardData.specialInstructions,
+            content_approach: wizardData.contentApproach,
+            selected_lenses: wizardData.selectedLenses,
+            provocation_level: wizardData.provocationLevel,
           },
         },
       });
@@ -155,8 +158,15 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
             {period.start && (
               <div className="flex justify-between"><span className="text-muted-foreground">Período</span><span className="font-medium">{new Date(period.start).toLocaleDateString("pt-BR")} — {new Date(period.end).toLocaleDateString("pt-BR")}</span></div>
             )}
-            {wizardData.channel === "social" && (
+             {wizardData.channel === "social" && (
               <>
+                <div className="flex justify-between"><span className="text-muted-foreground">Abordagem</span><span className="font-medium">{wizardData.contentApproach === "theses" ? "⚡ Teses Narrativas" : "📋 Pilares Tradicionais"}</span></div>
+                {wizardData.contentApproach === "theses" && (
+                  <>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Lentes</span><span className="font-medium text-right">{wizardData.selectedLenses.join(" · ")}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Provocação</span><span className="font-medium">Nível {wizardData.provocationLevel}/5</span></div>
+                  </>
+                )}
                 <div className="flex justify-between"><span className="text-muted-foreground">Posts</span><span className="font-medium">{totalPosts} planejados + {extraPosts} extras = {totalGenerated} títulos serão gerados</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Mix</span><span className="font-medium">{Object.entries(wizardData.formatMix).filter(([, v]) => v > 0).map(([k, v]) => `${k} ${v}%`).join(" · ")}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Responsáveis</span><span className="font-medium">{wizardData.responsibles.map((r) => `${r.code} ${r.percentage}%`).join(" · ")}</span></div>

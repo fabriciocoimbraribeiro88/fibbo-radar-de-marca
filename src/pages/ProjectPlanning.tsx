@@ -42,6 +42,10 @@ export interface WizardData {
   preferredTimes: { weekday: string[]; weekend: string[] };
   usePreferredTimes: boolean;
   specialInstructions: string;
+  // Theses approach
+  contentApproach: "theses" | "pillars";
+  selectedLenses: string[];
+  provocationLevel: number;
   // Ads config
   adsPlatforms: string[];
   adsBudget: number;
@@ -72,6 +76,9 @@ const defaultWizardData: WizardData = {
   preferredTimes: { weekday: ["09:00", "12:00", "18:00"], weekend: ["11:00"] },
   usePreferredTimes: false,
   specialInstructions: "",
+  contentApproach: "theses",
+  selectedLenses: ["Sociológica", "Psicológica", "Econômica", "Tecnológica", "Contraintuitiva", "Histórica/Futurista"],
+  provocationLevel: 3,
   adsPlatforms: ["Meta"],
   adsBudget: 5000,
   adsPlatformDistribution: { Meta: 100 },

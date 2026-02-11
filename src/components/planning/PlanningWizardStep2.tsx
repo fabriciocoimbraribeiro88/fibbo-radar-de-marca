@@ -25,7 +25,7 @@ export default function PlanningWizardStep2({ projectId, wizardData, setWizardDa
       </div>
 
       {wizardData.channel === "social" && (
-        <SocialConfig wizardData={wizardData} setWizardData={setWizardData} />
+        <SocialConfig wizardData={wizardData} setWizardData={setWizardData} projectId={projectId} />
       )}
       {wizardData.channel === "ads" && (
         <AdsConfig projectId={projectId} wizardData={wizardData} setWizardData={setWizardData} />

@@ -159,11 +159,24 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
                   <span className="text-xs text-muted-foreground">{dateStr} {dayShort} {item.scheduled_time ?? ""}</span>
                   <Badge variant="secondary" className="text-[9px]">{item.format ?? ""}</Badge>
                   <Badge variant="secondary" className="text-[9px]">{item.content_type ?? ""}</Badge>
+                  {md.territory && <Badge variant="outline" className="text-[8px]">{md.lens ?? ""}</Badge>}
                   <span className="text-xs font-mono text-muted-foreground">{md.responsible_code ?? ""}</span>
                   <span className="text-sm font-medium text-foreground truncate flex-1">{item.title}</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4 space-y-4">
+                {/* Thesis context (if theses approach) */}
+                {md.thesis && (
+                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 space-y-2">
+                    <Label className="text-xs text-primary font-semibold">Tese Narrativa</Label>
+                    <Textarea rows={2} className="mt-1 bg-transparent border-primary/20" defaultValue={md.thesis} onBlur={(e) => updateField(item.id, "thesis", e.target.value)} />
+                    <div className="flex gap-2 text-[10px] text-muted-foreground">
+                      {md.territory && <span>Território: <strong>{md.territory}</strong></span>}
+                      {md.lens && <span>Lente: <strong>{md.lens}</strong></span>}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <Label className="text-xs text-muted-foreground font-semibold">Objetivo</Label>
                   <Textarea rows={2} className="mt-1" defaultValue={md.objective ?? ""} onBlur={(e) => updateField(item.id, "objective", e.target.value)} />
@@ -172,6 +185,26 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
                   <Label className="text-xs text-muted-foreground font-semibold">Conceito</Label>
                   <Textarea rows={2} className="mt-1" defaultValue={md.concept ?? ""} onBlur={(e) => updateField(item.id, "concept", e.target.value)} />
                 </div>
+
+                {/* Argument/Evidence/Resolution for theses approach */}
+                {md.argument && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground font-semibold">Argumento Central</Label>
+                    <Textarea rows={4} className="mt-1" defaultValue={md.argument ?? ""} onBlur={(e) => updateField(item.id, "argument", e.target.value)} />
+                  </div>
+                )}
+                {md.evidence && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground font-semibold">Evidência / Exemplo</Label>
+                    <Textarea rows={3} className="mt-1" defaultValue={md.evidence ?? ""} onBlur={(e) => updateField(item.id, "evidence", e.target.value)} />
+                  </div>
+                )}
+                {md.resolution && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground font-semibold">Resolução / Provocação Final</Label>
+                    <Textarea rows={2} className="mt-1" defaultValue={md.resolution ?? ""} onBlur={(e) => updateField(item.id, "resolution", e.target.value)} />
+                  </div>
+                )}
 
                 {/* Format-specific content */}
                 {(item.format === "Carrossel" && slides) ? (
