@@ -64,14 +64,14 @@ export default function ProjectAnalyses() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Pesquisa Profunda</h1>
+            <h1 className="text-xl font-semibold text-foreground">Métricas Avançadas</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Pesquisas de inteligência competitiva do projeto.
+              Métricas avançadas de inteligência competitiva do projeto.
             </p>
           </div>
           <Button onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Pesquisa
+              Nova Métrica
           </Button>
         </div>
       </div>
@@ -84,13 +84,13 @@ export default function ProjectAnalyses() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center py-16">
             <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">Nenhuma pesquisa criada</p>
+            <p className="text-sm font-medium text-foreground">Nenhuma métrica criada</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Crie sua primeira pesquisa para gerar insights estratégicos.
+              Crie sua primeira métrica avançada para gerar insights estratégicos.
             </p>
             <Button className="mt-4" onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
               <Plus className="mr-2 h-4 w-4" />
-              Nova Pesquisa
+              Nova Métrica
             </Button>
           </CardContent>
         </Card>

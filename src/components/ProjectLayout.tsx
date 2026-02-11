@@ -19,7 +19,7 @@ const projectNav = [
   { title: "Contexto de Marca", path: "/brand", icon: Palette },
   { title: "Fontes de Dados", path: "/sources", icon: Database },
   { title: "Dashboard", path: "/dashboard", icon: BarChart3 },
-  { title: "Pesquisa Profunda", path: "/analyses", icon: Search },
+  { title: "Métricas Avançadas", path: "/analyses", icon: Search },
   { title: "Planejamento", path: "/planning", icon: CalendarDays },
   { title: "OKRs", path: "/okrs", icon: Target },
   { title: "Relatórios", path: "/reports", icon: FileText },
