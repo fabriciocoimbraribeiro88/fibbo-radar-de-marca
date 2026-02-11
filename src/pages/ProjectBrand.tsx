@@ -12,6 +12,8 @@ import BrandContextForm from "@/components/brand-context/BrandContextForm";
 import ContentPillars from "@/components/brand-context/ContentPillars";
 import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
 import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
+import BrandBook from "@/components/brand-context/BrandBook";
+import ProductsCatalog from "@/components/brand-context/ProductsCatalog";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -97,27 +99,11 @@ export default function ProjectBrand() {
         </TabsContent>
 
         <TabsContent value="brandbook">
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <Palette className="mx-auto h-10 w-10 text-muted-foreground/50" />
-                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
-                <p className="mt-1 text-xs text-muted-foreground/70">Brand Book visual da marca.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <BrandBook projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
         <TabsContent value="products">
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <Package className="mx-auto h-10 w-10 text-muted-foreground/50" />
-                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
-                <p className="mt-1 text-xs text-muted-foreground/70">Catálogo de produtos e serviços.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <ProductsCatalog projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
         <TabsContent value="references">
