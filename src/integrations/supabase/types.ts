@@ -797,34 +797,43 @@ export type Database = {
       }
       okr_key_results: {
         Row: {
+          baseline_value: number | null
           created_at: string | null
           current_value: number | null
           data_source: string | null
           id: string
+          metric_direction: string | null
           metric_type: string | null
           objective_id: string
+          responsible: string | null
           target_value: number
           title: string
           unit: string | null
         }
         Insert: {
+          baseline_value?: number | null
           created_at?: string | null
           current_value?: number | null
           data_source?: string | null
           id?: string
+          metric_direction?: string | null
           metric_type?: string | null
           objective_id: string
+          responsible?: string | null
           target_value: number
           title: string
           unit?: string | null
         }
         Update: {
+          baseline_value?: number | null
           created_at?: string | null
           current_value?: number | null
           data_source?: string | null
           id?: string
+          metric_direction?: string | null
           metric_type?: string | null
           objective_id?: string
+          responsible?: string | null
           target_value?: number
           title?: string
           unit?: string | null
