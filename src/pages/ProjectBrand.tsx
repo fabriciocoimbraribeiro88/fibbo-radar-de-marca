@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Target, Palette, Package, ImageIcon, Brain, FileText } from "lucide-react";
+import { Target, Palette, Package, ImageIcon, Brain, FileText, LayoutGrid } from "lucide-react";
 import BrandContextSources from "@/components/brand-context/BrandContextSources";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
 import ContentPillars from "@/components/brand-context/ContentPillars";
@@ -67,6 +67,7 @@ export default function ProjectBrand() {
 
   const tabs = [
     { value: "identity", label: "Identidade", icon: Target },
+    { value: "content", label: "Conteúdo", icon: LayoutGrid },
     { value: "brandbook", label: "Brand Book", icon: Palette },
     { value: "products", label: "Produtos", icon: Package },
     { value: "references", label: "Referências", icon: ImageIcon },
@@ -95,6 +96,9 @@ export default function ProjectBrand() {
 
         <TabsContent value="identity" className="space-y-6">
           <BrandContextForm projectId={id!} briefing={project?.briefing} />
+        </TabsContent>
+
+        <TabsContent value="content" className="space-y-6">
           <ContentPillars projectId={id!} briefing={project?.briefing} />
           <HashtagStrategy projectId={id!} briefing={project?.briefing} />
           <SeasonalCalendar projectId={id!} briefing={project?.briefing} segment={project?.segment} />
