@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -67,14 +66,12 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
   const [dialogOpen, setDialogOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Array<any>>([]);
   const [openMonths, setOpenMonths] = useState<Set<number>>(new Set());
-  const [filterType, setFilterType] = useState("all");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setDates(briefing?.seasonal_calendar ?? []);
   }, [briefing]);
 
-  // Auto-expand months that have dates
   useEffect(() => {
     const monthsWithDates = new Set(dates.map(d => getMonth(d.date_start)).filter(m => m >= 0));
     setOpenMonths(monthsWithDates);
@@ -108,16 +105,20 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
       ...newDate(),
       date_start: `${year}-${monthStr}-01`,
     };
-    const next = [...dates, d];
-    setDates(next);
-    schedSave(next);
+    setDates(prev => {
+      const next = [...prev, d];
+      schedSave(next);
+      return next;
+    });
     setOpenMonths(prev => new Set([...prev, monthIndex]));
   };
 
   const removeDate = (id: string) => {
-    const next = dates.filter((d) => d.id !== id);
-    setDates(next);
-    schedSave(next);
+    setDates(prev => {
+      const next = prev.filter((d) => d.id !== id);
+      schedSave(next);
+      return next;
+    });
   };
 
   const toggleMonth = (month: number) => {
@@ -170,30 +171,22 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
     setDates(next);
     save(next);
     setDialogOpen(false);
-    // Auto-expand months with new dates
     const newMonths = new Set(toAdd.map(d => getMonth(d.date_start)).filter(m => m >= 0));
     setOpenMonths(prev => new Set([...prev, ...newMonths]));
     toast.success(`${toAdd.length} datas adicionadas!`);
   };
 
-  // Group dates by month
+  // Group dates by month (no type filter)
   const datesByMonth: Record<number, SeasonalDate[]> = {};
   for (const d of dates) {
     const m = getMonth(d.date_start);
     if (m < 0) continue;
-    if (filterType !== "all" && d.type !== filterType) continue;
     if (!datesByMonth[m]) datesByMonth[m] = [];
     datesByMonth[m].push(d);
   }
-  // Sort within each month
   for (const m of Object.keys(datesByMonth)) {
     datesByMonth[Number(m)].sort((a, b) => a.date_start.localeCompare(b.date_start));
   }
-
-  const totalByType = dates.reduce<Record<string, number>>((acc, d) => {
-    acc[d.type] = (acc[d.type] || 0) + 1;
-    return acc;
-  }, {});
 
   return (
     <>
@@ -213,29 +206,9 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
               </Button>
             </div>
           </div>
-
-          {/* Type filter + summary */}
-          <div className="flex items-center gap-2 flex-wrap mt-3">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="h-7 text-xs w-36"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-card">
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>{cfg.emoji} {cfg.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex gap-1.5 flex-wrap">
-              {Object.entries(totalByType).map(([type, count]) => (
-                <span key={type} className={`text-[10px] rounded px-1.5 py-0.5 border ${TYPE_CONFIG[type]?.className ?? ""}`}>
-                  {TYPE_CONFIG[type]?.emoji} {TYPE_CONFIG[type]?.label ?? type}: {count}
-                </span>
-              ))}
-              {dates.length > 0 && (
-                <span className="text-[10px] rounded px-1.5 py-0.5 border">{dates.length} total</span>
-              )}
-            </div>
-          </div>
+          {dates.length > 0 && (
+            <span className="text-[10px] text-muted-foreground mt-1">{dates.length} datas no calendário</span>
+          )}
         </CardHeader>
 
         <CardContent className="space-y-1">
@@ -250,20 +223,6 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                   <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
                     {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                     <span className="text-sm font-medium">{monthName}</span>
-                    {hasContent && (
-                      <div className="flex gap-1">
-                        {monthDates.map(d => (
-                          <span key={d.id} className={`inline-block w-2 h-2 rounded-full ${
-                            d.type === "tradicional" ? "bg-amber-500" :
-                            d.type === "mercado" ? "bg-blue-500" :
-                            d.type === "setorial" ? "bg-purple-500" :
-                            d.type === "eventos" ? "bg-pink-500" :
-                            d.type === "marca" ? "bg-primary" :
-                            "bg-green-500"
-                          }`} />
-                        ))}
-                      </div>
-                    )}
                     {hasContent && <span className="text-[10px] text-muted-foreground">{monthDates.length}</span>}
                   </CollapsibleTrigger>
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); addDateToMonth(monthIndex); }}>
@@ -276,19 +235,15 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                     <div key={d.id} className="flex items-center gap-2 py-1 group">
                       {!d.name ? (
                         <>
-                          <Select value={d.type} onValueChange={(v) => updateDate(d.id, "type", v)}>
-                            <SelectTrigger className="h-6 text-[10px] w-24 shrink-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-card z-50">
-                              {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
-                                <SelectItem key={key} value={key}>{cfg.emoji} {cfg.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Input
+                            type="date"
+                            value={d.date_start}
+                            onChange={(e) => updateDate(d.id, "date_start", e.target.value)}
+                            className="h-6 text-xs w-32 shrink-0"
+                          />
                           <Input
                             autoFocus
-                            placeholder="Nome da data..."
+                            placeholder="Nome do evento..."
                             className="h-6 text-sm flex-1"
                             onBlur={(e) => {
                               if (!e.target.value.trim()) {
@@ -298,23 +253,17 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                               }
                             }}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                (e.target as HTMLInputElement).blur();
-                              } else if (e.key === "Escape") {
-                                removeDate(d.id);
-                              }
+                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                              else if (e.key === "Escape") removeDate(d.id);
                             }}
                           />
                         </>
                       ) : (
                         <>
-                          <span className={`text-[10px] shrink-0 w-20 text-center rounded px-1 py-0.5 ${TYPE_CONFIG[d.type]?.className ?? ""}`}>
-                            {TYPE_CONFIG[d.type]?.emoji} {TYPE_CONFIG[d.type]?.label ?? d.type}
-                          </span>
                           <span className="text-sm flex-1 truncate">{d.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{d.date_start?.slice(8)}/{d.date_start?.slice(5, 7)}</span>
                         </>
                       )}
-                      <span className="text-xs text-muted-foreground shrink-0">{d.date_start?.slice(8)}/{d.date_start?.slice(5, 7)}</span>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 shrink-0" onClick={() => removeDate(d.id)}>
                         <X className="h-3 w-3" />
                       </Button>
@@ -343,7 +292,6 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
             </DialogDescription>
           </DialogHeader>
 
-          {/* Group suggestions by type */}
           {Object.entries(TYPE_CONFIG).map(([typeKey, typeCfg]) => {
             const typeSuggestions = suggestions.filter(s => s.type === typeKey);
             if (typeSuggestions.length === 0) return null;
@@ -351,9 +299,9 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
               <div key={typeKey} className="space-y-2">
                 <h4 className="text-sm font-semibold flex items-center gap-2 pt-2">
                   <span>{typeCfg.emoji}</span> {typeCfg.label}
-                  <Badge variant="outline" className="text-[10px]">{typeSuggestions.length}</Badge>
+                  <span className="text-[10px] rounded px-1.5 py-0.5 border">{typeSuggestions.length}</span>
                 </h4>
-                {typeSuggestions.map((s, i) => {
+                {typeSuggestions.map((s) => {
                   const globalIdx = suggestions.indexOf(s);
                   return (
                     <label key={globalIdx} className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors ${s.type === "ideias" ? "border-dashed" : ""}`}>
@@ -369,9 +317,9 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                           <span className="text-sm font-medium">{s.name}</span>
                           <span className="text-xs text-muted-foreground">{s.date_start}</span>
                           {s.date_end && <span className="text-xs text-muted-foreground">→ {s.date_end}</span>}
-                          <Badge variant="outline" className={`text-[10px] ${RELEVANCE_BADGE[s.relevance]?.className}`}>
+                          <span className={`text-[10px] rounded px-1.5 py-0.5 border ${RELEVANCE_BADGE[s.relevance]?.className ?? ""}`}>
                             {RELEVANCE_BADGE[s.relevance]?.label}
-                          </Badge>
+                          </span>
                         </div>
                         {s.justification && (
                           <p className="text-xs text-primary/80 mt-1 italic flex items-start gap-1">
