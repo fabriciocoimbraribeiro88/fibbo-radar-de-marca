@@ -260,17 +260,41 @@ async function handleCheck(
       const batch = allItems.slice(i, i + BATCH);
       const posts = batch.map((post: any) => {
         const handle = post.ownerUsername ?? "";
+        const viewsCount = post.videoViewCount ?? post.videoPlayCount ?? null;
+        
+        // Infer post type from multiple signals
+        let postType: string | null = post.type || null;
+        if (!postType || postType === "Image") {
+          const url = post.url || "";
+          if (url.includes("/reel/")) {
+            postType = "Reel";
+          } else if (url.includes("/tv/")) {
+            postType = "Video";
+          } else if (post.isVideo === true || post.videoUrl || viewsCount) {
+            postType = post.productType === "clips" ? "Reel" : "Video";
+          } else if (
+            (Array.isArray(post.images) && post.images.length > 1) ||
+            (Array.isArray(post.sidecarImages) && post.sidecarImages.length > 1) ||
+            post.mediaCount > 1 ||
+            post.productType === "carousel_container"
+          ) {
+            postType = "Sidecar";
+          } else {
+            postType = "Image";
+          }
+        }
+        
         return {
           entity_id,
           post_id_instagram: post.id || post.shortCode || `${handle}_${post.timestamp}`,
           shortcode: post.shortCode ?? null,
           post_url: post.url ?? null,
-          post_type: post.type ?? null,
+          post_type: postType,
           caption: post.caption ?? null,
           posted_at: post.timestamp ? new Date(post.timestamp).toISOString() : null,
           likes_count: post.likesCount ?? null,
           comments_count: post.commentsCount ?? null,
-          views_count: post.videoViewCount ?? post.videoPlayCount ?? null,
+          views_count: viewsCount,
           shares_count: null,
           saves_count: null,
           hashtags: post.hashtags ?? null,

@@ -31,17 +31,22 @@ function mapApifyPost(post: any, entityId: string) {
     mediaUrls = post.displayUrls;
   }
 
-  // Infer post type when not provided
+  // Infer post type from multiple signals
   let postType: string | null = post.type || null;
-  if (!postType) {
+  if (!postType || postType === "Image") {
     const url = post.url || "";
     if (url.includes("/reel/")) {
       postType = "Reel";
     } else if (url.includes("/tv/")) {
       postType = "Video";
-    } else if (post.videoViewCount || post.videoPlayCount) {
-      postType = "Video";
-    } else if (Array.isArray(post.images) && post.images.length > 1) {
+    } else if (post.isVideo === true || post.videoUrl || post.videoViewCount || post.videoPlayCount) {
+      postType = post.productType === "clips" ? "Reel" : "Video";
+    } else if (
+      (Array.isArray(post.images) && post.images.length > 1) ||
+      (Array.isArray(post.sidecarImages) && post.sidecarImages.length > 1) ||
+      post.mediaCount > 1 ||
+      post.productType === "carousel_container"
+    ) {
       postType = "Sidecar";
     } else {
       postType = "Image";
