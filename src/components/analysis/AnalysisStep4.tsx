@@ -100,7 +100,7 @@ export default function AnalysisStep4(props: Step4Props) {
       }
 
       const { data: posts, count } = await query;
-      const postCount = count ?? posts?.length ?? 0;
+      const postCount = periodMode === "count" ? (posts?.length ?? 0) : (count ?? posts?.length ?? 0);
 
       const likes = posts?.reduce((s, p) => s + (p.likes_count ?? 0), 0) ?? 0;
       const comments = posts?.reduce((s, p) => s + (p.comments_count ?? 0), 0) ?? 0;
