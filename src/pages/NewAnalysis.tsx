@@ -145,7 +145,8 @@ export default function NewAnalysis() {
     enabled: !!projectEntities,
   });
 
-  const brandEntity = projectEntities?.find((pe) => pe.entity_role === "brand");
+  const brandEntity = projectEntities?.find((pe) => pe.entity_role === "brand")
+    ?? projectEntities?.find((pe) => pe.monitored_entities?.instagram_handle === project?.instagram_handle);
   const entities = (projectEntities ?? []).map((pe) => ({
     id: pe.monitored_entities?.id ?? pe.entity_id,
     name: pe.monitored_entities?.name ?? "",
