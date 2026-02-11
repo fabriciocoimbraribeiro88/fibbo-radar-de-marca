@@ -115,6 +115,7 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
             content_approach: wizardData.contentApproach,
             selected_lenses: wizardData.selectedLenses,
             provocation_level: wizardData.provocationLevel,
+            category_mix: wizardData.categoryMix,
           },
         },
       });
@@ -165,6 +166,15 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
                   <>
                     <div className="flex justify-between"><span className="text-muted-foreground">Lentes</span><span className="font-medium text-right">{wizardData.selectedLenses.join(" · ")}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Provocação</span><span className="font-medium">Nível {wizardData.provocationLevel}/5</span></div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Categorias</span>
+                      <span className="font-medium text-right">
+                        {Object.entries(wizardData.categoryMix).filter(([, v]) => v > 0).map(([k, v]) => {
+                          const labels: Record<string, string> = { thesis: "Teses", best_practice: "Cases", seasonal: "Sazonal", connection: "Conexão" };
+                          return `${labels[k] ?? k} ${v}%`;
+                        }).join(" · ")}
+                      </span>
+                    </div>
                   </>
                 )}
                 <div className="flex justify-between"><span className="text-muted-foreground">Posts</span><span className="font-medium">{totalPosts} planejados + {extraPosts} extras = {totalGenerated} títulos serão gerados</span></div>

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Info, Zap, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Info, Zap, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { WizardData, Responsible } from "@/pages/ProjectPlanning";
 
 const PERIOD_PRESETS = [
@@ -58,6 +59,8 @@ interface Props {
 }
 
 export default function SocialConfig({ wizardData, setWizardData, projectId }: Props) {
+  const { toast } = useToast();
+  const [suggestingMix, setSuggestingMix] = useState(false);
   const { data: project } = useQuery({
     queryKey: ["project-briefing", projectId],
     queryFn: async () => {
@@ -205,6 +208,128 @@ export default function SocialConfig({ wizardData, setWizardData, projectId }: P
                   <span>Consultivo</span>
                   <span>Confrontador</span>
                 </div>
+              </div>
+
+              {/* Category Mix */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Mix de Categorias</Label>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-mono ${Object.values(wizardData.categoryMix).reduce((a, b) => a + b, 0) === 100 ? "text-green-600" : "text-destructive"}`}>
+                      {Object.values(wizardData.categoryMix).reduce((a, b) => a + b, 0)}%
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] gap-1"
+                      disabled={suggestingMix}
+                      onClick={async () => {
+                        setSuggestingMix(true);
+                        try {
+                          const { data: proj } = await supabase.from("projects").select("briefing, segment, brand_name").eq("id", projectId).single();
+                          const briefing = proj?.briefing as any;
+                          const segment = proj?.segment ?? "";
+                          const pillars = briefing?.content_pillars ?? [];
+                          const territories = briefing?.tension_territories ?? [];
+                          const seasonal = briefing?.seasonal_calendar ?? [];
+
+                          const { data: memories } = await supabase
+                            .from("brand_memory_entries")
+                            .select("summary, learnings, pillar_performance")
+                            .eq("project_id", projectId)
+                            .eq("is_active", true)
+                            .order("year", { ascending: false })
+                            .limit(2);
+
+                          const { data: refs } = await supabase
+                            .from("brand_references")
+                            .select("type, title")
+                            .eq("project_id", projectId)
+                            .limit(20);
+
+                          const successCount = refs?.filter(r => r.type === "success_post" || r.type === "kv").length ?? 0;
+                          const seasonalCount = Array.isArray(seasonal) ? seasonal.length : 0;
+
+                          const prompt = `Baseado no contexto abaixo, sugira o mix ideal de categorias de conteúdo (em %) para o calendário de ${proj?.brand_name ?? "marca"}.
+
+Segmento: ${segment}
+Pilares: ${pillars.map((p: any) => p.name).join(", ")}
+Territórios de tensão: ${territories.map((t: any) => t.name).join(", ") || "nenhum definido"}
+Cases de sucesso cadastrados: ${successCount}
+Datas sazonais cadastradas: ${seasonalCount}
+Memória estratégica: ${memories?.map(m => m.summary).join("; ") ?? "nenhuma"}
+
+As 4 categorias são:
+- thesis: Posts com teses narrativas provocativas (cruzamento de territórios × lentes)
+- best_practice: Posts baseados em cases de sucesso e melhores práticas
+- seasonal: Posts conectados a datas sazonais e momentos culturais
+- connection: Posts de conexão (bastidores, produto, educativo, storytelling)
+
+Considere:
+- Se há poucos cases de sucesso, reduza best_practice
+- Se há muitas datas sazonais no período, aumente seasonal
+- Marcas B2B geralmente precisam de mais thesis e best_practice
+- Marcas B2C precisam de mais connection e seasonal
+- O total DEVE ser 100%
+
+Responda APENAS com JSON: {"thesis": N, "best_practice": N, "seasonal": N, "connection": N}`;
+
+                          const { data: fnData, error: fnErr } = await supabase.functions.invoke("fill-brand-context", {
+                            body: { prompt, project_id: projectId },
+                          });
+
+                          // Try parsing the AI response
+                          let suggestedMix: Record<string, number> | null = null;
+                          const responseText = typeof fnData === "string" ? fnData : fnData?.result ?? fnData?.content ?? JSON.stringify(fnData);
+                          const jsonMatch = responseText?.match?.(/\{[\s\S]*?\}/);
+                          if (jsonMatch) {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            if (parsed.thesis && parsed.best_practice && parsed.seasonal && parsed.connection) {
+                              suggestedMix = parsed;
+                            }
+                          }
+
+                          if (suggestedMix) {
+                            setWizardData((d) => ({ ...d, categoryMix: suggestedMix! }));
+                            toast({ title: "Mix sugerido pela IA aplicado!" });
+                          } else {
+                            toast({ title: "Não foi possível gerar sugestão", variant: "destructive" });
+                          }
+                        } catch (e: any) {
+                          toast({ title: "Erro ao sugerir mix", description: e.message, variant: "destructive" });
+                        } finally {
+                          setSuggestingMix(false);
+                        }
+                      }}
+                    >
+                      {suggestingMix ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      {suggestingMix ? "Analisando..." : "Sugerir com IA"}
+                    </Button>
+                  </div>
+                </div>
+                {[
+                  { key: "thesis", label: "⚡ Teses Narrativas", desc: "Provocativas e diferenciadas" },
+                  { key: "best_practice", label: "🏆 Cases & Melhores Práticas", desc: "Baseado no que funcionou" },
+                  { key: "seasonal", label: "📅 Datas Sazonais", desc: "Momentos culturais e comemorações" },
+                  { key: "connection", label: "🤝 Conexão", desc: "Bastidores, produto, educativo" },
+                ].map(({ key, label, desc }) => (
+                  <div key={key} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs">{label}</span>
+                        <span className="text-[9px] text-muted-foreground ml-1.5">{desc}</span>
+                      </div>
+                      <span className="text-xs font-mono text-muted-foreground">{wizardData.categoryMix[key] ?? 0}%</span>
+                    </div>
+                    <Slider
+                      value={[wizardData.categoryMix[key] ?? 0]}
+                      min={0}
+                      max={100}
+                      step={5}
+                      onValueChange={([v]) => setWizardData((d) => ({ ...d, categoryMix: { ...d.categoryMix, [key]: v } }))}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}

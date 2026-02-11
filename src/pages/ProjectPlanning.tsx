@@ -46,6 +46,7 @@ export interface WizardData {
   contentApproach: "theses" | "pillars";
   selectedLenses: string[];
   provocationLevel: number;
+  categoryMix: Record<string, number>;
   // Ads config
   adsPlatforms: string[];
   adsBudget: number;
@@ -79,6 +80,7 @@ const defaultWizardData: WizardData = {
   contentApproach: "theses",
   selectedLenses: ["Sociológica", "Psicológica", "Econômica", "Tecnológica", "Contraintuitiva", "Histórica/Futurista"],
   provocationLevel: 3,
+  categoryMix: { thesis: 40, best_practice: 25, seasonal: 15, connection: 20 },
   adsPlatforms: ["Meta"],
   adsBudget: 5000,
   adsPlatformDistribution: { Meta: 100 },

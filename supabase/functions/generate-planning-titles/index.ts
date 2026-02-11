@@ -156,13 +156,14 @@ Deno.serve(async (req) => {
       ).join("\n") : JSON.stringify(pc, null, 2).slice(0, 2000)) + "\n";
     }
 
-    const { posts_per_week, format_mix, responsibles, preferred_times, special_instructions } = parameters;
+    const { posts_per_week, format_mix, responsibles, preferred_times, special_instructions, category_mix } = parameters;
     const weeks = Math.max(1, Math.round((new Date(period_end).getTime() - new Date(period_start).getTime()) / (7 * 86400000)));
     const totalBase = posts_per_week * weeks;
     const totalWithExtra = Math.ceil(totalBase * 1.25);
 
     // Build the prompt based on content approach
     const isTheses = contentApproach === "theses";
+    const catMix = category_mix ?? { thesis: 40, best_practice: 25, seasonal: 15, connection: 20 };
 
     const provocationGuide = {
       1: "Tom consultivo e educativo. Apresente insights de forma construtiva e propositiva.",
@@ -193,26 +194,26 @@ ${selectedLenses.map((l: string) => {
 
 O calendário deve ter um MIX OBRIGATÓRIO de 4 categorias de posts:
 
-## CATEGORIA 1: TESES NARRATIVAS (~40% dos posts)
+## CATEGORIA 1: TESES NARRATIVAS (~${catMix.thesis}% dos posts)
 Posts provocativos que cruzam Territórios de Tensão com Lentes Narrativas.
 - Headlines no formato: [FRASE CURTA E FORTE] - [COMPLEMENTO PROVOCADOR] (caixa alta)
 - Cada post é uma TESE — um argumento original que gera reflexão
 - O objetivo é diferenciar a marca com perspectivas únicas
 
-## CATEGORIA 2: CASES DE SUCESSO & MELHORES PRÁTICAS (~25% dos posts)
+## CATEGORIA 2: CASES DE SUCESSO & MELHORES PRÁTICAS (~${catMix.best_practice}% dos posts)
 Posts baseados no que JÁ FUNCIONOU para a marca e nas melhores práticas identificadas na análise.
 - Replicar formatos, ângulos e abordagens que geraram alto engajamento
 - Adaptar cases de sucesso com novos ângulos (não repetir exatamente)
 - Aplicar aprendizados da memória estratégica e da análise de performance
 - Headlines diretas e claras (não precisam ser provocativas)
 
-## CATEGORIA 3: DATAS SAZONAIS & MOMENTOS CULTURAIS (~15% dos posts)
+## CATEGORIA 3: DATAS SAZONAIS & MOMENTOS CULTURAIS (~${catMix.seasonal}% dos posts)
 Posts conectados ao calendário sazonal, datas comemorativas e momentos culturais relevantes.
 - Usar as datas do calendário sazonal fornecido
 - Conectar a data com o posicionamento da marca (não ser genérico)
 - Pode combinar com uma lente narrativa para dar profundidade
 
-## CATEGORIA 4: CONTEÚDO DE CONEXÃO (~20% dos posts)
+## CATEGORIA 4: CONTEÚDO DE CONEXÃO (~${catMix.connection}% dos posts)
 Posts que constroem proximidade com a persona: bastidores, produto, educativo, storytelling.
 - Conteúdo que humaniza a marca
 - Posts sobre produtos/serviços com ângulo de valor (não venda direta)
@@ -225,7 +226,7 @@ NÍVEL DE PROVOCAÇÃO (aplica-se às Teses Narrativas): ${provocationLevel}/5
 ${provocationGuide}
 
 REGRAS CRÍTICAS:
-- RESPEITAR O MIX de categorias (40% teses, 25% cases/práticas, 15% sazonal, 20% conexão)
+- RESPEITAR O MIX de categorias (${catMix.thesis}% teses, ${catMix.best_practice}% cases/práticas, ${catMix.seasonal}% sazonal, ${catMix.connection}% conexão)
 - Para TESES: headlines em CAIXA ALTA no formato [FRASE] - [COMPLEMENTO]
 - Para outros tipos: headlines normais, claras e específicas
 - NUNCA crie algo que o concorrente poderia ter escrito
@@ -278,7 +279,7 @@ ${synthesisAnalysis ? `─── SÍNTESE ESTRATÉGICA ───\n${synthesisAna
 
 REGRAS:
 1. content_type = NOME COMPLETO do pilar relacionado
-2. MIX OBRIGATÓRIO: ~40% teses narrativas, ~25% cases/melhores práticas, ~15% datas sazonais, ~20% conexão
+2. MIX OBRIGATÓRIO: ~${catMix.thesis}% teses narrativas, ~${catMix.best_practice}% cases/melhores práticas, ~${catMix.seasonal}% datas sazonais, ~${catMix.connection}% conexão
 3. Para TESES: cruzar território + lente, headline em CAIXA ALTA
 4. Para CASES/PRÁTICAS: basear nos posts que funcionaram e nas análises de performance
 5. Para SAZONAL: usar datas do calendário sazonal, conectar com a marca
