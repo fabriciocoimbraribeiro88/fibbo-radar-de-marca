@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.generate-seasonal-calendar]
 verify_jwt = false
+
+[functions.generate-okrs]
+verify_jwt = false

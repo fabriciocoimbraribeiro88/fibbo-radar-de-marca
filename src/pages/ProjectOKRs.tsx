@@ -5,17 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -23,63 +12,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import {
   Target,
   Plus,
-  ChevronDown,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Pencil,
-  Loader2,
-  Instagram,
-  Megaphone,
-  Search,
-  AlertTriangle,
+  Bot,
+  BarChart3,
+  LayoutList,
+  LayoutGrid,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import { OKRObjectiveCard } from "@/components/okrs/OKRObjectiveCard";
+import { OKRTable } from "@/components/okrs/OKRTable";
+import { CreateObjectiveDialog } from "@/components/okrs/CreateObjectiveDialog";
+import { CollectDataDialog } from "@/components/okrs/CollectDataDialog";
+import { HistoryDialog } from "@/components/okrs/HistoryDialog";
+import { GenerateOKRsDialog } from "@/components/okrs/GenerateOKRsDialog";
+import { ExportOKRs } from "@/components/okrs/ExportOKRs";
+import { getQuarterProgress, computeStatus, calculateProgress, STATUS_CONFIG } from "@/components/okrs/okr-utils";
 
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
-const CHANNELS_OKR = [
-  { value: "social", label: "Redes Sociais", icon: Instagram },
-  { value: "ads", label: "Campanhas / Ads", icon: Megaphone },
-  { value: "seo", label: "SEO / Orgânico", icon: Search },
-  { value: "general", label: "Geral", icon: Target },
-];
-
-const STATUS_COLORS: Record<string, string> = {
-  on_track: "bg-green-500/15 text-green-600",
-  at_risk: "bg-amber-500/15 text-amber-600",
-  off_track: "bg-destructive/15 text-destructive",
-  achieved: "bg-primary/15 text-primary",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  on_track: "No Caminho",
-  at_risk: "Em Risco",
-  off_track: "Fora da Meta",
-  achieved: "Alcançado",
-};
-
-interface ObjForm {
-  title: string;
-  description: string;
-  channel: string;
-}
-
-interface KRForm {
-  title: string;
-  target_value: number;
-  current_value: number;
-  unit: string;
-  metric_type: string;
-}
 
 export default function ProjectOKRs() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -90,37 +53,18 @@ export default function ProjectOKRs() {
 
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedQuarter, setSelectedQuarter] = useState(currentQuarter);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // Dialogs
   const [objDialog, setObjDialog] = useState(false);
-  const [editObjId, setEditObjId] = useState<string | null>(null);
-  const [objForm, setObjForm] = useState<ObjForm>({ title: "", description: "", channel: "general" });
+  const [editingObj, setEditingObj] = useState<any>(null);
+  const [collectDialog, setCollectDialog] = useState(false);
+  const [historyDialog, setHistoryDialog] = useState(false);
+  const [historyKR, setHistoryKR] = useState<any>(null);
+  const [generateDialog, setGenerateDialog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
 
-  const [krDialog, setKrDialog] = useState(false);
-  const [krObjId, setKrObjId] = useState<string | null>(null);
-  const [editKrId, setEditKrId] = useState<string | null>(null);
-  const [krForm, setKrForm] = useState<KRForm>({
-    title: "", target_value: 100, current_value: 0, unit: "", metric_type: "",
-  });
-
-  // Fetch objectives
-  const { data: objectives, isLoading } = useQuery({
-    queryKey: ["okr-objectives", projectId, selectedYear, selectedQuarter],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("okr_objectives")
-        .select("*")
-        .eq("project_id", projectId!)
-        .eq("year", selectedYear)
-        .eq("quarter", selectedQuarter)
-        .order("created_at");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!projectId,
-  });
-
-  // Fetch API KPIs from instagram data
+  // Fetch project + brand entity
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
     queryFn: async () => {
@@ -136,7 +80,7 @@ export default function ProjectOKRs() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("project_entities")
-        .select("entity_id, monitored_entities(id, instagram_handle)")
+        .select("entity_id, entity_role, monitored_entities(id, instagram_handle)")
         .eq("project_id", projectId!);
       if (error) throw error;
       return data;
@@ -145,225 +89,213 @@ export default function ProjectOKRs() {
   });
 
   const brandEntityId = entities?.find(
-    (e) => (e.monitored_entities as any)?.instagram_handle?.replace("@", "") === project?.instagram_handle?.replace("@", "")
+    (e) => e.entity_role === "brand" || (e.monitored_entities as any)?.instagram_handle?.replace("@", "") === project?.instagram_handle?.replace("@", "")
   )?.entity_id;
 
-  const { data: latestProfile } = useQuery({
-    queryKey: ["brand-profile", brandEntityId],
+  // Fetch objectives with key results and measurements
+  const { data: objectives, isLoading } = useQuery({
+    queryKey: ["okr-objectives", projectId, selectedYear, selectedQuarter],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("instagram_profiles")
-        .select("*")
-        .eq("entity_id", brandEntityId!)
-        .order("snapshot_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .from("okr_objectives")
+        .select(`
+          *,
+          okr_key_results (
+            *,
+            okr_measurements (
+              id, value, measured_at, source, notes
+            )
+          )
+        `)
+        .eq("project_id", projectId!)
+        .eq("year", selectedYear)
+        .eq("quarter", selectedQuarter)
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!brandEntityId,
+    enabled: !!projectId,
   });
 
-  const { data: avgEngagement } = useQuery({
-    queryKey: ["brand-engagement", brandEntityId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("instagram_posts")
-        .select("engagement_total, likes_count, comments_count")
-        .eq("entity_id", brandEntityId!)
-        .order("posted_at", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      if (!data?.length) return null;
-      const totalEng = data.reduce((s, p) => s + (p.engagement_total ?? (p.likes_count ?? 0) + (p.comments_count ?? 0)), 0);
-      return Math.round(totalEng / data.length);
-    },
-    enabled: !!brandEntityId,
+  const keyResultsByObj: Record<string, any[]> = {};
+  const allKeyResults: any[] = [];
+  objectives?.forEach(obj => {
+    const krs = (obj as any).okr_key_results ?? [];
+    keyResultsByObj[obj.id] = krs;
+    allKeyResults.push(...krs);
   });
 
-  const kpiCards = [
-    { label: "Seguidores", value: latestProfile?.followers_count, icon: Instagram },
-    { label: "Seguindo", value: latestProfile?.following_count, icon: Instagram },
-    { label: "Posts", value: latestProfile?.posts_count, icon: Instagram },
-    { label: "Eng. Médio", value: avgEngagement, icon: TrendingUp },
-  ].filter((k) => k.value != null);
+  const quarterElapsed = getQuarterProgress(selectedQuarter, selectedYear);
 
-  const objIds = objectives?.map((o) => o.id) ?? [];
-  const { data: keyResults } = useQuery({
-    queryKey: ["okr-key-results", objIds],
-    queryFn: async () => {
-      if (!objIds.length) return [];
-      const { data, error } = await supabase
-        .from("okr_key_results")
-        .select("*")
-        .in("objective_id", objIds)
-        .order("created_at");
-      if (error) throw error;
-      return data;
-    },
-    enabled: objIds.length > 0,
-  });
+  // Stats
+  const totalObjectives = objectives?.length ?? 0;
+  const onTrackObjectives = objectives?.filter(obj => {
+    const krs = keyResultsByObj[obj.id] ?? [];
+    if (!krs.length) return false;
+    const progress = Math.round(krs.reduce((s, kr) => s + calculateProgress(Number(kr.baseline_value ?? 0), Number(kr.target_value), Number(kr.current_value ?? 0)), 0) / krs.length);
+    return computeStatus(progress, quarterElapsed) === "on_track" || computeStatus(progress, quarterElapsed) === "achieved";
+  }).length ?? 0;
 
-  const getKRsForObj = (objId: string) =>
-    keyResults?.filter((kr) => kr.objective_id === objId) ?? [];
+  // Last measurement date
+  const lastMeasurement = allKeyResults
+    .flatMap(kr => (kr.okr_measurements ?? []))
+    .sort((a: any, b: any) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime())[0];
 
-  const getObjProgress = (objId: string) => {
-    const krs = getKRsForObj(objId);
-    if (!krs.length) return 0;
-    const total = krs.reduce((sum, kr) => {
-      const pct = kr.target_value > 0 ? Math.min(((kr.current_value ?? 0) / kr.target_value) * 100, 100) : 0;
-      return sum + pct;
-    }, 0);
-    return Math.round(total / krs.length);
-  };
+  const lastMeasurementDaysAgo = lastMeasurement
+    ? Math.floor((Date.now() - new Date(lastMeasurement.measured_at).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
 
   // Mutations
-  const saveObj = useMutation({
-    mutationFn: async () => {
-      const payload = {
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["okr-objectives"] });
+
+  const handleSaveObjective = async (data: { objective: any; keyResults: any[] }) => {
+    const { objective, keyResults: krForms } = data;
+
+    if (objective.id) {
+      // Update
+      const { error } = await supabase.from("okr_objectives").update({
+        title: objective.title,
+        description: objective.description,
+        channel: objective.channel,
+      }).eq("id", objective.id);
+      if (error) throw error;
+
+      // Upsert KRs
+      for (const kr of krForms) {
+        const payload = {
+          objective_id: objective.id,
+          title: kr.title,
+          target_value: kr.target_value,
+          baseline_value: kr.baseline_value,
+          unit: kr.unit || null,
+          data_source: kr.data_source || null,
+          responsible: kr.responsible || null,
+          metric_direction: kr.metric_direction || "increase",
+        };
+        if (kr.id) {
+          await supabase.from("okr_key_results").update(payload).eq("id", kr.id);
+        } else {
+          await supabase.from("okr_key_results").insert({ ...payload, current_value: kr.baseline_value });
+        }
+      }
+    } else {
+      // Create
+      const { data: newObj, error } = await supabase.from("okr_objectives").insert({
         project_id: projectId!,
-        title: objForm.title,
-        description: objForm.description || null,
-        channel: objForm.channel,
-        year: selectedYear,
-        quarter: selectedQuarter,
-      };
-      if (editObjId) {
-        const { error } = await supabase.from("okr_objectives").update(payload).eq("id", editObjId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("okr_objectives").insert(payload);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["okr-objectives"] });
-      setObjDialog(false);
-      setEditObjId(null);
-      setObjForm({ title: "", description: "", channel: "general" });
-      toast({ title: editObjId ? "Objetivo atualizado!" : "Objetivo criado!" });
-    },
-    onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
-  });
-
-  const saveKR = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        objective_id: krObjId!,
-        title: krForm.title,
-        target_value: krForm.target_value,
-        current_value: krForm.current_value,
-        unit: krForm.unit || null,
-        metric_type: krForm.metric_type || null,
-      };
-      if (editKrId) {
-        const { error } = await supabase.from("okr_key_results").update(payload).eq("id", editKrId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("okr_key_results").insert(payload);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["okr-key-results"] });
-      setKrDialog(false);
-      setEditKrId(null);
-      setKrForm({ title: "", target_value: 100, current_value: 0, unit: "", metric_type: "" });
-      toast({ title: editKrId ? "Key Result atualizado!" : "Key Result criado!" });
-    },
-    onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
-  });
-
-  const updateKRValue = useMutation({
-    mutationFn: async ({ id, value }: { id: string; value: number }) => {
-      const { error } = await supabase.from("okr_key_results").update({ current_value: value }).eq("id", id);
+        title: objective.title,
+        description: objective.description,
+        channel: objective.channel,
+        year: objective.year,
+        quarter: objective.quarter,
+      }).select("id").single();
       if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["okr-key-results"] }),
-  });
 
-  const updateObjStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("okr_objectives").update({ status }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["okr-objectives"] }),
-  });
+      const krsToInsert = krForms.filter(kr => kr.title.trim()).map(kr => ({
+        objective_id: newObj.id,
+        title: kr.title,
+        target_value: kr.target_value,
+        current_value: kr.baseline_value,
+        baseline_value: kr.baseline_value,
+        unit: kr.unit || null,
+        data_source: kr.data_source || null,
+        responsible: kr.responsible || null,
+        metric_direction: kr.metric_direction || "increase",
+        metric_type: kr.data_source || null,
+      }));
+      if (krsToInsert.length > 0) {
+        await supabase.from("okr_key_results").insert(krsToInsert);
+      }
+    }
 
-  const openNewObj = () => {
-    setObjForm({ title: "", description: "", channel: "general" });
-    setEditObjId(null);
-    setObjDialog(true);
+    toast({ title: objective.id ? "Objetivo atualizado!" : "Objetivo criado!" });
+    invalidate();
   };
 
-  const openEditObj = (obj: any) => {
-    setObjForm({ title: obj.title, description: obj.description || "", channel: obj.channel || "general" });
-    setEditObjId(obj.id);
-    setObjDialog(true);
+  const handleDeleteObjective = async (obj: any) => {
+    // Delete KRs first (and their measurements)
+    const krs = keyResultsByObj[obj.id] ?? [];
+    for (const kr of krs) {
+      await supabase.from("okr_measurements").delete().eq("key_result_id", kr.id);
+      await supabase.from("okr_key_results").delete().eq("id", kr.id);
+    }
+    await supabase.from("okr_objectives").delete().eq("id", obj.id);
+    toast({ title: "Objetivo excluído" });
+    invalidate();
+    setDeleteConfirm(null);
   };
-
-  const openNewKR = (objId: string) => {
-    setKrForm({ title: "", target_value: 100, current_value: 0, unit: "", metric_type: "" });
-    setKrObjId(objId);
-    setEditKrId(null);
-    setKrDialog(true);
-  };
-
-  const openEditKR = (kr: any) => {
-    setKrForm({
-      title: kr.title,
-      target_value: kr.target_value,
-      current_value: kr.current_value ?? 0,
-      unit: kr.unit || "",
-      metric_type: kr.metric_type || "",
-    });
-    setKrObjId(kr.objective_id);
-    setEditKrId(kr.id);
-    setKrDialog(true);
-  };
-
-  // Overall progress
-  const overallProgress = objectives?.length
-    ? Math.round(objectives.reduce((s, o) => s + getObjProgress(o.id), 0) / objectives.length)
-    : 0;
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl space-y-4">
+      <div className="max-w-5xl space-y-4">
         <Skeleton className="h-8 w-48" />
-        {[1, 2].map((i) => <Skeleton key={i} className="h-32" />)}
+        {[1, 2].map(i => <Skeleton key={i} className="h-32" />)}
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl animate-fade-in">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">OKRs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Objetivos e resultados-chave por trimestre.
-          </p>
+    <div className="max-w-5xl animate-fade-in">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">
+              OKRs — {selectedQuarter} {selectedYear}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Objetivos e Resultados-Chave para o período.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setGenerateDialog(true)}>
+              <Bot className="h-3.5 w-3.5 mr-1.5" />
+              Gerar com IA
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCollectDialog(true)} disabled={allKeyResults.length === 0}>
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              Coletar Dados
+            </Button>
+            {objectives && objectives.length > 0 && (
+              <ExportOKRs
+                objectives={objectives}
+                keyResultsByObj={keyResultsByObj}
+                quarter={selectedQuarter}
+                year={selectedYear}
+              />
+            )}
+            <Button size="sm" onClick={() => { setEditingObj(null); setObjDialog(true); }}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Novo Objetivo
+            </Button>
+          </div>
         </div>
-        <Button onClick={openNewObj}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Objetivo
-        </Button>
+
+        {/* Summary stats */}
+        {totalObjectives > 0 && (
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+            <span>{onTrackObjectives} de {totalObjectives} objetivos on track · {quarterElapsed}% do quarter decorrido</span>
+            {lastMeasurementDaysAgo !== null && (
+              <Badge variant="secondary" className={`text-[10px] ${lastMeasurementDaysAgo > 30 ? "bg-destructive/15 text-destructive" : lastMeasurementDaysAgo > 7 ? "bg-amber-500/15 text-amber-600" : ""}`}>
+                {lastMeasurementDaysAgo > 30 ? "🔴" : lastMeasurementDaysAgo > 7 ? "⚠️" : ""} Última medição: {lastMeasurementDaysAgo}d atrás
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Quarter selector + summary */}
+      {/* Quarter selector */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
             <SelectTrigger className="h-8 w-20 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+              {[currentYear - 1, currentYear, currentYear + 1].map(y => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <div className="flex gap-1">
-            {QUARTERS.map((q) => (
+            {QUARTERS.map(q => (
               <button
                 key={q}
                 onClick={() => setSelectedQuarter(q)}
@@ -379,267 +311,137 @@ export default function ProjectOKRs() {
           </div>
         </div>
 
-        {objectives && objectives.length > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">Progresso geral</span>
-            <div className="w-24">
-              <Progress value={overallProgress} className="h-2" />
-            </div>
-            <span className="text-sm font-mono font-medium text-foreground">{overallProgress}%</span>
+        {totalObjectives > 0 && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant={viewMode === "cards" ? "secondary" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode("cards")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode("table")}
+            >
+              <LayoutList className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </div>
 
-      {/* API KPIs */}
-      {kpiCards.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">KPIs da API (tempo real)</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {kpiCards.map((kpi) => (
-              <Card key={kpi.label}>
-                <CardContent className="p-3 text-center">
-                  <kpi.icon className="h-4 w-4 text-primary mx-auto mb-1" />
-                  <p className="text-lg font-bold text-foreground font-mono">
-                    {typeof kpi.value === "number" ? kpi.value.toLocaleString("pt-BR") : kpi.value}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">{kpi.label}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Objectives */}
-      {objectives && objectives.length === 0 && (
-        <Card className="border-dashed">
+      {/* Empty state */}
+      {totalObjectives === 0 && (
+        <Card className="border-dashed rounded-2xl">
           <CardContent className="flex flex-col items-center py-16">
             <Target className="mb-3 h-10 w-10 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">Nenhum objetivo para {selectedQuarter} {selectedYear}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Crie objetivos e key results para acompanhar seus resultados.
             </p>
-            <Button className="mt-4" size="sm" onClick={openNewObj}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Criar Primeiro Objetivo
-            </Button>
+            <div className="flex gap-2 mt-4">
+              <Button size="sm" onClick={() => { setEditingObj(null); setObjDialog(true); }}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Criar Primeiro Objetivo
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setGenerateDialog(true)}>
+                <Bot className="mr-1.5 h-3.5 w-3.5" />
+                Gerar com IA
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="space-y-4">
-        {objectives?.map((obj) => {
-          const krs = getKRsForObj(obj.id);
-          const progress = getObjProgress(obj.id);
-          const statusColor = STATUS_COLORS[obj.status ?? "on_track"];
-          const statusLabel = STATUS_LABELS[obj.status ?? "on_track"];
-          const channelInfo = CHANNELS_OKR.find((c) => c.value === obj.channel);
-          const ChannelIcon = channelInfo?.icon ?? Target;
+      {/* Cards view */}
+      {viewMode === "cards" && totalObjectives > 0 && (
+        <div className="space-y-4">
+          {objectives?.map((obj, idx) => (
+            <OKRObjectiveCard
+              key={obj.id}
+              objective={obj}
+              keyResults={keyResultsByObj[obj.id] ?? []}
+              index={idx + 1}
+              quarter={selectedQuarter}
+              year={selectedYear}
+              onEdit={(o) => { setEditingObj(o); setObjDialog(true); }}
+              onDelete={(o) => setDeleteConfirm(o)}
+              onAddKR={(objId) => {
+                const o = objectives?.find(x => x.id === objId);
+                if (o) { setEditingObj(o); setObjDialog(true); }
+              }}
+              onHistoryKR={(kr) => { setHistoryKR(kr); setHistoryDialog(true); }}
+            />
+          ))}
+        </div>
+      )}
 
-          const TrendIcon = progress >= 70 ? TrendingUp : progress >= 40 ? Minus : TrendingDown;
-          const trendColor = progress >= 70 ? "text-green-600" : progress >= 40 ? "text-amber-600" : "text-destructive";
+      {/* Table view */}
+      {viewMode === "table" && totalObjectives > 0 && (
+        <OKRTable
+          objectives={objectives ?? []}
+          keyResultsByObj={keyResultsByObj}
+          quarter={selectedQuarter}
+          year={selectedYear}
+        />
+      )}
 
-          return (
-            <Collapsible key={obj.id} defaultOpen>
-              <Card>
-                <CardContent className="p-0">
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <ChannelIcon className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="text-left">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-foreground">{obj.title}</p>
-                            <Badge className={`text-[9px] ${statusColor}`}>{statusLabel}</Badge>
-                          </div>
-                          {obj.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{obj.description}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <TrendIcon className={`h-4 w-4 ${trendColor}`} />
-                        <div className="w-20">
-                          <Progress value={progress} className="h-2" />
-                        </div>
-                        <span className="text-sm font-mono font-medium text-foreground w-10 text-right">{progress}%</span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </CollapsibleTrigger>
+      {/* Dialogs */}
+      <CreateObjectiveDialog
+        open={objDialog}
+        onOpenChange={(o) => { setObjDialog(o); if (!o) setEditingObj(null); }}
+        onSave={handleSaveObjective}
+        editingObjective={editingObj}
+        editingKeyResults={editingObj ? keyResultsByObj[editingObj.id] : undefined}
+        quarter={selectedQuarter}
+        year={selectedYear}
+      />
 
-                  <CollapsibleContent>
-                    <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-                      {/* Status changer */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Status:</span>
-                        {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                          <button
-                            key={k}
-                            onClick={() => updateObjStatus.mutate({ id: obj.id, status: k })}
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                              obj.status === k ? STATUS_COLORS[k] : "bg-muted/50 text-muted-foreground hover:bg-accent"
-                            }`}
-                          >
-                            {v}
-                          </button>
-                        ))}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => openEditObj(obj)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                      </div>
+      <CollectDataDialog
+        open={collectDialog}
+        onOpenChange={setCollectDialog}
+        allKeyResults={allKeyResults}
+        brandEntityId={brandEntityId}
+        quarter={selectedQuarter}
+        year={selectedYear}
+        onSaved={invalidate}
+      />
 
-                      {/* Key Results */}
-                      {krs.length === 0 && (
-                        <p className="text-xs text-muted-foreground italic">Nenhum key result definido.</p>
-                      )}
-                      {krs.map((kr) => {
-                        const krPct = kr.target_value > 0 ? Math.min(Math.round(((kr.current_value ?? 0) / kr.target_value) * 100), 100) : 0;
-                        const isLow = krPct < 50;
-                        return (
-                          <div key={kr.id} className="rounded-lg border border-border p-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-foreground">{kr.title}</p>
-                                {isLow && <AlertTriangle className="h-3 w-3 text-amber-500" />}
-                              </div>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditKR(kr)}>
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Progress value={krPct} className="h-2 flex-1" />
-                              <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                                {kr.current_value ?? 0} / {kr.target_value} {kr.unit}
-                              </span>
-                            </div>
-                            {/* Quick update */}
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                className="h-7 w-24 text-xs"
-                                placeholder="Novo valor"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    const val = Number((e.target as HTMLInputElement).value);
-                                    if (!isNaN(val)) {
-                                      updateKRValue.mutate({ id: kr.id, value: val });
-                                      (e.target as HTMLInputElement).value = "";
-                                    }
-                                  }
-                                }}
-                              />
-                              <span className="text-[10px] text-muted-foreground">Enter para atualizar</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+      <HistoryDialog
+        open={historyDialog}
+        onOpenChange={setHistoryDialog}
+        kr={historyKR}
+      />
 
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => openNewKR(obj.id)}>
-                        <Plus className="mr-1.5 h-3.5 w-3.5" />
-                        Adicionar Key Result
-                      </Button>
-                    </div>
-                  </CollapsibleContent>
-                </CardContent>
-              </Card>
-            </Collapsible>
-          );
-        })}
-      </div>
+      <GenerateOKRsDialog
+        open={generateDialog}
+        onOpenChange={setGenerateDialog}
+        projectId={projectId!}
+        quarter={selectedQuarter}
+        year={selectedYear}
+        onSaved={invalidate}
+      />
 
-      {/* Objective dialog */}
-      <Dialog open={objDialog} onOpenChange={(open) => { if (!open) { setObjDialog(false); setEditObjId(null); } }}>
-        <DialogContent className="bg-card sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editObjId ? "Editar Objetivo" : "Novo Objetivo"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Título</Label>
-              <Input value={objForm.title} onChange={(e) => setObjForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex: Aumentar engajamento no Instagram" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Descrição</Label>
-              <Textarea value={objForm.description} onChange={(e) => setObjForm((f) => ({ ...f, description: e.target.value }))} placeholder="Descreva o objetivo..." rows={2} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Canal</Label>
-              <Select value={objForm.channel} onValueChange={(v) => setObjForm((f) => ({ ...f, channel: v }))}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CHANNELS_OKR.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setObjDialog(false)}>Cancelar</Button>
-            <Button onClick={() => saveObj.mutate()} disabled={!objForm.title.trim() || saveObj.isPending}>
-              {saveObj.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editObjId ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Key Result dialog */}
-      <Dialog open={krDialog} onOpenChange={(open) => { if (!open) { setKrDialog(false); setEditKrId(null); } }}>
-        <DialogContent className="bg-card sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editKrId ? "Editar Key Result" : "Novo Key Result"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Título</Label>
-              <Input value={krForm.title} onChange={(e) => setKrForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ex: Alcançar 10k seguidores" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Meta</Label>
-                <Input type="number" value={krForm.target_value} onChange={(e) => setKrForm((f) => ({ ...f, target_value: Number(e.target.value) }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Valor Atual</Label>
-                <Input type="number" value={krForm.current_value} onChange={(e) => setKrForm((f) => ({ ...f, current_value: Number(e.target.value) }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Unidade</Label>
-                <Input value={krForm.unit} onChange={(e) => setKrForm((f) => ({ ...f, unit: e.target.value }))} placeholder="Ex: seguidores, %, R$" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Tipo de Métrica</Label>
-                <Select value={krForm.metric_type} onValueChange={(v) => setKrForm((f) => ({ ...f, metric_type: v }))}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="followers">Seguidores</SelectItem>
-                    <SelectItem value="engagement">Engajamento</SelectItem>
-                    <SelectItem value="reach">Alcance</SelectItem>
-                    <SelectItem value="leads">Leads</SelectItem>
-                    <SelectItem value="cpl">CPL</SelectItem>
-                    <SelectItem value="cpa">CPA</SelectItem>
-                    <SelectItem value="revenue">Receita</SelectItem>
-                    <SelectItem value="keyword_position">Posição KW</SelectItem>
-                    <SelectItem value="organic_traffic">Tráfego Orgânico</SelectItem>
-                    <SelectItem value="custom">Personalizado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setKrDialog(false)}>Cancelar</Button>
-            <Button onClick={() => saveKR.mutate()} disabled={!krForm.title.trim() || saveKR.isPending}>
-              {saveKR.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editKrId ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o) setDeleteConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir objetivo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso excluirá o objetivo "{deleteConfirm?.title}" e todos os seus key results e medições. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteConfirm && handleDeleteObjective(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
