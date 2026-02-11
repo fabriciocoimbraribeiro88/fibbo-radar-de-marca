@@ -88,19 +88,30 @@ Deno.serve(async (req) => {
       .in("entity_id", allEntityIds.length > 0 ? allEntityIds : ["__none__"])
       .order("snapshot_date", { ascending: false });
 
+    // 5b. Identify brand entity from project_entities
+    const { data: projectEntities } = await supabase
+      .from("project_entities")
+      .select("entity_id, entity_role, monitored_entities(name, instagram_handle)")
+      .eq("project_id", analysis.project_id);
+
+    const brandPe = projectEntities?.find((pe: any) => pe.entity_role === "brand")
+      ?? projectEntities?.find((pe: any) => pe.monitored_entities?.instagram_handle === project.instagram_handle);
+    const brandEntityId = brandPe?.entity_id ?? null;
+
     // 6. Create sections for each entity
     const sectionsToCreate = [];
 
-    // Brand section (project itself)
+    // Brand section — use the actual brand entity_id
     sectionsToCreate.push({
       analysis_id,
-      entity_id: null,
+      entity_id: brandEntityId,
       section_type: "brand",
       status: "pending",
     });
 
-    // Entity sections
+    // Entity sections (skip the brand entity to avoid duplication)
     for (const eid of entityIds) {
+      if (eid === brandEntityId) continue; // already handled as brand section
       const entity = entities?.find((e) => e.id === eid);
       if (!entity) continue;
       sectionsToCreate.push({
@@ -151,7 +162,7 @@ Deno.serve(async (req) => {
 
           const entityPosts = section.entity_id
             ? (posts ?? []).filter((p) => p.entity_id === section.entity_id)
-            : (posts ?? []).filter((p) => p.entity_id === null || !entityIds.includes(p.entity_id!));
+            : [];
 
           const entityProfile = section.entity_id
             ? (profiles ?? []).find((p) => p.entity_id === section.entity_id)
@@ -171,7 +182,8 @@ Deno.serve(async (req) => {
             entityProfile,
             entityPosts,
             metrics,
-            analysis.parameters as any
+            analysis.parameters as any,
+            section.entity_id
           );
 
           const result = await callClaude(anthropicKey!, systemPrompt, userPrompt);
@@ -294,12 +306,19 @@ DIRETRIZES:
 
 FORMATO DE OUTPUT:
 Responda em Markdown bem formatado com:
-- Resumo executivo (2-3 parágrafos)
-- Big Numbers (métricas principais)
+- Resumo Executivo (2-3 parágrafos)
+- Big Numbers (tabela com métricas principais — use emojis 🔴🟡🟢 APENAS na coluna Status para indicar performance)
 - Análise de Performance (insights sobre engajamento)
 - Análise de Formatos (o que funciona melhor)
 - Análise de Temas (padrões de conteúdo)
-- Recomendações (lista priorizada)`;
+- Recomendações (lista priorizada)
+
+REGRAS DE FORMATAÇÃO:
+- NÃO use emojis nos títulos das seções. Use apenas texto limpo nos headers (##, ###).
+- Use emojis SOMENTE dentro de tabelas para indicar status de métricas (🔴 negativo, 🟡 neutro, 🟢 positivo).
+- Exemplo correto: "## Big Numbers" (sem emoji no título)
+- Exemplo errado: "## 🔢 Big Numbers" (emoji no título)
+- Os dados DEVEM refletir os números reais fornecidos nos dados. NÃO invente números.`;
 }
 
 function buildAgentUserPrompt(
@@ -308,7 +327,8 @@ function buildAgentUserPrompt(
   profile: any,
   posts: any[],
   metrics: Record<string, any>,
-  parameters: any
+  parameters: any,
+  entityId?: string | null
 ): string {
   const topPosts = posts
     .sort((a, b) => (b.engagement_total ?? 0) - (a.engagement_total ?? 0))
@@ -322,7 +342,7 @@ function buildAgentUserPrompt(
 
   prompt += `## Métricas Resumidas\n- Total de posts analisados: ${posts.length}\n`;
 
-  const entityMetrics = Object.values(metrics)[0];
+  const entityMetrics = entityId ? metrics[entityId] : Object.values(metrics)[0];
   if (entityMetrics) {
     prompt += `- Média de curtidas: ${entityMetrics.avg_likes}\n- Média de comentários: ${entityMetrics.avg_comments}\n- Engajamento médio: ${entityMetrics.avg_engagement}\n\n`;
   }
@@ -359,6 +379,10 @@ IMPORTANTE:
 - Focar em INSIGHTS CRUZADOS
 - Cada recomendação deve ser específica, acionável e priorizada
 - Usar dados concretos como evidência
+
+REGRAS DE FORMATAÇÃO:
+- NÃO use emojis nos títulos das seções (##, ###). Use apenas texto limpo.
+- Use emojis SOMENTE dentro de tabelas para indicar status de métricas (🔴 negativo, 🟡 neutro, 🟢 positivo).
 
 FORMATO: Markdown completo e bem estruturado.`;
 }
