@@ -14,6 +14,8 @@ import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
 import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
 import BrandBook from "@/components/brand-context/BrandBook";
 import ProductsCatalog from "@/components/brand-context/ProductsCatalog";
+import BrandReferences from "@/components/brand-context/BrandReferences";
+import StrategicMemory from "@/components/brand-context/StrategicMemory";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -107,27 +109,11 @@ export default function ProjectBrand() {
         </TabsContent>
 
         <TabsContent value="references">
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <ImageIcon className="mx-auto h-10 w-10 text-muted-foreground/50" />
-                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
-                <p className="mt-1 text-xs text-muted-foreground/70">Referências visuais e de conteúdo.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <BrandReferences projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
         <TabsContent value="memory">
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <Brain className="mx-auto h-10 w-10 text-muted-foreground/50" />
-                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
-                <p className="mt-1 text-xs text-muted-foreground/70">Memória de marca mensal.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <StrategicMemory projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
         <TabsContent value="sources">
