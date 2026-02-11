@@ -262,20 +262,16 @@ export default function AnalysisView() {
         </div>
       )}
 
-      {/* Fibbo Radar footer */}
+      {/* Fibbo Branding Footer */}
       {(isReview || analysis?.status === "published") && (
-        <div className="mt-8 pt-4 border-t border-border text-center">
+        <div className="mt-12 pt-6 border-t border-border text-center">
           <p className="text-xs text-muted-foreground">
-            Relatório gerado por Fibbo Radar — Inteligência Competitiva com IA
-            {analysis?.created_at && (
-              <> · {new Date(analysis.created_at).toLocaleDateString("pt-BR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}</>
-            )}
+            Relatório gerado por <span className="font-semibold text-foreground">Fibbo Radar</span> — Inteligência Competitiva com IA
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Data de geração: {analysis?.updated_at
+              ? new Date(analysis.updated_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+              : "—"}
           </p>
         </div>
       )}
