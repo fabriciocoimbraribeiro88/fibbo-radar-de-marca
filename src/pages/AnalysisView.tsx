@@ -238,12 +238,71 @@ export default function AnalysisView() {
         </div>
       ) : null}
 
-      {/* Review mode: show markdown */}
-      {isReview && sections && sections.length > 0 && (
-        <div className="space-y-4">
-          {sections
-            .filter((s) => s.status === "completed" && s.content_markdown)
-            .map((s) => (
+      {/* Review mode: Cover + TOC + Sections */}
+      {isReview && sections && sections.length > 0 && (() => {
+        const SECTION_ORDER: Record<string, number> = {
+          brand: 0,
+          competitor: 1,
+          influencer: 2,
+          inspiration: 3,
+          cross_analysis: 4,
+          synthesis: 5,
+        };
+        const completedSections = sections
+          .filter((s) => s.status === "completed" && s.content_markdown)
+          .sort((a, b) => (SECTION_ORDER[a.section_type ?? ""] ?? 99) - (SECTION_ORDER[b.section_type ?? ""] ?? 99));
+
+        return (
+          <div className="space-y-6">
+            {/* Cover Page */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-primary/10 via-background to-primary/5 px-8 py-12 text-center">
+                  <p className="text-xs font-medium tracking-widest uppercase text-primary mb-3">
+                    Relatório de Inteligência Competitiva
+                  </p>
+                  <h2 className="text-2xl font-bold text-foreground mb-2">
+                    {analysis?.title ?? "Pesquisa"}
+                  </h2>
+                  {analysis?.period_start && (
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(analysis.period_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                      {" — "}
+                      {new Date(analysis.period_end!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                    </p>
+                  )}
+                  <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">
+                    <span className="text-xs font-semibold text-primary">Fibbo Radar</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Table of Contents */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-4">Sumário</h3>
+                <ol className="space-y-2">
+                  {completedSections.map((s, idx) => {
+                    const label = SECTION_TYPE_LABEL[s.section_type ?? ""] ?? s.section_type;
+                    const entityName = (s as any).monitored_entities?.name;
+                    return (
+                      <li key={s.id} className="flex items-center gap-3 text-sm">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-mono text-muted-foreground">
+                          {idx + 1}
+                        </span>
+                        <span className="text-foreground">
+                          {label}{entityName ? ` — ${entityName}` : ""}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </CardContent>
+            </Card>
+
+            {/* Section Cards — brand first */}
+            {completedSections.map((s) => (
               <Card key={s.id}>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-4">
@@ -259,8 +318,9 @@ export default function AnalysisView() {
                 </CardContent>
               </Card>
             ))}
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {/* Fibbo Branding Footer */}
       {(isReview || analysis?.status === "published") && (
