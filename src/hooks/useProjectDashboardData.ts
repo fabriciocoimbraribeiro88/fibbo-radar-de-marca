@@ -321,7 +321,7 @@ export function useEntityMetrics(
       // Post type distribution
       const postTypes: Record<string, number> = {};
       entityPosts.forEach((p) => {
-        const t = p.post_type ?? "Unknown";
+        const t = p.post_type ?? "Image";
         postTypes[t] = (postTypes[t] ?? 0) + 1;
       });
 
