@@ -31,12 +31,29 @@ function mapApifyPost(post: any, entityId: string) {
     mediaUrls = post.displayUrls;
   }
 
+  // Infer post type when not provided
+  let postType: string | null = post.type || null;
+  if (!postType) {
+    const url = post.url || "";
+    if (url.includes("/reel/")) {
+      postType = "Reel";
+    } else if (url.includes("/tv/")) {
+      postType = "Video";
+    } else if (post.videoViewCount || post.videoPlayCount) {
+      postType = "Video";
+    } else if (Array.isArray(post.images) && post.images.length > 1) {
+      postType = "Sidecar";
+    } else {
+      postType = "Image";
+    }
+  }
+
   return {
     entity_id: entityId,
     post_id_instagram: postIdInstagram,
     shortcode: shortCode,
     post_url: post.url || null,
-    post_type: post.type || null,
+    post_type: postType,
     caption: post.caption || null,
     posted_at: post.timestamp ? new Date(post.timestamp).toISOString() : null,
     likes_count: likesCount,

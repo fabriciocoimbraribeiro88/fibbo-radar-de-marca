@@ -7,7 +7,7 @@ const FORMAT_COLORS: Record<string, string> = {
   Video: "#1e3a5f",
   Reel: "#3b82f6",
   Sidecar: "#10b981",
-  Unknown: "#9ca3af",
+  Other: "#9ca3af",
 };
 
 interface Props { metrics: EntityMetrics[] }
