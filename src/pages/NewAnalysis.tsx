@@ -82,12 +82,19 @@ export default function NewAnalysis() {
 
   // Generate title when entering step 4
   useEffect(() => {
-    if (step === 3 && !title) {
-      const typeLabel = ANALYSIS_TYPES.find((t) => t.value === analysisType)?.label ?? "";
+    if (step === 3) {
+      const brandName = project?.brand_name ?? project?.name ?? "Marca";
       const channelLabel = channel === "social" ? "Social" : channel === "ads" ? "Ads" : "SEO";
-      const now = new Date();
-      const quarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
-      setTitle(`${typeLabel} ${channelLabel} — ${quarter} ${now.getFullYear()}`);
+      const typeLabel = ANALYSIS_TYPES.find((t) => t.value === analysisType)?.label ?? "";
+      let periodLabel = "";
+      if (periodMode === "count") {
+        periodLabel = `${postsLimit} posts`;
+      } else if (periodStart && periodEnd) {
+        const s = new Date(periodStart);
+        const e = new Date(periodEnd);
+        periodLabel = `${s.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })} — ${e.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}`;
+      }
+      setTitle(`${brandName} - ${channelLabel} - ${typeLabel} - ${periodLabel}`);
     }
   }, [step]);
 

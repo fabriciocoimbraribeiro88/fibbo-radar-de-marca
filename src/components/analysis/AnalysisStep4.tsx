@@ -93,8 +93,10 @@ export default function AnalysisStep4(props: Step4Props) {
       let query = supabase.from("instagram_posts").select("likes_count,comments_count,views_count,engagement_total,post_type", { count: "exact" }).eq("entity_id", entityId);
       if (periodMode === "date" && periodStart && periodEnd) {
         query = query.gte("posted_at", periodStart).lte("posted_at", periodEnd);
-      } else {
-        query = query.order("posted_at", { ascending: false }).limit(postsLimit);
+      }
+      query = query.order("posted_at", { ascending: false });
+      if (periodMode === "count") {
+        query = query.limit(postsLimit);
       }
 
       const { data: posts, count } = await query;
