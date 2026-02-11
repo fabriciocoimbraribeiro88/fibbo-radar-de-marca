@@ -274,31 +274,45 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
                 <CollapsibleContent className="pl-6 pr-1 space-y-0.5 pb-2">
                   {monthDates.map((d) => (
                     <div key={d.id} className="flex items-center gap-2 py-1 group">
-                      <span className={`text-[10px] shrink-0 w-20 text-center rounded px-1 py-0.5 ${TYPE_CONFIG[d.type]?.className ?? ""}`}>
-                        {TYPE_CONFIG[d.type]?.emoji} {TYPE_CONFIG[d.type]?.label ?? d.type}
-                      </span>
                       {!d.name ? (
-                        <Input
-                          autoFocus
-                          placeholder="Nome da data..."
-                          className="h-6 text-sm flex-1"
-                          onBlur={(e) => {
-                            if (!e.target.value.trim()) {
-                              removeDate(d.id);
-                            } else {
-                              updateDate(d.id, "name", e.target.value.trim());
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              (e.target as HTMLInputElement).blur();
-                            } else if (e.key === "Escape") {
-                              removeDate(d.id);
-                            }
-                          }}
-                        />
+                        <>
+                          <Select value={d.type} onValueChange={(v) => updateDate(d.id, "type", v)}>
+                            <SelectTrigger className="h-6 text-[10px] w-24 shrink-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card z-50">
+                              {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
+                                <SelectItem key={key} value={key}>{cfg.emoji} {cfg.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            autoFocus
+                            placeholder="Nome da data..."
+                            className="h-6 text-sm flex-1"
+                            onBlur={(e) => {
+                              if (!e.target.value.trim()) {
+                                removeDate(d.id);
+                              } else {
+                                updateDate(d.id, "name", e.target.value.trim());
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                (e.target as HTMLInputElement).blur();
+                              } else if (e.key === "Escape") {
+                                removeDate(d.id);
+                              }
+                            }}
+                          />
+                        </>
                       ) : (
-                        <span className="text-sm flex-1 truncate">{d.name}</span>
+                        <>
+                          <span className={`text-[10px] shrink-0 w-20 text-center rounded px-1 py-0.5 ${TYPE_CONFIG[d.type]?.className ?? ""}`}>
+                            {TYPE_CONFIG[d.type]?.emoji} {TYPE_CONFIG[d.type]?.label ?? d.type}
+                          </span>
+                          <span className="text-sm flex-1 truncate">{d.name}</span>
+                        </>
                       )}
                       <span className="text-xs text-muted-foreground shrink-0">{d.date_start?.slice(8)}/{d.date_start?.slice(5, 7)}</span>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 shrink-0" onClick={() => removeDate(d.id)}>
