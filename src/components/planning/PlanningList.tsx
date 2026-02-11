@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, Plus, Instagram, Megaphone, Search } from "lucide-react";
+import { CalendarDays, Plus, Instagram, Megaphone, Search, FileText, Eye } from "lucide-react";
 
 const CHANNEL_ICONS: Record<string, typeof Instagram> = {
   social: Instagram,
@@ -68,6 +68,7 @@ export default function PlanningList({ projectId, onNewPlanning, onOpenCalendar,
   const handleClick = (cal: any) => {
     if (cal.status === "titles_review") onOpenTitlesReview(cal.id);
     else if (cal.status === "briefings_review") onOpenBriefingsReview(cal.id);
+    else if (cal.status === "approved" || cal.status === "active") onOpenCalendar(cal.id);
     else onOpenCalendar(cal.id);
   };
 
@@ -143,7 +144,20 @@ export default function PlanningList({ projectId, onNewPlanning, onOpenCalendar,
                       </div>
                     </div>
                   </div>
-                  <Badge className={`text-[10px] ${st.color}`}>{st.label}</Badge>
+                  <div className="flex items-center gap-2">
+                    {(cal.status === "approved" || cal.status === "briefings_review") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs gap-1"
+                        onClick={(e) => { e.stopPropagation(); onOpenBriefingsReview(cal.id); }}
+                      >
+                        <FileText className="h-3 w-3" />
+                        Briefings
+                      </Button>
+                    )}
+                    <Badge className={`text-[10px] ${st.color}`}>{st.label}</Badge>
+                  </div>
                 </CardContent>
               </Card>
             );
