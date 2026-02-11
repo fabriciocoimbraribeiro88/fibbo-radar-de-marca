@@ -36,23 +36,37 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um estrategista sênior de marketing de conteúdo.
+            content: `Você é um estrategista sênior de marketing de conteúdo especializado em calendário editorial.
 
-IMPORTANTE: Leia ATENTAMENTE todo o contexto da marca — segmento, público-alvo, produtos, posicionamento, tom de voz — antes de sugerir datas sazonais.
+IMPORTANTE: Leia ATENTAMENTE todo o contexto da marca — segmento, público-alvo, produtos, posicionamento, tom de voz, documentos e histórico de posts — antes de sugerir datas.
 
-Suas sugestões devem:
-1. Incluir datas ESPECÍFICAS do setor/nicho da marca (não apenas datas genéricas como Natal e Dia das Mães)
-2. Incluir datas relevantes para o público-alvo específico da marca
-3. Incluir eventos do setor (feiras, congressos, semanas temáticas)
-4. Incluir campanhas de conscientização relevantes ao posicionamento
-5. Justificar por que cada data é relevante PARA ESTA MARCA especificamente
-6. Usar datas de ${currentYear} e ${currentYear + 1}
+Você DEVE classificar cada data em uma dessas 6 categorias:
+
+1. **tradicional** — Datas comemorativas amplamente conhecidas (Natal, Dia das Mães, Dia dos Pais, Ano Novo, etc.) MAS que façam sentido para o setor e público da marca. NÃO inclua datas tradicionais irrelevantes para o negócio.
+
+2. **mercado** — Datas comerciais e marcos do mercado (Black Friday, Cyber Monday, Dia do Consumidor, início de planejamento anual, virada fiscal, etc.)
+
+3. **setorial** — Datas específicas do setor/nicho da marca (Dia do Publicitário, Dia do E-commerce, Dia do Programador, Semana do Design, etc.). Devem ser datas REAIS e reconhecidas.
+
+4. **eventos** — Eventos, conferências e feiras do setor (RD Summit, Web Summit, SXSW, NRF, E-commerce Brasil, etc.). Use datas aproximadas de ${currentYear}/${currentYear + 1}. Devem ser eventos REAIS.
+
+5. **marca** — Marcos específicos da marca (aniversário da empresa, lançamentos de produto, datas que a marca já celebra). Baseie-se no contexto fornecido.
+
+6. **ideias** — Datas INVENTADAS que façam sentido estratégico para a marca. Ex: "Semana do [tema relevante]", "Dia do [público-alvo]", marcos que a marca poderia criar. Estas são sugestões criativas, não datas existentes.
+
+REGRAS:
+- Sugira 25-40 datas distribuídas ao longo dos 12 meses
+- NUNCA invente uma data e classifique como tradicional, mercado, setorial ou eventos — se for inventada, DEVE ser "ideias"
+- Para cada data, explique POR QUE é relevante PARA ESTA MARCA especificamente
+- Use datas de ${currentYear} e ${currentYear + 1}
+- Distribua as datas equilibradamente entre os meses
+- Inclua pelo menos 3-5 "ideias" criativas específicas para o negócio
 
 Responda em português brasileiro.`,
           },
           {
             role: "user",
-            content: `Analise TODO o contexto abaixo e sugira 10-20 datas sazonais estratégicas ESPECÍFICAS para esta marca:\n\n${brandContext.slice(0, 40000)}`,
+            content: `Analise TODO o contexto abaixo e sugira datas sazonais estratégicas para esta marca, classificadas nas 6 categorias:\n\n${brandContext.slice(0, 40000)}`,
           },
         ],
         tools: [
@@ -60,7 +74,7 @@ Responda em português brasileiro.`,
             type: "function",
             function: {
               name: "suggest_seasonal_dates",
-              description: "Retorna datas sazonais estratégicas específicas para a marca",
+              description: "Retorna datas sazonais classificadas em 6 categorias",
               parameters: {
                 type: "object",
                 properties: {
@@ -71,11 +85,11 @@ Responda em português brasileiro.`,
                       properties: {
                         name: { type: "string", description: "Nome da data/evento" },
                         date_start: { type: "string", description: "Data início YYYY-MM-DD" },
-                        date_end: { type: "string", description: "Data fim YYYY-MM-DD (opcional, só se for um período)" },
-                        recurrence: { type: "string", enum: ["annual", "one_time"], description: "Anual ou pontual" },
+                        date_end: { type: "string", description: "Data fim YYYY-MM-DD (opcional)" },
+                        recurrence: { type: "string", enum: ["annual", "one_time"] },
                         relevance: { type: "string", enum: ["high", "medium", "low"] },
-                        type: { type: "string", enum: ["commercial", "institutional", "social", "cultural"] },
-                        justification: { type: "string", description: "Por que esta data é relevante para ESTA marca especificamente" },
+                        type: { type: "string", enum: ["tradicional", "mercado", "setorial", "eventos", "marca", "ideias"], description: "Classificação da data" },
+                        justification: { type: "string", description: "Por que esta data é relevante para ESTA marca" },
                       },
                       required: ["name", "date_start", "recurrence", "relevance", "type", "justification"],
                       additionalProperties: false,
