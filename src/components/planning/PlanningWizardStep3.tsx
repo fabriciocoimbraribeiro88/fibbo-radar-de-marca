@@ -52,15 +52,27 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
 
   const brandName = project?.brand_name ?? project?.name ?? "Marca";
   const defaultTitle = useMemo(() => {
-    const channelLabel = wizardData.channel === "social" ? "Social" : wizardData.channel === "ads" ? "Ads" : "SEO";
-    if (period.start) {
+    const channelLabel = wizardData.channel === "social" ? "Calendário Social" : wizardData.channel === "ads" ? "Calendário Ads" : "Calendário SEO";
+    if (period.start && period.end) {
       const startDate = new Date(period.start);
-      const monthName = startDate.toLocaleDateString("pt-BR", { month: "long" });
-      const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-      return `Calendário ${channelLabel} — ${capMonth} ${startDate.getFullYear()}`;
+      const endDate = new Date(period.end);
+      const fmt = (d: Date) => {
+        const m = d.toLocaleDateString("pt-BR", { month: "long" });
+        return m.charAt(0).toUpperCase() + m.slice(1);
+      };
+      const startMonth = fmt(startDate);
+      const endMonth = fmt(endDate);
+      const startYear = startDate.getFullYear();
+      const endYear = endDate.getFullYear();
+      const months = startMonth === endMonth
+        ? `${startMonth} ${startYear}`
+        : startYear === endYear
+          ? `${startMonth}/${endMonth} ${startYear}`
+          : `${startMonth} ${startYear}/${endMonth} ${endYear}`;
+      return `${brandName} - ${channelLabel} - ${months}`;
     }
-    return `Calendário ${channelLabel}`;
-  }, [wizardData.channel, period.start]);
+    return `${brandName} - ${channelLabel}`;
+  }, [wizardData.channel, period.start, period.end, brandName]);
 
   const title = wizardData.title || defaultTitle;
 
