@@ -168,6 +168,9 @@ export default function HashtagStrategy({ projectId, briefing }: Props) {
             <DialogTitle>Estratégia de Hashtags Sugerida</DialogTitle>
             <DialogDescription>Revise as sugestões antes de aplicar. Isso substituirá as hashtags atuais.</DialogDescription>
           </DialogHeader>
+          {(preview as any).justification && (
+            <p className="text-xs text-primary/80 italic bg-primary/5 rounded-lg p-3">💡 {(preview as any).justification}</p>
+          )}
           <div className="space-y-4">
             {CATEGORIES.map(({ key, label, icon: Icon }) => (
               <div key={key} className="space-y-1.5">

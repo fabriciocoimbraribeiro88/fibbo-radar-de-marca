@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildFullBrandContext, getCompetitorHashtags } from "../_shared/brand-context-builder.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,49 +17,14 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    // Get full brand context + competitor hashtag data
+    const [brandContext, entityHashtags] = await Promise.all([
+      buildFullBrandContext(project_id),
+      getCompetitorHashtags(project_id),
+    ]);
 
-    // Get all entities for this project
-    const { data: projectEntities } = await supabase
-      .from("project_entities")
-      .select("entity_id, entity_role, monitored_entities(name, instagram_handle)")
-      .eq("project_id", project_id);
-
-    if (!projectEntities?.length) throw new Error("Nenhuma entidade encontrada no projeto.");
-
-    // For each entity, get hashtags from recent posts
-    const entityHashtags: Array<{ name: string; handle: string; role: string; hashtags: Record<string, number> }> = [];
-
-    for (const pe of projectEntities) {
-      const entity = (pe as any).monitored_entities;
-      const { data: posts } = await supabase
-        .from("instagram_posts")
-        .select("hashtags")
-        .eq("entity_id", pe.entity_id)
-        .order("posted_at", { ascending: false })
-        .limit(50);
-
-      const freq: Record<string, number> = {};
-      for (const post of posts ?? []) {
-        for (const tag of post.hashtags ?? []) {
-          const normalized = tag.startsWith("#") ? tag : `#${tag}`;
-          freq[normalized] = (freq[normalized] ?? 0) + 1;
-        }
-      }
-
-      entityHashtags.push({
-        name: entity?.name ?? "Unknown",
-        handle: entity?.instagram_handle ?? "",
-        role: pe.entity_role,
-        hashtags: freq,
-      });
-    }
-
-    // Build prompt
-    const parts: string[] = [];
+    // Build hashtag comparison section
+    const hashtagParts: string[] = [];
     for (const e of entityHashtags) {
       const role = e.role === "brand" ? "MARCA" : "Concorrente";
       const top = Object.entries(e.hashtags)
@@ -67,11 +32,10 @@ serve(async (req) => {
         .slice(0, 30)
         .map(([tag, count]) => `${tag} (${count}x)`)
         .join(", ");
-      parts.push(`${role} ${e.name} (@${e.handle}): ${top || "sem hashtags"}`);
+      hashtagParts.push(`${role} ${e.name} (@${e.handle}): ${top || "sem hashtags"}`);
     }
 
-    const userPrompt = parts.join("\n\n") +
-      "\n\nIdentifique:\n1. Hashtags proprietárias (só a marca usa)\n2. Hashtags de comunidade (usadas por todos no nicho)\n3. Hashtags de alcance que a marca deveria usar\n4. Hashtags que a marca deve evitar";
+    const userPrompt = `CONTEXTO COMPLETO DA MARCA:\n${brandContext.slice(0, 30000)}\n\nHASHTAGS USADAS PELA MARCA E CONCORRENTES:\n${hashtagParts.join("\n\n")}\n\nCom base em TODO o contexto da marca (briefing, documentos, posicionamento, público-alvo) e na análise de hashtags, identifique:\n1. Hashtags proprietárias (únicas/exclusivas da marca)\n2. Hashtags de comunidade (do nicho/setor)\n3. Hashtags de alcance para descoberta (relevantes ao posicionamento da marca)\n4. Hashtags a evitar (que não combinam com o posicionamento)`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -84,7 +48,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "Você é especialista em estratégia de hashtags para Instagram. Analise as hashtags usadas pela marca e seus concorrentes e sugira uma estratégia organizada em 4 categorias. Cada hashtag deve começar com #. Responda em português brasileiro.",
+            content: `Você é um estrategista sênior de hashtags para redes sociais.
+
+IMPORTANTE: Leia ATENTAMENTE todo o contexto da marca — briefing, documentos, público-alvo, tom de voz, posicionamento — antes de sugerir hashtags. As hashtags devem refletir o universo REAL da marca, não genéricas.
+
+Cada hashtag deve começar com #. Justifique suas escolhas. Responda em português brasileiro.`,
           },
           { role: "user", content: userPrompt },
         ],
@@ -93,28 +61,17 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "suggest_hashtag_strategy",
-              description: "Retorna estratégia de hashtags em 4 categorias",
+              description: "Retorna estratégia de hashtags em 4 categorias com justificativas",
               parameters: {
                 type: "object",
                 properties: {
-                  proprietary: {
-                    type: "array", items: { type: "string" },
-                    description: "Hashtags proprietárias da marca",
-                  },
-                  community: {
-                    type: "array", items: { type: "string" },
-                    description: "Hashtags de comunidade do nicho",
-                  },
-                  reach: {
-                    type: "array", items: { type: "string" },
-                    description: "Hashtags para alcance/descoberta",
-                  },
-                  forbidden: {
-                    type: "array", items: { type: "string" },
-                    description: "Hashtags a evitar",
-                  },
+                  proprietary: { type: "array", items: { type: "string" }, description: "Hashtags proprietárias da marca" },
+                  community: { type: "array", items: { type: "string" }, description: "Hashtags de comunidade do nicho" },
+                  reach: { type: "array", items: { type: "string" }, description: "Hashtags para alcance/descoberta" },
+                  forbidden: { type: "array", items: { type: "string" }, description: "Hashtags a evitar" },
+                  justification: { type: "string", description: "Explicação geral da estratégia sugerida, baseada no contexto da marca" },
                 },
-                required: ["proprietary", "community", "reach", "forbidden"],
+                required: ["proprietary", "community", "reach", "forbidden", "justification"],
                 additionalProperties: false,
               },
             },
@@ -126,16 +83,8 @@ serve(async (req) => {
 
     if (!response.ok) {
       const status = response.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const text = await response.text();
       console.error("AI error:", status, text);
       throw new Error(`AI gateway error: ${status}`);

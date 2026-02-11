@@ -20,8 +20,10 @@ serve(async (req) => {
     const brandContext = await buildFullBrandContext(project_id);
 
     if (!brandContext.trim()) {
-      throw new Error("Nenhum contexto de marca encontrado. Preencha o briefing ou adicione fontes primeiro.");
+      throw new Error("Nenhum contexto de marca encontrado. Preencha o briefing primeiro.");
     }
+
+    const currentYear = new Date().getFullYear();
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -34,68 +36,65 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um estrategista sênior de conteúdo para redes sociais. 
+            content: `Você é um estrategista sênior de marketing de conteúdo.
 
-IMPORTANTE: Você está analisando uma AGÊNCIA DE MARKETING ou a marca de um CLIENTE de agência. Leia ATENTAMENTE todo o contexto fornecido — briefing, documentos, histórico de posts — antes de sugerir pilares.
+IMPORTANTE: Leia ATENTAMENTE todo o contexto da marca — segmento, público-alvo, produtos, posicionamento, tom de voz — antes de sugerir datas sazonais.
 
-Seus pilares devem:
-1. Refletir a essência e posicionamento REAL da marca (não genérico de e-commerce ou varejo)
-2. Ser baseados no que a marca realmente comunica nos seus posts e documentos
-3. Ter justificativas concretas baseadas nos dados analisados
-4. Somar exatamente 100% no total de percentuais
+Suas sugestões devem:
+1. Incluir datas ESPECÍFICAS do setor/nicho da marca (não apenas datas genéricas como Natal e Dia das Mães)
+2. Incluir datas relevantes para o público-alvo específico da marca
+3. Incluir eventos do setor (feiras, congressos, semanas temáticas)
+4. Incluir campanhas de conscientização relevantes ao posicionamento
+5. Justificar por que cada data é relevante PARA ESTA MARCA especificamente
+6. Usar datas de ${currentYear} e ${currentYear + 1}
 
 Responda em português brasileiro.`,
           },
           {
             role: "user",
-            content: `Analise TODO o contexto abaixo sobre esta marca e sugira 3-5 pilares de conteúdo estratégicos. Justifique cada pilar com base nos dados.\n\n${brandContext.slice(0, 40000)}`,
+            content: `Analise TODO o contexto abaixo e sugira 10-20 datas sazonais estratégicas ESPECÍFICAS para esta marca:\n\n${brandContext.slice(0, 40000)}`,
           },
         ],
         tools: [
           {
             type: "function",
             function: {
-              name: "suggest_pillars",
-              description: "Retorna 3-5 pilares de conteúdo sugeridos com justificativas",
+              name: "suggest_seasonal_dates",
+              description: "Retorna datas sazonais estratégicas específicas para a marca",
               parameters: {
                 type: "object",
                 properties: {
-                  pillars: {
+                  dates: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        name: { type: "string", description: "Nome do pilar" },
-                        description: { type: "string", description: "Descrição detalhada do pilar" },
-                        justification: { type: "string", description: "Por que este pilar foi sugerido, baseado nos dados analisados (briefing, posts, documentos)" },
-                        percentage: { type: "number", description: "% ideal do calendário" },
-                        preferred_formats: {
-                          type: "array",
-                          items: { type: "string", enum: ["Reels", "Carrossel", "Estático", "Stories", "Vídeo"] },
-                        },
-                        objective: {
-                          type: "string",
-                          enum: ["Awareness", "Engajamento", "Conversão", "Autoridade", "Comunidade"],
-                        },
+                        name: { type: "string", description: "Nome da data/evento" },
+                        date_start: { type: "string", description: "Data início YYYY-MM-DD" },
+                        date_end: { type: "string", description: "Data fim YYYY-MM-DD (opcional, só se for um período)" },
+                        recurrence: { type: "string", enum: ["annual", "one_time"], description: "Anual ou pontual" },
+                        relevance: { type: "string", enum: ["high", "medium", "low"] },
+                        type: { type: "string", enum: ["commercial", "institutional", "social", "cultural"] },
+                        justification: { type: "string", description: "Por que esta data é relevante para ESTA marca especificamente" },
                       },
-                      required: ["name", "description", "justification", "percentage", "preferred_formats", "objective"],
+                      required: ["name", "date_start", "recurrence", "relevance", "type", "justification"],
                       additionalProperties: false,
                     },
                   },
                 },
-                required: ["pillars"],
+                required: ["dates"],
                 additionalProperties: false,
               },
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "suggest_pillars" } },
+        tool_choice: { type: "function", function: { name: "suggest_seasonal_dates" } },
       }),
     });
 
     if (!response.ok) {
       const status = response.status;
-      if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const text = await response.text();
       console.error("AI error:", status, text);
@@ -110,11 +109,11 @@ Responda em português brasileiro.`,
       ? JSON.parse(toolCall.function.arguments)
       : toolCall.function.arguments;
 
-    return new Response(JSON.stringify({ success: true, pillars: parsed.pillars }), {
+    return new Response(JSON.stringify({ success: true, dates: parsed.dates }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("generate-content-pillars error:", e);
+    console.error("generate-seasonal-calendar error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
