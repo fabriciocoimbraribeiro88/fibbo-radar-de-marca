@@ -11,6 +11,20 @@ function extractShortCode(url: string): string | null {
   return match ? match[2] : null;
 }
 
+function extractHashtagsFromCaption(caption: string | null): string[] | null {
+  if (!caption) return null;
+  const matches = caption.match(/#[\w\u00C0-\u024F]+/g);
+  if (!matches || matches.length === 0) return null;
+  return matches.map((h) => h.replace(/^#/, "").toLowerCase());
+}
+
+function extractMentionsFromCaption(caption: string | null): string[] | null {
+  if (!caption) return null;
+  const matches = caption.match(/@[\w.]+/g);
+  if (!matches || matches.length === 0) return null;
+  return matches.map((m) => m.replace(/^@/, "").toLowerCase());
+}
+
 function mapApifyPost(post: any, entityId: string) {
   const shortCode = post.shortCode || extractShortCode(post.url) || null;
   const postIdInstagram =
@@ -53,6 +67,16 @@ function mapApifyPost(post: any, entityId: string) {
     }
   }
 
+  // Hashtags: use explicit array if available, otherwise extract from caption
+  const hashtags = (Array.isArray(post.hashtags) && post.hashtags.length > 0)
+    ? post.hashtags
+    : extractHashtagsFromCaption(post.caption);
+
+  // Mentions: use explicit array if available, otherwise extract from caption
+  const mentions = (Array.isArray(post.mentions) && post.mentions.length > 0)
+    ? post.mentions
+    : extractMentionsFromCaption(post.caption);
+
   return {
     entity_id: entityId,
     post_id_instagram: postIdInstagram,
@@ -64,9 +88,8 @@ function mapApifyPost(post: any, entityId: string) {
     likes_count: likesCount,
     comments_count: commentsCount,
     views_count: viewsCount,
-    
-    hashtags: Array.isArray(post.hashtags) && post.hashtags.length > 0 ? post.hashtags : null,
-    mentions: Array.isArray(post.mentions) && post.mentions.length > 0 ? post.mentions : null,
+    hashtags,
+    mentions,
     thumbnail_url: post.displayUrl || null,
     media_urls: mediaUrls,
     is_pinned: post.isPinned ?? false,
