@@ -38,6 +38,7 @@ import TopHashtagsChart from "@/components/dashboard/TopHashtagsChart";
 import LikesTimelineChart from "@/components/dashboard/LikesTimelineChart";
 import ThemeDistributionChart from "@/components/dashboard/ThemeDistributionChart";
 import TopPostsTable from "@/components/dashboard/TopPostsTable";
+import SentimentAnalysisSection from "@/components/dashboard/SentimentAnalysisSection";
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -332,6 +333,13 @@ export default function ProjectDashboard() {
             <TopPostsTable posts={filteredPosts} entityId={em.entityId} mode="best" />
             <TopPostsTable posts={filteredPosts} entityId={em.entityId} mode="worst" />
           </div>
+
+          {/* Sentiment Analysis */}
+          <SentimentAnalysisSection
+            entityId={em.entityId}
+            entityName={em.name}
+            color={em.color}
+          />
         </div>
       ))}
 

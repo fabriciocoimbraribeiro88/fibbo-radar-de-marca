@@ -110,21 +110,58 @@ Deno.serve(async (req) => {
 
     const BATCH_SIZE = 500;
     let totalImported = 0;
+    let totalComments = 0;
     let errors: string[] = [];
 
     for (let i = 0; i < posts.length; i += BATCH_SIZE) {
       const batch = posts.slice(i, i + BATCH_SIZE);
       const mapped = batch.map((p: any) => mapApifyPost(p, entity_id));
 
-      const { error: upsertError, count } = await supabase
+      const { data: upsertedPosts, error: upsertError } = await supabase
         .from("instagram_posts")
         .upsert(mapped, { onConflict: "post_id_instagram", ignoreDuplicates: false })
-        .select("id");
+        .select("id, post_id_instagram");
 
       if (upsertError) {
         errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${upsertError.message}`);
       } else {
         totalImported += batch.length;
+
+        // Extract comments from latestComments in metadata
+        if (upsertedPosts) {
+          const postIdMap = new Map(upsertedPosts.map((p: any) => [p.post_id_instagram, p.id]));
+
+          for (const rawPost of batch) {
+            const comments = rawPost.latestComments;
+            if (!Array.isArray(comments) || comments.length === 0) continue;
+
+            const postIdInstagram = rawPost.id || rawPost.shortCode || `${rawPost.ownerUsername || "unknown"}_${rawPost.timestamp || Date.now()}`;
+            const dbPostId = postIdMap.get(postIdInstagram);
+            if (!dbPostId) continue;
+
+            const mappedComments = comments.map((c: any) => ({
+              post_id: dbPostId,
+              comment_id_instagram: c.id || `${c.ownerUsername || "anon"}_${c.timestamp || Date.now()}`,
+              text: c.text || null,
+              username: c.ownerUsername || null,
+              commented_at: c.timestamp ? new Date(c.timestamp).toISOString() : null,
+              likes_count: c.likesCount ?? 0,
+              replied_to: c.repliedTo || null,
+              fetched_at: new Date().toISOString(),
+              metadata: c,
+            }));
+
+            const { error: commentErr } = await supabase
+              .from("instagram_comments")
+              .upsert(mappedComments, { onConflict: "comment_id_instagram", ignoreDuplicates: false });
+
+            if (commentErr) {
+              errors.push(`Comments for post ${postIdInstagram}: ${commentErr.message}`);
+            } else {
+              totalComments += mappedComments.length;
+            }
+          }
+        }
       }
     }
 
@@ -132,6 +169,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: errors.length === 0,
         total_imported: totalImported,
+        total_comments: totalComments,
         total_received: posts.length,
         errors: errors.length > 0 ? errors : undefined,
       }),

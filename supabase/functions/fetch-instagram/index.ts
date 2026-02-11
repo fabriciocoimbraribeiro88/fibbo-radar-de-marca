@@ -307,14 +307,45 @@ async function handleCheck(
         };
       });
 
-      const { error: upsertErr } = await supabase
+      const { data: upsertedPosts, error: upsertErr } = await supabase
         .from("instagram_posts")
-        .upsert(posts, { onConflict: "post_id_instagram", ignoreDuplicates: false });
+        .upsert(posts, { onConflict: "post_id_instagram", ignoreDuplicates: false })
+        .select("id, post_id_instagram");
 
       if (upsertErr) {
         console.error(`Batch upsert error at offset ${i}:`, upsertErr.message);
       } else {
         totalImported += posts.length;
+
+        // Extract comments from latestComments
+        if (upsertedPosts) {
+          const postIdMap = new Map(upsertedPosts.map((p: any) => [p.post_id_instagram, p.id]));
+
+          for (const rawPost of batch) {
+            const comments = rawPost.latestComments;
+            if (!Array.isArray(comments) || comments.length === 0) continue;
+
+            const postIdInstagram = rawPost.id || rawPost.shortCode || `${rawPost.ownerUsername}_${rawPost.timestamp}`;
+            const dbPostId = postIdMap.get(postIdInstagram);
+            if (!dbPostId) continue;
+
+            const mappedComments = comments.map((c: any) => ({
+              post_id: dbPostId,
+              comment_id_instagram: c.id || `${c.ownerUsername || "anon"}_${c.timestamp || Date.now()}`,
+              text: c.text || null,
+              username: c.ownerUsername || null,
+              commented_at: c.timestamp ? new Date(c.timestamp).toISOString() : null,
+              likes_count: c.likesCount ?? 0,
+              replied_to: c.repliedTo || null,
+              fetched_at: new Date().toISOString(),
+              metadata: c,
+            }));
+
+            await supabase
+              .from("instagram_comments")
+              .upsert(mappedComments, { onConflict: "comment_id_instagram", ignoreDuplicates: false });
+          }
+        }
       }
     }
 
