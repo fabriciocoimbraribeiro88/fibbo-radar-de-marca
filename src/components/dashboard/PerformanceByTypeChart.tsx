@@ -9,7 +9,7 @@ export default function PerformanceByTypeChart({ posts, entityId }: Props) {
   const typeMap: Record<string, { likes: number[]; comments: number[] }> = {};
 
   entityPosts.forEach((p) => {
-    const t = p.post_type ?? "Unknown";
+    const t = p.post_type ?? "Image";
     if (!typeMap[t]) typeMap[t] = { likes: [], comments: [] };
     typeMap[t].likes.push(p.likes_count);
     typeMap[t].comments.push(p.comments_count);
