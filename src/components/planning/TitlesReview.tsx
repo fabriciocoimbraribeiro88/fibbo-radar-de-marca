@@ -113,20 +113,31 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
     setGeneratingBriefings(true);
     try {
       const approvedItems = items?.filter((i) => (i.metadata as any)?.title_status === "approved") ?? [];
-      const { error } = await supabase.functions.invoke("generate-planning-briefings", {
+      // Send compact items (strip large metadata fields)
+      const compactItems = approvedItems.map((i) => {
+        const md = i.metadata as any ?? {};
+        return {
+          id: i.id,
+          scheduled_date: i.scheduled_date,
+          scheduled_time: i.scheduled_time,
+          format: i.format,
+          content_type: i.content_type,
+          title: i.title,
+          metadata: {
+            responsible_code: md.responsible_code,
+            territory: md.territory,
+            lens: md.lens,
+            thesis: md.thesis,
+            content_approach: md.content_approach,
+            category: md.category,
+          },
+        };
+      });
+      const { data, error } = await supabase.functions.invoke("generate-planning-briefings", {
         body: {
           calendar_id: calendarId,
           project_id: projectId,
-          approved_items: approvedItems.map((i) => ({
-            id: i.id,
-            scheduled_date: i.scheduled_date,
-            scheduled_time: i.scheduled_time,
-            format: i.format,
-            content_type: i.content_type,
-            responsible_code: (i.metadata as any)?.responsible_code,
-            title: i.title,
-            metadata: i.metadata,
-          })),
+          approved_items: compactItems,
         },
       });
       if (error) throw error;
@@ -136,7 +147,7 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
         await supabase.from("planning_items").update({ status: "cancelled" }).eq("id", ri.id);
       }
       await supabase.from("planning_calendars").update({ status: "briefings_review" }).eq("id", calendarId);
-      toast({ title: "Briefings gerados!" });
+      toast({ title: "Briefings gerados!", description: `${data?.count ?? 0} briefings criados.` });
       onBriefingsGenerated();
     } catch (e: any) {
       toast({ title: "Erro ao gerar briefings", description: e.message, variant: "destructive" });
