@@ -77,6 +77,7 @@ export default function NewAnalysis() {
   useEffect(() => {
     if (analysisType) {
       setSelectedSections(getDefaultSections(channel, analysisType));
+      setSelectedEntities(new Set());
     }
   }, [channel, analysisType]);
 
