@@ -71,7 +71,7 @@ export default function ProjectAnalyses() {
           </div>
           <Button onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
             <Plus className="mr-2 h-4 w-4" />
-              Nova Métrica
+              Nova Análise
           </Button>
         </div>
       </div>
