@@ -393,7 +393,7 @@ export default function ProjectPlanning() {
             </p>
             <Button className="mt-4" variant="outline" onClick={() => navigate(`/projects/${projectId}/analyses`)}>
               <BarChart3 className="mr-2 h-4 w-4" />
-              Ir para Análises
+              Ir para Pesquisa Profunda
             </Button>
           </CardContent>
         </Card>

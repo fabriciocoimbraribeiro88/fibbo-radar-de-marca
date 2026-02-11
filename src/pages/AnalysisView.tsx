@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   Bot,
@@ -16,6 +25,7 @@ import {
   FileText,
   ThumbsUp,
   ThumbsDown,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +57,8 @@ export default function AnalysisView() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: analysis } = useQuery({
     queryKey: ["analysis", analysisId],
@@ -107,32 +119,56 @@ export default function AnalysisView() {
     }
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      // Delete sections first
+      await supabase.from("analysis_sections").delete().eq("analysis_id", analysisId!);
+      const { error } = await supabase.from("analyses").delete().eq("id", analysisId!);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["project-analyses", projectId] });
+      toast({ title: "Pesquisa excluída com sucesso." });
+      navigate(`/projects/${projectId}/analyses`);
+    } catch (e) {
+      toast({ title: "Erro ao excluir", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
+
   return (
+    <>
     <div className="max-w-4xl animate-fade-in">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">
-              {analysis?.title ?? "Análise"}
+              {analysis?.title ?? "Pesquisa"}
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">
               {analysis?.period_start &&
                 `${new Date(analysis.period_start).toLocaleDateString("pt-BR")} – ${new Date(analysis.period_end!).toLocaleDateString("pt-BR")}`}
             </p>
           </div>
-          {isReview && analysis?.status !== "approved" && analysis?.status !== "rejected" && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleStatusUpdate("rejected")}>
-                <ThumbsDown className="mr-2 h-4 w-4" />
-                Reprovar
-              </Button>
-              <Button onClick={() => handleStatusUpdate("approved")}>
-                <ThumbsUp className="mr-2 h-4 w-4" />
-                Aprovar
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {isReview && analysis?.status !== "approved" && analysis?.status !== "rejected" && (
+              <>
+                <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleStatusUpdate("rejected")}>
+                  <ThumbsDown className="mr-2 h-4 w-4" />
+                  Reprovar
+                </Button>
+                <Button onClick={() => handleStatusUpdate("approved")}>
+                  <ThumbsUp className="mr-2 h-4 w-4" />
+                  Aprovar
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -226,5 +262,24 @@ export default function AnalysisView() {
         </div>
       )}
     </div>
+
+    <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Excluir pesquisa</DialogTitle>
+          <DialogDescription>
+            Tem certeza que deseja excluir "{analysis?.title}"? Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Excluir
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
