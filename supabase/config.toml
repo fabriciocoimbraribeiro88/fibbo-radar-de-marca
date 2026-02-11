@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.process-entity-data]
 verify_jwt = false
+
+[functions.generate-content-pillars]
+verify_jwt = false
+
+[functions.generate-hashtag-strategy]
+verify_jwt = false

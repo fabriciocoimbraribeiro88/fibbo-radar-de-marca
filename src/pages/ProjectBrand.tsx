@@ -4,9 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Target, Palette, Package, ImageIcon, Brain, FileText } from "lucide-react";
 import BrandContextSources from "@/components/brand-context/BrandContextSources";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
+import ContentPillars from "@/components/brand-context/ContentPillars";
+import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
+import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +61,15 @@ export default function ProjectBrand() {
     );
   }
 
+  const tabs = [
+    { value: "identity", label: "Identidade", icon: Target },
+    { value: "brandbook", label: "Brand Book", icon: Palette },
+    { value: "products", label: "Produtos", icon: Package },
+    { value: "references", label: "Referências", icon: ImageIcon },
+    { value: "memory", label: "Memória", icon: Brain },
+    { value: "sources", label: "Fontes", icon: FileText },
+  ];
+
   return (
     <div className="max-w-3xl animate-fade-in">
       <div className="mb-6">
@@ -65,11 +79,70 @@ export default function ProjectBrand() {
         </p>
       </div>
 
-      <Tabs defaultValue="sources" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="sources">Fontes de Contexto</TabsTrigger>
-          <TabsTrigger value="form">Formulário de Contexto</TabsTrigger>
+      <Tabs defaultValue="identity" className="space-y-6">
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5 text-xs sm:text-sm">
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
+
+        <TabsContent value="identity" className="space-y-6">
+          <BrandContextForm projectId={id!} briefing={project?.briefing} />
+          <ContentPillars projectId={id!} briefing={project?.briefing} />
+          <HashtagStrategy projectId={id!} briefing={project?.briefing} />
+          <SeasonalCalendar projectId={id!} briefing={project?.briefing} segment={project?.segment} />
+        </TabsContent>
+
+        <TabsContent value="brandbook">
+          <Card>
+            <CardContent className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <Palette className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">Brand Book visual da marca.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="products">
+          <Card>
+            <CardContent className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <Package className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">Catálogo de produtos e serviços.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="references">
+          <Card>
+            <CardContent className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <ImageIcon className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">Referências visuais e de conteúdo.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="memory">
+          <Card>
+            <CardContent className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <Brain className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-muted-foreground">Em breve</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">Memória de marca mensal.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="sources">
           <BrandContextSources
@@ -77,10 +150,6 @@ export default function ProjectBrand() {
             onFillWithAI={handleFillWithAI}
             isFillingAI={isFillingAI}
           />
-        </TabsContent>
-
-        <TabsContent value="form">
-          <BrandContextForm projectId={id!} briefing={project?.briefing} />
         </TabsContent>
       </Tabs>
     </div>

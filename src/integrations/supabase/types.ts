@@ -254,6 +254,142 @@ export type Database = {
           },
         ]
       }
+      brand_memory_entries: {
+        Row: {
+          confidence_level: number | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          learnings: Json | null
+          metrics: Json | null
+          month: number
+          pillar_performance: Json | null
+          project_id: string
+          summary: string | null
+          tags: string[] | null
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          confidence_level?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          learnings?: Json | null
+          metrics?: Json | null
+          month: number
+          pillar_performance?: Json | null
+          project_id: string
+          summary?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          confidence_level?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          learnings?: Json | null
+          metrics?: Json | null
+          month?: number
+          pillar_performance?: Json | null
+          project_id?: string
+          summary?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_memory_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_references: {
+        Row: {
+          campaign_learnings: string | null
+          campaign_period_end: string | null
+          campaign_period_start: string | null
+          campaign_results: string | null
+          created_at: string | null
+          description: string | null
+          external_url: string | null
+          format: string | null
+          id: string
+          image_url: string | null
+          metrics: Json | null
+          pillar_id: string | null
+          platform: string | null
+          project_id: string
+          sort_order: number | null
+          tags: string[] | null
+          title: string
+          type: string
+          updated_at: string | null
+          why_it_worked: string | null
+        }
+        Insert: {
+          campaign_learnings?: string | null
+          campaign_period_end?: string | null
+          campaign_period_start?: string | null
+          campaign_results?: string | null
+          created_at?: string | null
+          description?: string | null
+          external_url?: string | null
+          format?: string | null
+          id?: string
+          image_url?: string | null
+          metrics?: Json | null
+          pillar_id?: string | null
+          platform?: string | null
+          project_id: string
+          sort_order?: number | null
+          tags?: string[] | null
+          title: string
+          type: string
+          updated_at?: string | null
+          why_it_worked?: string | null
+        }
+        Update: {
+          campaign_learnings?: string | null
+          campaign_period_end?: string | null
+          campaign_period_start?: string | null
+          campaign_results?: string | null
+          created_at?: string | null
+          description?: string | null
+          external_url?: string | null
+          format?: string | null
+          id?: string
+          image_url?: string | null
+          metrics?: Json | null
+          pillar_id?: string | null
+          platform?: string | null
+          project_id?: string
+          sort_order?: number | null
+          tags?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          why_it_worked?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_references_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_fetch_configs: {
         Row: {
           apify_actor_id: string | null
