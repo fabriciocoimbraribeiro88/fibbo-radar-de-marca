@@ -52,7 +52,8 @@ export default function AnalysisStep4(props: Step4Props) {
   const [data, setData] = useState<PreviewData | null>(null);
 
   const typeLabel = ANALYSIS_TYPES.find((t) => t.value === analysisType)?.label ?? analysisType;
-  const allEntityIds = [brandEntityId, ...Array.from(selectedEntities)].filter(Boolean) as string[];
+  const includeBrand = ["brand_diagnosis", "cross_analysis"].includes(analysisType);
+  const allEntityIds = [...(includeBrand && brandEntityId ? [brandEntityId] : []), ...Array.from(selectedEntities)].filter(Boolean) as string[];
   const entityMap = new Map(allEntities.map((e) => [e.id, e]));
 
   useEffect(() => {

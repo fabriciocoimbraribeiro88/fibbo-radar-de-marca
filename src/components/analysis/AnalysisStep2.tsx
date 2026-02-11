@@ -45,6 +45,7 @@ export default function AnalysisStep2({
   };
 
   // Filter entities by analysis type
+  const includeBrand = ["brand_diagnosis", "cross_analysis"].includes(analysisType);
   const relevantRoles = (() => {
     switch (analysisType) {
       case "brand_diagnosis":
@@ -71,7 +72,7 @@ export default function AnalysisStep2({
     {} as Record<string, Entity[]>
   );
 
-  const totalSelected = selectedEntities.size + 1; // +1 for brand
+  const totalSelected = selectedEntities.size + (includeBrand ? 1 : 0);
   const totalRecords = filteredEntities
     .filter((e) => selectedEntities.has(e.id))
     .reduce((sum, e) => {
@@ -95,23 +96,25 @@ export default function AnalysisStep2({
         </p>
       </div>
 
-      {/* Brand always included */}
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-2">
-          Marca (sempre incluída)
-        </p>
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="flex items-center gap-3 p-3">
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
-              {project?.brand_name?.slice(0, 2).toUpperCase() ?? "MR"}
-            </div>
-            <span className="text-sm font-medium text-foreground">
-              {project?.brand_name ?? project?.name}
-            </span>
-            <Badge className="ml-auto bg-primary/20 text-primary">Marca</Badge>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Brand included only for brand_diagnosis and cross_analysis */}
+      {includeBrand && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">
+            Marca (sempre incluída)
+          </p>
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="flex items-center gap-3 p-3">
+              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                {project?.brand_name?.slice(0, 2).toUpperCase() ?? "MR"}
+              </div>
+              <span className="text-sm font-medium text-foreground">
+                {project?.brand_name ?? project?.name}
+              </span>
+              <Badge className="ml-auto bg-primary/20 text-primary">Marca</Badge>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Entity groups */}
       {relevantRoles.map((role) => {

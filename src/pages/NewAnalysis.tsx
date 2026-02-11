@@ -193,7 +193,10 @@ export default function NewAnalysis() {
           status: "draft",
           period_start: periodMode === "date" ? periodStart : null,
           period_end: periodMode === "date" ? periodEnd : null,
-          entities_included: [brandEntity?.entity_id, ...Array.from(selectedEntities)].filter(Boolean) as string[],
+          entities_included: [
+            ...(["brand_diagnosis", "cross_analysis"].includes(analysisType) && brandEntity?.entity_id ? [brandEntity.entity_id] : []),
+            ...Array.from(selectedEntities),
+          ].filter(Boolean) as string[],
           parameters: {
             channel,
             sections: Array.from(selectedSections),
