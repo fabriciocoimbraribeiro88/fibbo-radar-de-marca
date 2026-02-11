@@ -80,6 +80,16 @@ export default function NewAnalysis() {
     }
   }, [channel, analysisType]);
 
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projects").select("*").eq("id", projectId!).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
   // Generate title when entering step 4
   useEffect(() => {
     if (step === 3) {
@@ -96,17 +106,7 @@ export default function NewAnalysis() {
       }
       setTitle(`${brandName} - ${channelLabel} - ${typeLabel} - ${periodLabel}`);
     }
-  }, [step]);
-
-  const { data: project } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("projects").select("*").eq("id", projectId!).single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!projectId,
-  });
+  }, [step, project]);
 
   const { data: projectEntities } = useQuery({
     queryKey: ["project-entities-full", projectId],
