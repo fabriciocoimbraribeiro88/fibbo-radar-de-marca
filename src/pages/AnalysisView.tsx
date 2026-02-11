@@ -261,6 +261,24 @@ export default function AnalysisView() {
             ))}
         </div>
       )}
+
+      {/* Fibbo Radar footer */}
+      {(isReview || analysis?.status === "published") && (
+        <div className="mt-8 pt-4 border-t border-border text-center">
+          <p className="text-xs text-muted-foreground">
+            Relatório gerado por Fibbo Radar — Inteligência Competitiva com IA
+            {analysis?.created_at && (
+              <> · {new Date(analysis.created_at).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}</>
+            )}
+          </p>
+        </div>
+      )}
     </div>
 
     <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
