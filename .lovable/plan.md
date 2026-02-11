@@ -1,37 +1,54 @@
 
 
-## Plano: Corrigir importacao JSON (0 posts importados)
+# Novos Critérios de Hit e Viral (Relativos)
 
-### Problema encontrado
+## Resumo
 
-O erro nos logs de rede diz:
+Alterar os critérios de **Hit** e **Viral** de absolutos para relativos, baseados na media de views de cada entidade:
+
+- **Hit**: posts com views > 2x a media de views da entidade
+- **Viral**: posts com views > 10x a media de views da entidade
+- **% Viral**: porcentagem de posts virais sobre o total
+
+## Arquivos a alterar
+
+### 1. `src/hooks/useProjectDashboardData.ts` (logica principal)
+
+Na funcao `useEntityMetrics`, substituir os calculos atuais:
 
 ```
-"cannot insert a non-DEFAULT value into column \"engagement_total\""
+// ANTES:
+hits = posts com views > 5x followers
+viralHits = posts com views >= 1M
+
+// DEPOIS:
+avgViews = totalViews / totalPosts
+hits = posts com views > 2 * avgViews
+viralHits = posts com views > 10 * avgViews
+viralRate = (viralHits / total) * 100
 ```
 
-A coluna `engagement_total` na tabela `instagram_posts` e uma **coluna gerada automaticamente** pelo banco (`likes_count + comments_count`). A edge function `import-instagram-json` esta tentando inserir um valor nessa coluna, o que o banco rejeita, fazendo com que **todos os batches falhem** e 0 posts sejam importados.
+Adicionar `avgViews` ao tipo `EntityMetrics` para exibicao nos graficos.
 
-### Correcao
+### 2. `src/components/dashboard/ViralHitsChart.tsx`
 
-Remover o campo `engagement_total` do objeto retornado pela funcao `mapApifyPost` no arquivo `supabase/functions/import-instagram-json/index.ts`.
+Atualizar o subtitulo de "Posts Virais (1M+ views)" para "Posts Virais (>10x media views)".
 
-### Alteracao especifica
+### 3. `src/components/dashboard/ViralRateChart.tsx`
 
-**Arquivo:** `supabase/functions/import-instagram-json/index.ts`
+Atualizar o subtitulo de "% Posts Virais (1M+ views)" para "% Posts Virais (>10x media views)".
 
-Na funcao `mapApifyPost`, remover as linhas que calculam e retornam `engagement_total`:
+### 4. `src/components/dashboard/RadarComparisonChart.tsx`
 
-- Remover o calculo (linhas 26-29):
-```typescript
-const engagementTotal = ...
-```
+O eixo "% Virais" ja usa `m.viralHits / total` -- nenhuma mudanca de codigo necessaria, apenas reflete os novos valores.
 
-- Remover `engagement_total: engagementTotal` do objeto de retorno (linha 50)
+### 5. `src/pages/ProjectReports.tsx`
 
-O banco vai calcular esse valor automaticamente a partir de `likes_count + comments_count`.
+Nenhuma mudanca de codigo necessaria -- ja consome `viralHits` e `viralRate` do hook.
 
-### Resultado esperado
+## Detalhes Tecnicos
 
-Apos essa correcao, a importacao do JSON do Tallis (~5.600 posts) vai funcionar normalmente, inserindo todos os posts em batches de 500.
+- O calculo e feito por entidade, garantindo que perfis menores tambem tenham hits e virais proporcionais ao seu desempenho
+- `avgViews` sera adicionado como campo em `EntityMetrics` para possivel uso futuro em tooltips ou graficos
+- Nenhuma mudanca de banco de dados necessaria
 
