@@ -265,7 +265,7 @@ export default function ProjectDashboard() {
             <AvgCommentsChart metrics={entityMetrics} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* <ContentMixChart metrics={entityMetrics} /> */}
+            <ContentMixChart metrics={entityMetrics} />
             <RadarComparisonChart metrics={entityMetrics} />
             <VolumeEngagementScatter metrics={entityMetrics} />
           </div>
