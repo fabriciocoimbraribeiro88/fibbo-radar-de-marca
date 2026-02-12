@@ -61,6 +61,8 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { Database } from "@/integrations/supabase/types";
+import { useEntityDataSummary } from "@/hooks/useEntityDataSummary";
+import { EntityDataSummary } from "@/components/sources/EntityDataSummary";
 
 type EntityType = Database["public"]["Enums"]["entity_type"];
 
@@ -148,6 +150,7 @@ export default function ProjectSources() {
   });
 
   const entityIds = entities?.map((e) => e.entity_id) ?? [];
+  const { data: dataSummary } = useEntityDataSummary(entityIds);
 
   const { data: configs } = useQuery({
     queryKey: ["data-fetch-configs", projectId, entityIds],
@@ -857,6 +860,11 @@ export default function ProjectSources() {
                         {/* Expanded details */}
                         {isExpanded && !isExecuting && (
                           <div className="border-t border-border px-5 py-4 space-y-4 bg-muted/30">
+                            {/* Data summary */}
+                            {dataSummary?.get(e.id) && (
+                              <EntityDataSummary data={dataSummary.get(e.id)!} />
+                            )}
+
                             {/* Ad library links */}
                             {adLibraryUrls && Object.keys(adLibraryUrls).length > 0 && (
                               <div className="space-y-2">
