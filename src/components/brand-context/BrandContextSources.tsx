@@ -14,11 +14,9 @@ import { toast } from "sonner";
 
 interface Props {
   projectId: string;
-  onFillWithAI: () => void;
-  isFillingAI: boolean;
 }
 
-export default function BrandContextSources({ projectId, onFillWithAI, isFillingAI }: Props) {
+export default function BrandContextSources({ projectId }: Props) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [urlInput, setUrlInput] = useState("");
@@ -216,19 +214,6 @@ export default function BrandContextSources({ projectId, onFillWithAI, isFilling
               </Tabs>
             </DialogContent>
           </Dialog>
-
-          <Button
-            onClick={onFillWithAI}
-            disabled={isFillingAI || processedCount === 0}
-            className="gradient-coral text-white"
-          >
-            {isFillingAI ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            Preencher com IA
-          </Button>
         </div>
       </div>
 

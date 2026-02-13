@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
 type SaveStatus = "idle" | "saving" | "saved";
 
@@ -56,9 +57,11 @@ function deepMerge(target: any, source: any): any {
 interface Props {
   projectId: string;
   briefing: any;
+  onFillWithAI?: () => void;
+  isFillingAI?: boolean;
 }
 
-export default function BrandContextForm({ projectId, briefing }: Props) {
+export default function BrandContextForm({ projectId, briefing, onFillWithAI, isFillingAI }: Props) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<BriefingData>(deepMerge(emptyBriefing, briefing));
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -135,12 +138,29 @@ export default function BrandContextForm({ projectId, briefing }: Props) {
             12 seções que definem a identidade completa da marca.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {saveStatus === "saving" && (
-            <><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</>
-          )}
-          {saveStatus === "saved" && (
-            <><CheckCircle2 className="h-3.5 w-3.5 text-primary" />Salvo</>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {saveStatus === "saving" && (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</>
+            )}
+            {saveStatus === "saved" && (
+              <><CheckCircle2 className="h-3.5 w-3.5 text-primary" />Salvo</>
+            )}
+          </div>
+          {onFillWithAI && (
+            <Button
+              onClick={onFillWithAI}
+              disabled={isFillingAI}
+              className="gradient-coral text-white"
+              size="sm"
+            >
+              {isFillingAI ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              Preencher com IA
+            </Button>
           )}
         </div>
       </div>

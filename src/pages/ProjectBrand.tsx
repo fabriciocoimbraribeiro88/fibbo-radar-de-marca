@@ -90,7 +90,12 @@ export default function ProjectBrand() {
         </TabsList>
 
         <TabsContent value="identity" className="space-y-6">
-          <BrandContextForm projectId={id!} briefing={project?.briefing} />
+          <BrandContextForm
+            projectId={id!}
+            briefing={project?.briefing}
+            onFillWithAI={handleFillWithAI}
+            isFillingAI={isFillingAI}
+          />
         </TabsContent>
 
         <TabsContent value="content" className="space-y-6">
@@ -107,11 +112,7 @@ export default function ProjectBrand() {
         </TabsContent>
 
         <TabsContent value="sources">
-          <BrandContextSources
-            projectId={id!}
-            onFillWithAI={handleFillWithAI}
-            isFillingAI={isFillingAI}
-          />
+          <BrandContextSources projectId={id!} />
         </TabsContent>
       </Tabs>
     </div>
