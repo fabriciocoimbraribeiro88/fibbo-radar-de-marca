@@ -125,23 +125,27 @@ Deno.serve(async (req) => {
       const posts30to60 = posts.filter((p: any) => p.posted_at && p.posted_at >= d60 && p.posted_at < d30);
 
       // ── PRESENÇA (0-25) ──
+      // Recalibrado para contas grandes: 2M seguidores crescendo 0.4%/90d = bom
+      // Contas grandes crescem mais devagar em % — 1.5% em 90d já é excelente
       const followerGrowth = followers90d > 0 ? ((latestFollowers - followers90d) / followers90d) * 100 : 0;
-      // Recalibrado: 5% growth in 90d = max (era 20%)
-      const crescimentoScore = clamp(mapRange(followerGrowth, -2, 5, 0, 8), 0, 8);
+      const crescimentoScore = clamp(mapRange(followerGrowth, -0.5, 1.5, 0, 8), 0, 8);
 
       const weeks90d = 90 / 7;
       const postsPerWeek = posts90d.length / weeks90d;
-      // 3 posts/week = max (era 5)
+      // 3 posts/week = max
       const volumeScore = clamp(mapRange(postsPerWeek, 0, 3, 0, 5), 0, 5);
 
       const weeklyPostCounts = getWeeklyDistribution(posts90d);
       const cvInverse = weeklyPostCounts.length > 1 ? 1 - coefficientOfVariation(weeklyPostCounts) : 0;
       const regularidadeScore = clamp(mapRange(Math.max(0, cvInverse), 0, 1, 0, 5), 0, 5);
 
-      const avgViews = posts90d.length > 0 ? avg(posts90d.map((p: any) => p.views_count ?? 0)) : 0;
+      // Usar apenas posts que TÊM views (null/0 = sem dados, não penalizar)
+      const postsWithViews = posts90d.filter((p: any) => (p.views_count ?? 0) > 0);
+      const avgViews = postsWithViews.length > 0 ? avg(postsWithViews.map((p: any) => p.views_count)) : 0;
       const viewsReach = latestFollowers > 0 ? avgViews / latestFollowers : 0;
-      // Recalibrado: 30% reach = max (era 150%). Para grandes contas, 10-25% é excelente.
-      const alcanceScore = clamp(mapRange(viewsReach, 0, 0.3, 0, 4), 0, 4);
+      // Recalibrado: contas grandes (>1M) tipicamente têm 5-15% de reach
+      // 12% reach = max. Tay com 35% é excepcional e satura.
+      const alcanceScore = clamp(mapRange(viewsReach, 0, 0.12, 0, 4), 0, 4);
 
       const seoScore = calculateSeoPresenceScore(seo);
 
