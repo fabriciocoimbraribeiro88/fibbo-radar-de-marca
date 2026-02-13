@@ -21,7 +21,7 @@ import {
   Bell,
   Search,
   LogOut,
-  Radar,
+
   ChevronDown } from
 "lucide-react";
 import {
@@ -65,7 +65,7 @@ export default function AppLayout() {
             <div className="flex items-center gap-2 px-4 py-5">
               <img alt="Fibbo" className="h-7 object-scale-down" src="/lovable-uploads/83f1c62f-386c-440e-86af-6e70b5cdadc5.png" />
               <div className="flex items-center gap-1 text-muted-foreground">
-                <Radar className="h-3.5 w-3.5 text-primary" />
+                
                 
               </div>
             </div>
