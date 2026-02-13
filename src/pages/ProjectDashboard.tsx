@@ -163,7 +163,7 @@ export default function ProjectDashboard() {
       <div className="mx-auto max-w-4xl animate-fade-in">
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-sm text-destructive">Erro ao carregar dados: {(error as Error).message}</p>
+            <p className="text-sm text-destructive">Erro ao carregar dados: {error instanceof Error ? error.message : "Erro desconhecido"}</p>
           </CardContent>
         </Card>
       </div>
