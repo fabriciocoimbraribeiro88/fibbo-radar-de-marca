@@ -63,7 +63,7 @@ export default function AppLayout() {
           <div className="flex h-full flex-col">
             {/* Logo */}
             <div className="flex items-center gap-2 px-4 py-5">
-              <img alt="Fibbo" className="h-7" src="/lovable-uploads/165f694b-a8ef-47da-9c31-b73b782aee8e.png" />
+              <img alt="Fibbo" className="h-7 object-scale-down" src="/lovable-uploads/165f694b-a8ef-47da-9c31-b73b782aee8e.png" />
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Radar className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-medium">Radar</span>
