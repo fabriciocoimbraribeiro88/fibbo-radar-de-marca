@@ -16,10 +16,21 @@ import {
 import { ArrowLeft, ArrowRight, Check, X, Pencil, Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DistributionTables from "./DistributionTables";
+import { getFrameLabel, getObjectiveLabel, getMethodLabel, getObjectiveAbbr } from "@/lib/formulaConstants";
 import type { WizardData } from "@/pages/ProjectPlanning";
 
 const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const STATUS_EMOJI: Record<string, string> = { pending: "⏳", approved: "✅", rejected: "❌", edited: "✏️" };
+
+const OBJ_COLOR: Record<string, string> = {
+  awareness: "text-blue-600",
+  education: "text-blue-600",
+  authority: "text-amber-600",
+  social_proof: "text-amber-600",
+  conversion: "text-green-600",
+  product: "text-green-600",
+  community: "text-violet-600",
+};
 
 interface Props {
   projectId: string;
@@ -58,6 +69,8 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
       return data;
     },
   });
+
+  const hasFormulaItems = useMemo(() => items?.some((i) => (i.metadata as any)?.formula) ?? false, [items]);
 
   const approvedCount = items?.filter((i) => i.status === "idea" && (i.metadata as any)?.title_status === "approved").length ?? 0;
   const rejectedCount = items?.filter((i) => (i.metadata as any)?.title_status === "rejected").length ?? 0;
@@ -113,7 +126,6 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
     setGeneratingBriefings(true);
     try {
       const approvedItems = items?.filter((i) => (i.metadata as any)?.title_status === "approved") ?? [];
-      // Send compact items (strip large metadata fields)
       const compactItems = approvedItems.map((i) => {
         const md = i.metadata as any ?? {};
         return {
@@ -130,6 +142,7 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
             thesis: md.thesis,
             content_approach: md.content_approach,
             category: md.category,
+            formula: md.formula,
           },
         };
       });
@@ -141,7 +154,6 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
         },
       });
       if (error) throw error;
-      // Remove rejected items
       const rejectedItems = items?.filter((i) => (i.metadata as any)?.title_status === "rejected") ?? [];
       for (const ri of rejectedItems) {
         await supabase.from("planning_items").update({ status: "cancelled" }).eq("id", ri.id);
@@ -215,17 +227,20 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
                 <th className="p-2 text-left text-xs font-medium text-muted-foreground w-24">Pilar</th>
                 <th className="p-2 text-left text-xs font-medium text-muted-foreground w-24">Formato</th>
                 <th className="p-2 text-left text-xs font-medium text-muted-foreground w-16">Resp.</th>
+                {hasFormulaItems && <th className="p-2 text-center text-xs font-medium text-muted-foreground w-12">Obj.</th>}
                 <th className="p-2 text-left text-xs font-medium text-muted-foreground">Tema / Tese</th>
                 <th className="p-2 text-right text-xs font-medium text-muted-foreground w-28">Ações</th>
               </tr>
             </thead>
             <tbody>
               {items?.map((item) => {
-                const titleStatus = (item.metadata as any)?.title_status ?? "pending";
-                const respCode = (item.metadata as any)?.responsible_code ?? "";
-                const territory = (item.metadata as any)?.territory;
-                const lens = (item.metadata as any)?.lens;
-                const thesis = (item.metadata as any)?.thesis;
+                const metadata = (item.metadata as any) ?? {};
+                const titleStatus = metadata.title_status ?? "pending";
+                const respCode = metadata.responsible_code ?? "";
+                const territory = metadata.territory;
+                const lens = metadata.lens;
+                const thesis = metadata.thesis;
+                const formulaData = metadata.formula;
                 const date = item.scheduled_date ? new Date(item.scheduled_date + "T12:00:00") : null;
                 const isApproved = titleStatus === "approved";
                 const isRejected = titleStatus === "rejected";
@@ -244,10 +259,26 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
                     <td className="p-2"><Badge variant="secondary" className="text-[10px]">{item.content_type ?? "—"}</Badge></td>
                     <td className="p-2 text-xs">{item.format ?? "—"}</td>
                     <td className="p-2 text-xs font-mono">{respCode || "—"}</td>
+                    {hasFormulaItems && (
+                      <td className="p-2 text-center">
+                        {formulaData?.objective ? (
+                          <span className={`text-[10px] font-bold font-mono ${OBJ_COLOR[formulaData.objective] ?? "text-muted-foreground"}`}>
+                            {getObjectiveAbbr(formulaData.objective)}
+                          </span>
+                        ) : "—"}
+                      </td>
+                    )}
                     <td className="p-2">
                       <p className={`text-xs font-medium text-foreground ${territory ? "uppercase" : ""}`}>{item.title}</p>
                       {thesis && <p className="text-[10px] text-muted-foreground mt-0.5 italic">{thesis}</p>}
-                      {(territory || lens) && (
+                      {formulaData && (
+                        <div className="flex gap-1 mt-0.5 flex-wrap">
+                          <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">{getFrameLabel(formulaData.frame)}</Badge>
+                          <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">{getObjectiveLabel(formulaData.objective)}</Badge>
+                          <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">{getMethodLabel(formulaData.method)}</Badge>
+                        </div>
+                      )}
+                      {!formulaData && (territory || lens) && (
                         <div className="flex gap-1 mt-0.5">
                           {territory && <Badge variant="outline" className="text-[8px] px-1 py-0">{territory}</Badge>}
                           {lens && <Badge variant="outline" className="text-[8px] px-1 py-0">{lens}</Badge>}
