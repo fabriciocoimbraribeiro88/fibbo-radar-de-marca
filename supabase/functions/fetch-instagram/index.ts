@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     // ── CHECK action: poll for run status and import results ──
     if (action === "check") {
-      return await handleCheck(body, supabase, apifyToken);
+      return await handleCheck(body, supabase, apifyToken, supabaseUrl, supabaseKey);
     }
 
     // ── START action: kick off Apify runs ──
@@ -170,7 +170,9 @@ Deno.serve(async (req) => {
 async function handleCheck(
   body: any,
   supabase: any,
-  apifyToken: string
+  apifyToken: string,
+  supabaseUrl: string,
+  supabaseKey: string
 ) {
   const { run_id, dataset_id, entity_id, log_id } = body;
 
@@ -358,6 +360,31 @@ async function handleCheck(
         completed_at: new Date().toISOString(),
         records_fetched: totalImported + 1, // +1 for profile
       }).eq("id", log_id);
+    }
+
+    // Recalculate FibboScore after successful collection
+    if (entity_id) {
+      try {
+        const { data: peData } = await supabase
+          .from("project_entities")
+          .select("project_id")
+          .eq("entity_id", entity_id)
+          .limit(1);
+        if (peData && peData.length > 0) {
+          const projectId = peData[0].project_id;
+          console.log(`Triggering FibboScore recalculation for project ${projectId}...`);
+          await fetch(`${supabaseUrl}/functions/v1/calculate-fibbo-score`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ project_id: projectId }),
+          });
+        }
+      } catch (fibboErr) {
+        console.error("FibboScore trigger error (non-blocking):", fibboErr instanceof Error ? fibboErr.message : fibboErr);
+      }
     }
 
     return new Response(
