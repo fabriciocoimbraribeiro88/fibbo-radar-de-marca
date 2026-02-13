@@ -55,8 +55,7 @@ export default function Projects() {
     user?.user_metadata?.full_name?.split(" ")[0] ?? "usuário";
 
   const statItems = [
-    { label: "Projetos", value: projects?.length ?? 0, icon: FolderOpen, color: "text-primary bg-primary/10" },
-    { label: "Entidades", value: stats?.entities ?? 0, icon: Database, color: "text-blue-500 bg-blue-500/10" },
+    { label: "Marcas Monitoradas", value: stats?.entities ?? 0, icon: Database, color: "text-blue-500 bg-blue-500/10" },
     { label: "Posts Coletados", value: stats?.posts ?? 0, icon: BarChart3, color: "text-emerald-500 bg-emerald-500/10" },
     { label: "Análises", value: stats?.analyses ?? 0, icon: Search, color: "text-violet-500 bg-violet-500/10" },
   ];
@@ -72,7 +71,7 @@ export default function Projects() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {statItems.map((stat) => (
           <div key={stat.label} className="card-elevated p-5">
             <div className="flex items-center gap-3">

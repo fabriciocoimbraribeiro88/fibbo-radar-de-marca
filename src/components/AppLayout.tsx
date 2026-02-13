@@ -44,13 +44,10 @@ export default function AppLayout() {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <img
-              alt="Fibbo"
-              className="h-[1.8rem] object-scale-down"
+              alt="FibboMetrics"
+              className="h-[2.1rem] object-scale-down"
               src={fibboLogo}
             />
-            <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
-              Radar
-            </span>
           </button>
           <div className="relative hidden sm:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
