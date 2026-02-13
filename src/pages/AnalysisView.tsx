@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft,
   Bot,
   CheckCircle2,
   Clock,
@@ -87,7 +85,6 @@ export default function AnalysisView() {
     enabled: !!analysisId,
     refetchInterval: (query) => {
       const status = analysis?.status;
-      // Poll every 3s during execution
       if (status === "analyzing" || status === "agents_running" || status === "synthesizing") {
         return 3000;
       }
@@ -122,7 +119,6 @@ export default function AnalysisView() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      // Delete sections first
       await supabase.from("analysis_sections").delete().eq("analysis_id", analysisId!);
       const { error } = await supabase.from("analyses").delete().eq("id", analysisId!);
       if (error) throw error;
@@ -144,10 +140,10 @@ export default function AnalysisView() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">
+            <h1 className="page-title">
               {analysis?.title ?? "Pesquisa"}
             </h1>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="page-subtitle">
               {analysis?.period_start &&
                 `${new Date(analysis.period_start).toLocaleDateString("pt-BR")}${analysis.period_end ? ` – ${new Date(analysis.period_end).toLocaleDateString("pt-BR")}` : ""}`}
             </p>
@@ -159,7 +155,7 @@ export default function AnalysisView() {
                   <ThumbsDown className="mr-2 h-4 w-4" />
                   Reprovar
                 </Button>
-                <Button onClick={() => handleStatusUpdate("approved")}>
+                <Button className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={() => handleStatusUpdate("approved")}>
                   <ThumbsUp className="mr-2 h-4 w-4" />
                   Aprovar
                 </Button>
@@ -174,24 +170,24 @@ export default function AnalysisView() {
 
       {/* Pipeline status */}
       {isRunning && (
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-foreground">Progresso da análise</span>
-              <span className="text-xs text-muted-foreground font-mono">
-                {completedCount}/{totalCount} agentes
-              </span>
-            </div>
-            <Progress value={progressPct} className="h-2" />
-          </CardContent>
-        </Card>
+        <div className="card-flat p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-foreground">Progresso da análise</span>
+            <span className="text-xs text-muted-foreground font-mono">
+              {completedCount}/{totalCount} agentes
+            </span>
+          </div>
+          <div className="w-full bg-primary/20 rounded-full h-2">
+            <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
       )}
 
       {/* Agent cards */}
       {sectionsLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 w-full" />
+            <Skeleton key={i} className="h-20 w-full rounded-xl" />
           ))}
         </div>
       ) : isRunning || (sections && sections.length > 0 && !isReview) ? (
@@ -200,53 +196,44 @@ export default function AnalysisView() {
             const StatusIcon = SECTION_STATUS_ICON[s.status ?? "pending"] ?? Clock;
             const isActive = s.status === "running";
             return (
-              <Card key={s.id} className={isActive ? "ring-1 ring-primary/30" : ""}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                      <Bot className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {SECTION_TYPE_LABEL[s.section_type ?? ""] ?? s.section_type}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(s as any).monitored_entities?.name ?? "Síntese"}
-                      </p>
-                    </div>
+              <div key={s.id} className={`card-flat p-4 flex items-center justify-between ${isActive ? "ring-1 ring-primary/30" : ""}`}>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                    <Bot className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      className={
-                        s.status === "completed"
-                          ? "bg-green-500/20 text-green-600"
-                          : s.status === "running"
-                            ? "bg-blue-500/20 text-blue-600"
-                            : s.status === "failed"
-                              ? "bg-destructive/20 text-destructive"
-                              : "bg-muted text-muted-foreground"
-                      }
-                    >
-                      <StatusIcon className={`mr-1 h-3 w-3 ${isActive ? "animate-spin" : ""}`} />
-                      {SECTION_STATUS_LABEL[s.status ?? "pending"]}
-                    </Badge>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {SECTION_TYPE_LABEL[s.section_type ?? ""] ?? s.section_type}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(s as any).monitored_entities?.name ?? "Síntese"}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <Badge
+                  className={
+                    s.status === "completed"
+                      ? "bg-emerald-500/10 text-emerald-500 border-0"
+                      : s.status === "running"
+                        ? "bg-info/10 text-info border-0"
+                        : s.status === "failed"
+                          ? "bg-destructive/10 text-destructive border-0"
+                          : "bg-muted text-muted-foreground border-0"
+                  }
+                >
+                  <StatusIcon className={`mr-1 h-3 w-3 ${isActive ? "animate-spin" : ""}`} />
+                  {SECTION_STATUS_LABEL[s.status ?? "pending"]}
+                </Badge>
+              </div>
             );
           })}
         </div>
       ) : null}
 
-      {/* Review mode: Cover + TOC + Sections */}
+      {/* Review mode */}
       {isReview && sections && sections.length > 0 && (() => {
         const SECTION_ORDER: Record<string, number> = {
-          brand: 0,
-          competitor: 1,
-          influencer: 2,
-          inspiration: 3,
-          cross_analysis: 4,
-          synthesis: 5,
+          brand: 0, competitor: 1, influencer: 2, inspiration: 3, cross_analysis: 4, synthesis: 5,
         };
         const completedSections = sections
           .filter((s) => s.status === "completed" && s.content_markdown)
@@ -254,76 +241,73 @@ export default function AnalysisView() {
 
         return (
           <div className="space-y-6">
-            {/* Cover Page */}
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-primary/10 via-background to-primary/5 px-8 py-12 text-center">
-                  <p className="text-xs font-medium tracking-widest uppercase text-primary mb-3">
-                    Relatório de Inteligência Competitiva
+            {/* Cover */}
+            <div className="gradient-card overflow-hidden">
+              <div className="px-8 py-12 text-center">
+                <p className="text-xs font-medium tracking-widest uppercase text-primary mb-3">
+                  Relatório de Inteligência Competitiva
+                </p>
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  {analysis?.title ?? "Pesquisa"}
+                </h2>
+                {analysis?.period_start && (
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(analysis.period_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                    {analysis.period_end && ` — ${new Date(analysis.period_end).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}`}
                   </p>
-                  <h2 className="text-2xl font-bold text-foreground mb-2">
-                    {analysis?.title ?? "Pesquisa"}
-                  </h2>
-                  {analysis?.period_start && (
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(analysis.period_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                      {analysis.period_end && ` — ${new Date(analysis.period_end).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}`}
-                    </p>
-                  )}
-                  <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">
-                    <span className="text-xs font-semibold text-primary">Fibbo Radar</span>
-                  </div>
+                )}
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">
+                  <span className="text-xs font-semibold text-primary">Fibbo Radar</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Table of Contents */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-sm font-semibold text-foreground mb-4">Sumário</h3>
-                <ol className="space-y-2">
-                  {completedSections.map((s, idx) => {
-                    const label = SECTION_TYPE_LABEL[s.section_type ?? ""] ?? s.section_type;
-                    const entityName = (s as any).monitored_entities?.name;
-                    return (
-                      <li key={s.id} className="flex items-center gap-3 text-sm">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-mono text-muted-foreground">
-                          {idx + 1}
-                        </span>
-                        <span className="text-foreground">
-                          {label}{entityName ? ` — ${entityName}` : ""}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </CardContent>
-            </Card>
+            {/* TOC */}
+            <div className="card-flat p-6">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Sumário</h3>
+              <ol className="space-y-2">
+                {completedSections.map((s, idx) => {
+                  const label = SECTION_TYPE_LABEL[s.section_type ?? ""] ?? s.section_type;
+                  const entityName = (s as any).monitored_entities?.name;
+                  return (
+                    <li key={s.id} className="flex items-center gap-3 text-sm">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-mono text-muted-foreground">
+                        {idx + 1}
+                      </span>
+                      <span className="text-foreground">
+                        {label}{entityName ? ` — ${entityName}` : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
 
-            {/* Section Cards — brand first */}
+            {/* Sections */}
             {completedSections.map((s) => (
-              <Card key={s.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">
-                      {SECTION_TYPE_LABEL[s.section_type ?? ""] ?? s.section_type}
-                      {(s as any).monitored_entities?.name && ` — ${(s as any).monitored_entities.name}`}
-                    </h3>
-                  </div>
-                  <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed">
-                    {s.content_markdown}
-                  </div>
-                </CardContent>
-              </Card>
+              <div key={s.id} className="card-flat p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {SECTION_TYPE_LABEL[s.section_type ?? ""] ?? s.section_type}
+                    {(s as any).monitored_entities?.name && ` — ${(s as any).monitored_entities.name}`}
+                  </h3>
+                </div>
+                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed">
+                  {s.content_markdown}
+                </div>
+              </div>
             ))}
           </div>
         );
       })()}
 
-      {/* Fibbo Branding Footer */}
+      {/* Footer */}
       {(isReview || analysis?.status === "published") && (
-        <div className="mt-12 pt-6 border-t border-border text-center">
+        <div className="mt-12 divider" />
+      )}
+      {(isReview || analysis?.status === "published") && (
+        <div className="pt-6 text-center">
           <p className="text-xs text-muted-foreground">
             Relatório gerado por <span className="font-semibold text-foreground">Fibbo Radar</span> — Inteligência Competitiva com IA
           </p>

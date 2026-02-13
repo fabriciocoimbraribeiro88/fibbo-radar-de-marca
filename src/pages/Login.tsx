@@ -26,7 +26,7 @@ export default function Login() {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        navigate("/");
+        navigate("/projects");
       } else {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
