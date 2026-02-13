@@ -45,6 +45,8 @@ export interface WizardData {
   periodEnd: string;
   postsPerWeek: number;
   formatMix: Record<string, number>;
+  useColabs: boolean;
+  colabPercentage: number;
   colabs: Colab[];
   preferredTimes: { weekday: string[]; weekend: string[] };
   usePreferredTimes: boolean;
@@ -75,7 +77,9 @@ const defaultWizardData: WizardData = {
   periodEnd: "",
   postsPerWeek: 3,
   formatMix: { Reels: 40, Carrossel: 30, Estático: 20, Stories: 10 },
-  colabs: [{ instagram: "Equipe Interna", description: "", percentage: 100 }],
+  useColabs: false,
+  colabPercentage: 20,
+  colabs: [],
   preferredTimes: { weekday: ["09:00", "12:00", "18:00"], weekend: ["11:00"] },
   usePreferredTimes: false,
   specialInstructions: "",
