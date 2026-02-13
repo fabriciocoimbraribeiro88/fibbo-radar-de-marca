@@ -1,79 +1,71 @@
 
+# Corrigir Area de Selecao de Titulos do Planejamento
 
-# Recalibração do Fibbo Score: Apenas Redes Sociais
+## Problemas Identificados
 
-## Situacao Atual
+### 1. Titulos duplicados/faltando (Bug critico de pareamento)
+A funcao `groupIntoPairs()` agrupa items pelo campo `metadata.slot_index`. Porem, os dados no banco mostram que TODOS os items tem `slot_index: null`. Isso faz com que todos os items com `content_approach: "formula"` caiam no slot 0, criando um unico grupo gigante ao inves de pares A/B corretos.
 
-Os scores atuais estao na faixa 42-58/100. Os componentes que usam SEO/Ads:
+**Causa raiz**: A edge function `generate-planning-titles` gera items no formato `slots` com `slot_index`, mas quando a IA retorna o JSON com `slot_index: 0` para todos (ou o campo nao e preenchido corretamente), o front quebra.
 
-- **Presenca**: `seoScore` vale 0-3 pts (quase sempre 0, pois poucos tem dados SEO)
-- **Competitividade**: `seoRelScore` vale 0-3 pts (idem)
-- **Conteudo**: `planningAdherence` vale 0-4 pts (depende de planejamento interno, nao de redes sociais)
+**Solucao**: Reescrever `groupIntoPairs()` para usar uma estrategia de fallback mais robusta:
+- Se `slot_index` estiver presente e valido, usar ele
+- Senao, agrupar items por `scheduled_date + scheduled_time + format` (pois ambas opcoes A/B compartilham mesma data/hora/formato)
+- Se ainda nao parear, usar agrupamento sequencial (2 a 2, ordenados por data)
 
-Total de 10 pontos "desperdicados" em metricas que quase nunca pontuam.
+### 2. Edicao nao funciona corretamente
+O `saveEdit()` depende de encontrar o "par" correto para rejeitar o sibling. Com o pareamento quebrado, o sibling nao e encontrado ou o item errado e rejeitado.
 
-## O Que Sera Removido
+**Solucao**: Corrigir junto com o fix de pareamento. Alem disso, melhorar o dialog de edicao para ser mais completo.
 
-1. Fetch de `seo_data` do banco
-2. Funcao `calculateSeoPresenceScore()`
-3. SEO relativo na Competitividade (`seoRelScore`)
-4. `calculatePlanningAdherence()` (depende de planning items, nao de dados sociais)
+### 3. Edge function sem slot_index
+A edge function `generate-planning-titles` depende da IA retornar `slot_index` no JSON. Quando a IA nao retorna ou retorna incorretamente, os items ficam sem `slot_index`.
 
-## Nova Distribuicao de Pontos (100 pts, 4 dimensoes de 25)
-
-### PRESENCA (0-25) -- era 22 efetivo, agora 25
-
-| Sub-score | Antes | Depois | O que mede |
-|---|---|---|---|
-| Crescimento de seguidores | 0-8 | 0-8 | % crescimento 90d. Range: -0.5% a 1.5% |
-| Volume de posts | 0-5 | 0-6 | Posts/semana. Max em 3/semana |
-| Regularidade | 0-5 | 0-5 | Inverso do CV da distribuicao semanal |
-| Alcance (views/followers) | 0-4 | 0-6 | Reach medio. Max em 12% |
-| ~~SEO~~ | ~~0-3~~ | removido | -- |
-
-### ENGAJAMENTO (0-25) -- sem mudanca estrutural, ajuste fino
-
-| Sub-score | Antes | Depois | O que mede |
-|---|---|---|---|
-| Taxa de engajamento | 0-10 | 0-10 | (likes+comments)/followers. Max 1.5% |
-| Taxa de comentarios | 0-5 | 0-5 | comments/followers. Max 0.1% |
-| Taxa de saves | 0-5 | 0-5 | saves/followers. Baseline 2.5 se sem dados |
-| Sentimento | 0-2 | 0-2.5 | % positivos nos comentarios |
-| Tendencia | 0-2.5 | 0-2.5 | Variacao eng 30d vs 30-60d |
-
-### CONTEUDO (0-25) -- remove planning adherence, redistribui
-
-| Sub-score | Antes | Depois | O que mede |
-|---|---|---|---|
-| Performance de formato | 0-6 | 0-8 | Se o formato mais usado e o que mais engaja |
-| Aderencia a pilares | 0-6 | 0-6 | Diversidade tematica do conteudo |
-| Consistencia | 0-5 | 0-7 | Quao "nao-spiky" e o engajamento |
-| Eficacia de hashtags | 0-4 | 0-4 | Engajamento com vs sem hashtags |
-| ~~Planning adherence~~ | ~~0-4~~ | removido | -- |
-
-### COMPETITIVIDADE (0-25) -- remove SEO relativo, redistribui
-
-| Sub-score | Antes | Depois | O que mede |
-|---|---|---|---|
-| Eng. relativo | 0-8 | 0-9 | Taxa eng brand vs media concorrentes |
-| Crescimento relativo | 0-6 | 0-6 | Crescimento seguidores brand vs concorrentes (BUG FIX: antes usava volume) |
-| Volume relativo | 0-4 | 0-4 | Posts brand vs concorrentes |
-| Share of engagement | 0-4 | 0-6 | % do engagement total do mercado |
-| ~~SEO relativo~~ | ~~0-3~~ | removido | -- |
-
-## Bug Fix na Competitividade
-
-Atualmente `growthRelScore` e `volumeRelScore` usam a mesma formula (ambos comparam `brandPosts90d.length / avgCompVolume`). O crescimento relativo passara a comparar **taxa de crescimento de seguidores** entre brand e concorrentes.
+**Solucao**: Forcar `slot_index` no backend usando o indice do loop, nao o valor da IA.
 
 ## Mudancas Tecnicas
 
-Arquivo: `supabase/functions/calculate-fibbo-score/index.ts`
+### Arquivo 1: `src/components/planning/TitlesReview.tsx`
 
-1. Remover fetch de `seo_data` e `seoByEntity` do Promise.all
-2. Remover `calculateSeoPresenceScore()` e chamada
-3. Remover `calculatePlanningAdherence()` e chamada
-4. Ajustar pesos nas 4 dimensoes conforme tabelas acima
-5. Corrigir bug do `growthRelScore` para usar crescimento de seguidores
-6. Remover parametros `seoByEntity`/`brandSeo` de `calculateCompetitiveness()`
-7. Deploy e recalculo automatico
+1. **Reescrever `groupIntoPairs()`**:
+   - Primeiro tenta agrupar por `slot_index` (se presente e unico)
+   - Fallback: agrupa por chave composta `scheduled_date|scheduled_time|format`
+   - Fallback final: agrupa sequencialmente de 2 em 2 por data
+   - Garantir que cada grupo tenha no maximo 2 items
 
+2. **Corrigir `selectOption()`**: 
+   - Garantir que apenas o sibling direto do par seja rejeitado
+   - Usar `queryClient.invalidateQueries` com `await` para evitar race conditions
+
+3. **Corrigir `saveEdit()`**:
+   - Mesma logica de busca do par corrigida
+
+4. **Melhorar contagem de selecionados**: 
+   - Contar corretamente mesmo quando pareamento nao e perfeito (items impares)
+
+5. **Corrigir `handleGenerateBriefings()`**:
+   - Filtrar items aprovados corretamente independente do pareamento
+
+### Arquivo 2: `supabase/functions/generate-planning-titles/index.ts`
+
+1. **Forcar `slot_index` no backend** (linhas 668-701):
+   - Usar o indice do loop `for` ao inves de confiar no `slot.slot_index` da IA
+   - Garantir que cada par A/B receba o mesmo `slot_index` incrementado sequencialmente
+
+```text
+Antes:  const slotIdx = regenerate_slot ?? slot.slot_index ?? 0;
+Depois: const slotIdx = regenerate_slot ?? loopIndex;  // loopIndex do for
+```
+
+### Arquivo 3: `src/components/planning/BriefingsReview.tsx`
+
+1. **Corrigir hashtags input**: O campo de hashtags nao salva ao editar (falta `onBlur` handler)
+2. **Corrigir slides edit**: As laminas do carrossel nao salvam edicoes (Input sem `onBlur`)
+
+## Resultado Esperado
+
+- Posts aparecem corretamente em pares A/B, mesmo para dados antigos sem `slot_index`
+- Selecionar uma opcao marca a outra como rejeitada corretamente
+- Editar um titulo salva e seleciona corretamente
+- Novos calendarios gerados terao `slot_index` correto desde o inicio
+- Campos de hashtags e laminas salvam edicoes no BriefingsReview
