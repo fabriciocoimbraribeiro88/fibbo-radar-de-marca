@@ -531,6 +531,7 @@ export type Database = {
       }
       fibbo_scores: {
         Row: {
+          channel: string | null
           competitividade_score: number
           conteudo_score: number
           created_at: string | null
@@ -544,6 +545,7 @@ export type Database = {
           total_score: number
         }
         Insert: {
+          channel?: string | null
           competitividade_score?: number
           conteudo_score?: number
           created_at?: string | null
@@ -557,6 +559,7 @@ export type Database = {
           total_score?: number
         }
         Update: {
+          channel?: string | null
           competitividade_score?: number
           conteudo_score?: number
           created_at?: string | null

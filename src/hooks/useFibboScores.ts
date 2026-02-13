@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { SocialChannel } from "@/lib/fibboScoreConfig";
 
 export interface FibboScore {
   id: string;
@@ -13,6 +14,7 @@ export interface FibboScore {
   competitividade_score: number;
   metrics_snapshot: any;
   created_at: string | null;
+  channel: string | null;
 }
 
 export interface FibboScoreWithEntity extends FibboScore {
@@ -25,7 +27,6 @@ export function useFibboScores(projectId: string | undefined) {
   return useQuery({
     queryKey: ["fibbo-scores", projectId],
     queryFn: async (): Promise<FibboScoreWithEntity[]> => {
-      // Get scores
       const { data: scores, error } = await supabase
         .from("fibbo_scores")
         .select("*")
@@ -34,7 +35,6 @@ export function useFibboScores(projectId: string | undefined) {
       if (error) throw error;
       if (!scores || scores.length === 0) return [];
 
-      // Get entity info
       const entityIds = [...new Set(scores.map((s) => s.entity_id).filter(Boolean))] as string[];
       const [entitiesRes, peRes] = await Promise.all([
         supabase.from("monitored_entities").select("id, name, instagram_handle").in("id", entityIds),
@@ -48,6 +48,7 @@ export function useFibboScores(projectId: string | undefined) {
         const entity = entityMap.get(s.entity_id ?? "");
         return {
           ...s,
+          channel: (s as any).channel ?? "instagram",
           entity_name: entity?.name ?? "Desconhecido",
           entity_handle: entity?.instagram_handle ?? null,
           entity_role: roleMap.get(s.entity_id ?? "") ?? "brand",
@@ -61,12 +62,12 @@ export function useFibboScores(projectId: string | undefined) {
 export function useLatestFibboScores(projectId: string | undefined) {
   const { data, ...rest } = useFibboScores(projectId);
 
-  // Get only the most recent score per entity
+  // Get only the most recent score per entity+channel combo
   const latestScores = (() => {
     if (!data) return [];
     const seen = new Set<string>();
     return data.filter((s) => {
-      const key = s.entity_id ?? "null";
+      const key = `${s.entity_id ?? "null"}_${s.channel ?? "instagram"}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -74,4 +75,27 @@ export function useLatestFibboScores(projectId: string | undefined) {
   })();
 
   return { data: latestScores, ...rest };
+}
+
+/** Returns latest channel-specific scores (excluding 'general') grouped by channel */
+export function useLatestChannelScores(projectId: string | undefined) {
+  const { data: latestScores, ...rest } = useLatestFibboScores(projectId);
+
+  const channelScores = (latestScores ?? []).filter(
+    (s) => s.channel && s.channel !== "general"
+  );
+
+  const generalScores = (latestScores ?? []).filter(
+    (s) => s.channel === "general"
+  );
+
+  const activeChannels = [...new Set(channelScores.map((s) => s.channel as SocialChannel))];
+
+  return {
+    channelScores,
+    generalScores,
+    activeChannels,
+    allLatest: latestScores,
+    ...rest,
+  };
 }
