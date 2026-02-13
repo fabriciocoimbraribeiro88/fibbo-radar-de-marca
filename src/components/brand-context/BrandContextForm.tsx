@@ -72,9 +72,10 @@ export default function BrandContextForm({ projectId, briefing }: Props) {
     async (data: BriefingData) => {
       if (!projectId) return;
       setSaveStatus("saving");
+      const merged = { ...(briefing ?? {}), ...data };
       const { error } = await supabase
         .from("projects")
-        .update({ briefing: data as any })
+        .update({ briefing: merged as any })
         .eq("id", projectId);
       if (!error) {
         setSaveStatus("saved");
@@ -84,7 +85,7 @@ export default function BrandContextForm({ projectId, briefing }: Props) {
         setSaveStatus("idle");
       }
     },
-    [projectId, queryClient]
+    [projectId, queryClient, briefing]
   );
 
   const update = (path: string, value: string) => {
