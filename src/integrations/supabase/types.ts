@@ -529,6 +529,63 @@ export type Database = {
           },
         ]
       }
+      fibbo_scores: {
+        Row: {
+          competitividade_score: number
+          conteudo_score: number
+          created_at: string | null
+          engajamento_score: number
+          entity_id: string | null
+          id: string
+          metrics_snapshot: Json | null
+          presenca_score: number
+          project_id: string
+          score_date: string
+          total_score: number
+        }
+        Insert: {
+          competitividade_score?: number
+          conteudo_score?: number
+          created_at?: string | null
+          engajamento_score?: number
+          entity_id?: string | null
+          id?: string
+          metrics_snapshot?: Json | null
+          presenca_score?: number
+          project_id: string
+          score_date: string
+          total_score?: number
+        }
+        Update: {
+          competitividade_score?: number
+          conteudo_score?: number
+          created_at?: string | null
+          engajamento_score?: number
+          entity_id?: string | null
+          id?: string
+          metrics_snapshot?: Json | null
+          presenca_score?: number
+          project_id?: string
+          score_date?: string
+          total_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fibbo_scores_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fibbo_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_comments: {
         Row: {
           comment_id_instagram: string | null
