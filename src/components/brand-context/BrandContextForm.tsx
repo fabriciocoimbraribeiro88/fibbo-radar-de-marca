@@ -68,6 +68,13 @@ export default function BrandContextForm({ projectId, briefing }: Props) {
     setForm(deepMerge(emptyBriefing, briefing));
   }, [briefing]);
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const save = useCallback(
     async (data: BriefingData) => {
       if (!projectId) return;
