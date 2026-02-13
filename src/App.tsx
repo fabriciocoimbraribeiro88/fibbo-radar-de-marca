@@ -21,6 +21,7 @@ import ProjectPlanning from "@/pages/ProjectPlanning";
 import ProjectOKRs from "@/pages/ProjectOKRs";
 import ProjectDashboard from "@/pages/ProjectDashboard";
 import ProjectReports from "@/pages/ProjectReports";
+import ProjectFibboScore from "@/pages/ProjectFibboScore";
 import SettingsPage from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
@@ -59,6 +60,7 @@ const App = () => (
                 <Route path="brand" element={<ProjectBrand />} />
                 <Route path="sources" element={<ProjectSources />} />
                 <Route path="dashboard" element={<ProjectDashboard />} />
+                <Route path="fibbo-score" element={<ProjectFibboScore />} />
                 <Route path="analyses" element={<ProjectAnalyses />} />
                 <Route path="analyses/new" element={<NewAnalysis />} />
                 <Route path="analyses/:analysisId" element={<AnalysisView />} />

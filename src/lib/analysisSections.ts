@@ -119,6 +119,14 @@ export const SOCIAL_SECTIONS: AnalysisSection[] = [
       "Sugestões concretas de posts: temas, formatos, hooks, CTAs e hashtags. Cada sugestão é um brief criativo pronto para produção.",
   },
   {
+    key: "fibbo_score",
+    label: "Fibbo Score",
+    icon: "Gauge",
+    defaultOn: true,
+    description:
+      "Score de maturidade digital (0-100) com 4 dimensões: Presença, Engajamento, Conteúdo e Competitividade. Permite comparar a marca com concorrentes.",
+  },
+  {
     key: "creative_guidelines",
     label: "Diretrizes Criativas",
     icon: "Palette",
