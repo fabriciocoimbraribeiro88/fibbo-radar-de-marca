@@ -152,14 +152,15 @@ Deno.serve(async (req) => {
       const avgComments = posts90d.length > 0 ? avg(posts90d.map((p: any) => p.comments_count ?? 0)) : 0;
       const avgSaves = posts90d.length > 0 ? avg(posts90d.map((p: any) => p.saves_count ?? 0)) : 0;
 
-      // Use logarithmic scaling for eng rate to handle accounts of all sizes
-      // 0.5% = decent, 1.5% = good, 3%+ = excellent
+      // Benchmarks 2025: mediana global ~0.50%, excelente >1%, elite >2%
+      // Rival IQ: mediana 0.43%, top 25% >1%
+      // Recalibrado: 0.36% = média setorial → ~5pts, 1% = excelente → ~8pts, 1.5%+ = max
       const engRate = latestFollowers > 0 ? ((avgLikes + avgComments) / latestFollowers) * 100 : 0;
-      const taxaEngScore = clamp(mapRange(engRate, 0, 3, 0, 10), 0, 10);
+      const taxaEngScore = clamp(mapRange(engRate, 0, 1.5, 0, 10), 0, 10);
 
-      // Comment rate: 0.05% = decent, 0.2% = good for large accounts
+      // Comment rate recalibrado: 0.03% = média, 0.1% = excelente para grandes contas
       const commRate = latestFollowers > 0 ? (avgComments / latestFollowers) * 100 : 0;
-      const taxaCommScore = clamp(mapRange(commRate, 0, 0.2, 0, 5), 0, 5);
+      const taxaCommScore = clamp(mapRange(commRate, 0, 0.1, 0, 5), 0, 5);
 
       // Saves: if data not available, give baseline score instead of penalizing
       const hasSavesData = posts90d.some((p: any) => (p.saves_count ?? 0) > 0);
@@ -169,7 +170,7 @@ Deno.serve(async (req) => {
         taxaSavesScore = 2.5;
       } else {
         const savesRate = latestFollowers > 0 ? (avgSaves / latestFollowers) * 100 : 0;
-        taxaSavesScore = clamp(mapRange(savesRate, 0, 0.3, 0, 5), 0, 5);
+        taxaSavesScore = clamp(mapRange(savesRate, 0, 0.15, 0, 5), 0, 5);
       }
 
       const analyzedComments = comments.filter((c: any) => c.sentiment_category);
