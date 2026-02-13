@@ -53,12 +53,23 @@ export function useEntityDataSummary(entityIds: string[]) {
         Promise.all(
           entityIds.map(async (eid) => {
             try {
-              const { data: postRows, error: postErr } = await supabase
-                .from("instagram_posts")
-                .select("id")
-                .eq("entity_id", eid);
-              if (postErr) throw postErr;
-              const postIds = postRows?.map((p) => p.id) ?? [];
+              // Paginate post IDs to avoid 1000-row limit
+              let allPostIds: string[] = [];
+              let pidFrom = 0;
+              const PID_PAGE = 1000;
+              while (true) {
+                const { data: postRows, error: postErr } = await supabase
+                  .from("instagram_posts")
+                  .select("id")
+                  .eq("entity_id", eid)
+                  .range(pidFrom, pidFrom + PID_PAGE - 1);
+                if (postErr) throw postErr;
+                if (!postRows || postRows.length === 0) break;
+                allPostIds = allPostIds.concat(postRows.map((p) => p.id));
+                if (postRows.length < PID_PAGE) break;
+                pidFrom += PID_PAGE;
+              }
+              const postIds = allPostIds;
               if (!postIds.length) return { entityId: eid, total: 0, withSentiment: 0 };
 
               // Count comments in smaller batches to avoid URL length limits
