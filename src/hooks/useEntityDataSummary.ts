@@ -28,50 +28,71 @@ export function useEntityDataSummary(entityIds: string[]) {
 
       // Run queries for all entities in parallel
       const [postsResults, commentsResults, profilesResults] = await Promise.all([
-        // Posts per entity
+        // Posts per entity (paginated to avoid 1000-row limit)
         Promise.all(
           entityIds.map(async (eid) => {
-            const { data, error } = await supabase
-              .from("instagram_posts")
-              .select("posted_at, likes_count, comments_count, views_count, saves_count, shares_count, post_type, hashtags")
-              .eq("entity_id", eid);
-            if (error) throw error;
-            return { entityId: eid, posts: data ?? [] };
+            let allPosts: any[] = [];
+            let from = 0;
+            const PAGE_SIZE = 1000;
+            while (true) {
+              const { data, error } = await supabase
+                .from("instagram_posts")
+                .select("posted_at, likes_count, comments_count, views_count, saves_count, shares_count, post_type, hashtags")
+                .eq("entity_id", eid)
+                .range(from, from + PAGE_SIZE - 1);
+              if (error) throw error;
+              if (!data || data.length === 0) break;
+              allPosts = allPosts.concat(data);
+              if (data.length < PAGE_SIZE) break;
+              from += PAGE_SIZE;
+            }
+            return { entityId: eid, posts: allPosts };
           })
         ),
         // Comments per entity (via post_ids)
         Promise.all(
           entityIds.map(async (eid) => {
-            const { data: postRows, error: postErr } = await supabase
-              .from("instagram_posts")
-              .select("id")
-              .eq("entity_id", eid);
-            if (postErr) throw postErr;
-            const postIds = postRows?.map((p) => p.id) ?? [];
-            if (!postIds.length) return { entityId: eid, total: 0, withSentiment: 0 };
+            try {
+              const { data: postRows, error: postErr } = await supabase
+                .from("instagram_posts")
+                .select("id")
+                .eq("entity_id", eid);
+              if (postErr) throw postErr;
+              const postIds = postRows?.map((p) => p.id) ?? [];
+              if (!postIds.length) return { entityId: eid, total: 0, withSentiment: 0 };
 
-            // Count comments in batches (supabase .in() has limits)
-            let total = 0;
-            let withSentiment = 0;
-            const PAGE = 1000;
-            for (let i = 0; i < postIds.length; i += PAGE) {
-              const batch = postIds.slice(i, i + PAGE);
-              const { count: totalCount, error: tcErr } = await supabase
-                .from("instagram_comments")
-                .select("id", { count: "exact", head: true })
-                .in("post_id", batch);
-              if (tcErr) throw tcErr;
-              total += totalCount ?? 0;
+              // Count comments in smaller batches to avoid URL length limits
+              let total = 0;
+              let withSentiment = 0;
+              const PAGE = 200;
+              for (let i = 0; i < postIds.length; i += PAGE) {
+                const batch = postIds.slice(i, i + PAGE);
+                const { count: totalCount, error: tcErr } = await supabase
+                  .from("instagram_comments")
+                  .select("id", { count: "exact", head: true })
+                  .in("post_id", batch);
+                if (tcErr) {
+                  console.warn("Comments count error (skipping batch):", tcErr.message);
+                  continue;
+                }
+                total += totalCount ?? 0;
 
-              const { count: sentCount, error: scErr } = await supabase
-                .from("instagram_comments")
-                .select("id", { count: "exact", head: true })
-                .in("post_id", batch)
-                .not("sentiment", "is", null);
-              if (scErr) throw scErr;
-              withSentiment += sentCount ?? 0;
+                const { count: sentCount, error: scErr } = await supabase
+                  .from("instagram_comments")
+                  .select("id", { count: "exact", head: true })
+                  .in("post_id", batch)
+                  .not("sentiment", "is", null);
+                if (scErr) {
+                  console.warn("Sentiment count error (skipping batch):", scErr.message);
+                  continue;
+                }
+                withSentiment += sentCount ?? 0;
+              }
+              return { entityId: eid, total, withSentiment };
+            } catch (err) {
+              console.warn("Comments query failed for entity", eid, err);
+              return { entityId: eid, total: 0, withSentiment: 0 };
             }
-            return { entityId: eid, total, withSentiment };
           })
         ),
         // Latest profile per entity
