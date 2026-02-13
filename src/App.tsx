@@ -8,7 +8,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import ProjectLayout from "@/components/ProjectLayout";
 import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
 import Projects from "@/pages/Projects";
 import NewProject from "@/pages/NewProject";
 import ProjectOverview from "@/pages/ProjectOverview";
@@ -23,6 +22,7 @@ import ProjectDashboard from "@/pages/ProjectDashboard";
 import ProjectReports from "@/pages/ProjectReports";
 import ProjectFibboScore from "@/pages/ProjectFibboScore";
 import SettingsPage from "@/pages/Settings";
+import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -43,6 +43,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route index element={<Index />} />
             <Route
               element={
                 <ProtectedRoute>
@@ -50,7 +51,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/new" element={<NewProject />} />
 

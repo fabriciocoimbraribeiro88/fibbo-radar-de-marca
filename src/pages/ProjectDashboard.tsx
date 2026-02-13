@@ -28,16 +28,10 @@ import ContentMixChart from "@/components/dashboard/ContentMixChart";
 import RadarComparisonChart from "@/components/dashboard/RadarComparisonChart";
 import VolumeEngagementScatter from "@/components/dashboard/VolumeEngagementScatter";
 import SentimentComparisonChart from "@/components/dashboard/SentimentComparisonChart";
-import ViralHitsChart from "@/components/dashboard/ViralHitsChart";
-import ViralRateChart from "@/components/dashboard/ViralRateChart";
-import HitsVsViralChart from "@/components/dashboard/HitsVsViralChart";
 
-import ContentTypePieChart from "@/components/dashboard/ContentTypePieChart";
 import PerformanceByTypeChart from "@/components/dashboard/PerformanceByTypeChart";
 import PostsVolumeChart from "@/components/dashboard/PostsVolumeChart";
-import TopHashtagsChart from "@/components/dashboard/TopHashtagsChart";
 import LikesTimelineChart from "@/components/dashboard/LikesTimelineChart";
-import ThemeDistributionChart from "@/components/dashboard/ThemeDistributionChart";
 import TopPostsTable from "@/components/dashboard/TopPostsTable";
 import SentimentAnalysisSection from "@/components/dashboard/SentimentAnalysisSection";
 
@@ -76,7 +70,6 @@ export default function ProjectDashboard() {
     queryClient.invalidateQueries({ queryKey: ["project-dashboard-full", projectId] });
   };
 
-  // Filter state — defaults: all time, all posts, brand vs all
   const defaultRange = getPresetRange("all");
   const [period, setPeriod] = useState<PeriodRange>({ ...defaultRange, preset: "all" });
   const [postLimit, setPostLimit] = useState<PostLimit>("all");
@@ -88,9 +81,7 @@ export default function ProjectDashboard() {
   const allProfiles = data?.profiles ?? [];
   const brandEntityId = data?.brandEntityId ?? null;
 
-  // Resolve which entities to show based on source mode + manual selection
   const resolvedEntities = useMemo(() => {
-    // When user explicitly selects entities via pills, show exactly those
     if (selectedEntityIds.size > 0) {
       return allEntities.filter((e) => selectedEntityIds.has(e.id));
     }
@@ -102,7 +93,6 @@ export default function ProjectDashboard() {
     [resolvedEntities]
   );
 
-  // Filter posts to resolved entities, then by date + limit
   const entityFilteredPosts = useMemo(
     () => allPosts.filter((p) => resolvedEntityIds.has(p.entity_id)),
     [allPosts, resolvedEntityIds]
@@ -112,7 +102,6 @@ export default function ProjectDashboard() {
   const filteredPosts = useFilteredAndLimitedPosts(entityFilteredPosts, dateRange, postLimit);
   const entityMetrics = useEntityMetrics(resolvedEntities, filteredPosts, allProfiles);
 
-  // Entity toggle handler
   const handleToggleEntity = (id: string) => {
     setSelectedEntityIds((prev) => {
       const next = new Set(prev);
@@ -126,7 +115,6 @@ export default function ProjectDashboard() {
     [allEntities]
   );
 
-  // Big numbers
   const bigNumbers = useMemo(() => {
     const totalPosts = filteredPosts.length;
     const totalFollowers = entityMetrics.reduce((s, m) => s + m.followers, 0);
@@ -143,10 +131,9 @@ export default function ProjectDashboard() {
 
   const isComparative = resolvedEntities.length > 1;
 
-  /* ── Loading ── */
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-4">
+      <div className="mx-auto max-w-7xl space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-12 w-full" />
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
@@ -157,33 +144,27 @@ export default function ProjectDashboard() {
     );
   }
 
-  /* ── Error ── */
   if (error) {
     return (
       <div className="mx-auto max-w-4xl animate-fade-in">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-sm text-destructive">Erro ao carregar dados: {error instanceof Error ? error.message : "Erro desconhecido"}</p>
-          </CardContent>
-        </Card>
+        <div className="card-flat p-12 text-center">
+          <p className="text-sm text-destructive">Erro ao carregar dados: {error instanceof Error ? error.message : "Erro desconhecido"}</p>
+        </div>
       </div>
     );
   }
 
-  /* ── Empty ── */
   if (!allEntities.length) {
     return (
       <div className="mx-auto max-w-4xl animate-fade-in">
-        <h1 className="text-xl font-semibold text-foreground mb-2">Dashboard</h1>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm font-medium text-foreground mb-1">Nenhuma entidade cadastrada</p>
-            <p className="text-xs text-muted-foreground">
-              Adicione fontes de dados ao projeto para visualizar o dashboard.
-            </p>
-          </CardContent>
-        </Card>
+        <h1 className="page-title mb-4">Dashboard</h1>
+        <div className="gradient-card p-12 text-center">
+          <Users className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+          <p className="text-base font-medium text-foreground mb-1">Nenhuma entidade cadastrada</p>
+          <p className="text-sm text-muted-foreground/70 max-w-sm mx-auto">
+            Adicione fontes de dados ao projeto para visualizar o dashboard.
+          </p>
+        </div>
       </div>
     );
   }
@@ -274,11 +255,6 @@ export default function ProjectDashboard() {
             <VolumeEngagementScatter metrics={entityMetrics} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <ViralHitsChart metrics={entityMetrics} />
-            <ViralRateChart metrics={entityMetrics} />
-            <HitsVsViralChart metrics={entityMetrics} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <SentimentComparisonChart metrics={entityMetrics} />
           </div>
         </div>
@@ -300,18 +276,14 @@ export default function ProjectDashboard() {
             <Badge variant="secondary" className="text-[10px] ml-auto bg-accent/60 border-0 rounded-full">{em.totalPosts} posts</Badge>
           </div>
 
-          {/* Entity big numbers */}
-          <div className="grid grid-cols-3 sm:grid-cols-9 gap-3">
+          {/* Entity big numbers — simplified to 5 */}
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
             {[
               { label: "Seguidores", value: fmt(em.followers) },
               { label: "Posts", value: fmt(em.totalPosts) },
               { label: "Média Likes", value: fmt(em.avgLikes) },
               { label: "Média Coment.", value: fmt(em.avgComments) },
               { label: "Taxa Eng.", value: `${em.engagementRate.toFixed(2)}%` },
-              { label: "Views", value: fmt(em.totalViews) },
-              { label: "Hits", value: fmt(em.hits) },
-              { label: "Virais", value: fmt(em.viralHits) },
-              { label: "% Viral", value: `${em.viralRate.toFixed(1)}%` },
             ].map((item) => (
               <div key={item.label} className="card-flat p-3 text-center">
                 <p className="text-lg font-bold font-mono text-foreground">{item.value}</p>
@@ -320,18 +292,11 @@ export default function ProjectDashboard() {
             ))}
           </div>
 
-          {/* Charts row 1 */}
+          {/* Charts row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <ContentTypePieChart metrics={em} handle={em.handle} />
             <PerformanceByTypeChart posts={filteredPosts} entityId={em.entityId} />
             <PostsVolumeChart posts={filteredPosts} entityId={em.entityId} color={em.color} />
-          </div>
-
-          {/* Charts row 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <TopHashtagsChart metrics={em} color={em.color} />
             <LikesTimelineChart posts={filteredPosts} entityId={em.entityId} />
-            <ThemeDistributionChart metrics={em} color={em.color} />
           </div>
 
           {/* Top/Bottom posts */}
@@ -351,13 +316,11 @@ export default function ProjectDashboard() {
 
       {/* Empty filtered state */}
       {filteredPosts.length === 0 && allPosts.length > 0 && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              Nenhum post encontrado para o período e filtros selecionados. Tente ajustar os filtros acima.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="card-flat p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Nenhum post encontrado para o período e filtros selecionados. Tente ajustar os filtros acima.
+          </p>
+        </div>
       )}
     </div>
   );

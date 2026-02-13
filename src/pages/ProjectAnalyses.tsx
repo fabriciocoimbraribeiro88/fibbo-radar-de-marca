@@ -2,20 +2,20 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Loader2, BarChart3, Search, Calendar } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Loader2, Search, Calendar } from "lucide-react";
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  draft: { label: "Rascunho", className: "bg-muted text-muted-foreground" },
-  collecting_data: { label: "Coletando", className: "bg-yellow-500/20 text-yellow-600" },
-  analyzing: { label: "Analisando", className: "bg-blue-500/20 text-blue-600" },
-  agents_running: { label: "Agentes IA", className: "bg-purple-500/20 text-purple-600" },
-  synthesizing: { label: "Sintetizando", className: "bg-indigo-500/20 text-indigo-600" },
-  review: { label: "Em Revisão", className: "bg-orange-500/20 text-orange-600" },
-  approved: { label: "Aprovada", className: "bg-green-500/20 text-green-600" },
-  rejected: { label: "Reprovada", className: "bg-destructive/20 text-destructive" },
-  published: { label: "Publicada", className: "bg-primary/20 text-primary" },
+  draft: { label: "Rascunho", className: "bg-muted text-muted-foreground border-0" },
+  collecting_data: { label: "Coletando", className: "bg-amber-500/10 text-amber-500 border-0" },
+  analyzing: { label: "Analisando", className: "bg-info/10 text-info border-0" },
+  agents_running: { label: "Agentes IA", className: "bg-info/10 text-info border-0" },
+  synthesizing: { label: "Sintetizando", className: "bg-info/10 text-info border-0" },
+  review: { label: "Em Revisão", className: "bg-amber-500/10 text-amber-500 border-0" },
+  approved: { label: "Aprovada", className: "bg-emerald-500/10 text-emerald-500 border-0" },
+  rejected: { label: "Reprovada", className: "bg-destructive/10 text-destructive border-0" },
+  published: { label: "Publicada", className: "bg-emerald-500/10 text-emerald-500 border-0" },
 };
 
 const TYPE_MAP: Record<string, string> = {
@@ -30,20 +30,6 @@ const TYPE_MAP: Record<string, string> = {
 export default function ProjectAnalyses() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  const { data: project } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId!)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!projectId,
-  });
 
   const { data: analyses, isLoading } = useQuery({
     queryKey: ["project-analyses", projectId],
@@ -64,14 +50,14 @@ export default function ProjectAnalyses() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Métricas Avançadas</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="page-title">Métricas Avançadas</h1>
+            <p className="page-subtitle">
               Métricas avançadas de inteligência competitiva do projeto.
             </p>
           </div>
-          <Button onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
+          <Button className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
             <Plus className="mr-2 h-4 w-4" />
-              Nova Análise
+            Nova Análise
           </Button>
         </div>
       </div>
@@ -81,30 +67,28 @@ export default function ProjectAnalyses() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : !analyses?.length ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center py-16">
-            <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">Nenhuma métrica criada</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Crie sua primeira métrica avançada para gerar insights estratégicos.
-            </p>
-            <Button className="mt-4" onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Métrica
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="gradient-card p-12 text-center">
+          <Search className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+          <p className="text-base font-medium text-foreground mb-1">Nenhuma métrica criada</p>
+          <p className="text-sm text-muted-foreground/70 mb-6 max-w-sm mx-auto">
+            Crie sua primeira métrica avançada para gerar insights estratégicos.
+          </p>
+          <Button className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Métrica
+          </Button>
+        </div>
       ) : (
         <div className="space-y-3">
           {analyses.map((a) => {
             const status = STATUS_MAP[a.status ?? "draft"] ?? STATUS_MAP.draft;
             return (
-              <Card
+              <div
                 key={a.id}
-                className="cursor-pointer transition-colors hover:bg-accent/50"
+                className="card-interactive"
                 onClick={() => navigate(`/projects/${projectId}/analyses/${a.id}`)}
               >
-                <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                       <Search className="h-5 w-5 text-primary" />
@@ -126,8 +110,8 @@ export default function ProjectAnalyses() {
                     </div>
                   </div>
                   <Badge className={status.className}>{status.label}</Badge>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>
