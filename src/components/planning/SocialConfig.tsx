@@ -69,7 +69,7 @@ export default function SocialConfig({ wizardData, setWizardData, projectId }: P
   const totalGenerated = totalPosts + extraPosts;
 
   const formatTotal = Object.values(wizardData.formatMix).reduce((a, b) => a + b, 0);
-  const colabTotal = wizardData.colabs.reduce((a, c) => a + c.percentage, 0);
+  
 
   const updateFormat = (format: string, value: number) => {
     setWizardData((d) => ({ ...d, formatMix: { ...d.formatMix, [format]: value } }));
@@ -234,49 +234,70 @@ export default function SocialConfig({ wizardData, setWizardData, projectId }: P
       {/* Colabs */}
       <Card>
         <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Colabs</Label>
-            <span className={`text-xs font-mono ${colabTotal === 100 ? "text-green-600" : "text-destructive"}`}>
-              Total: {colabTotal}% {colabTotal === 100 ? "✅" : ""}
-            </span>
-          </div>
-          <p className="text-[10px] text-muted-foreground -mt-1">
-            Adicione perfis de colaboradores para posts em parceria. Se não houver colabs, mantenha apenas a equipe interna.
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={wizardData.useColabs}
+              onCheckedChange={(v) => {
+                const enabled = !!v;
+                setWizardData((d) => ({
+                  ...d,
+                  useColabs: enabled,
+                  colabs: enabled ? (d.colabs.length === 0 ? [{ instagram: "", description: "", percentage: 0 }] : d.colabs) : [],
+                  colabPercentage: enabled ? d.colabPercentage : 0,
+                }));
+              }}
+            />
+            <span className="text-sm font-medium text-foreground">Incluir Colabs</span>
+          </label>
+          <p className="text-[10px] text-muted-foreground">
+            Ative se houver posts em parceria com colaboradores externos.
           </p>
-          {wizardData.colabs.map((c, idx) => (
-            <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Instagram</Label>
-                  <Input className="h-8 text-sm" value={c.instagram} onChange={(e) => updateColab(idx, "instagram", e.target.value)} placeholder="@usuario ou Equipe Interna" />
+
+          {wizardData.useColabs && (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground">% dos posts em colab</span>
+                  <span className="text-sm font-mono font-medium text-primary">{wizardData.colabPercentage}%</span>
                 </div>
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Descrição do Parceiro</Label>
-                  <Input className="h-8 text-sm" value={c.description} onChange={(e) => updateColab(idx, "description", e.target.value)} placeholder="Ex: Influenciador fitness" />
-                </div>
+                <Slider
+                  value={[wizardData.colabPercentage]}
+                  min={5}
+                  max={100}
+                  step={5}
+                  onValueChange={([v]) => setWizardData((d) => ({ ...d, colabPercentage: v }))}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  {wizardData.colabPercentage}% dos posts serão em colab · {100 - wizardData.colabPercentage}% equipe interna
+                </p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <Slider
-                    value={[c.percentage]}
-                    min={0}
-                    max={100}
-                    step={1}
-                    onValueChange={([v]) => updateColab(idx, "percentage", v)}
-                  />
+
+              {wizardData.colabs.map((c, idx) => (
+                <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Instagram</Label>
+                      <Input className="h-8 text-sm" value={c.instagram} onChange={(e) => updateColab(idx, "instagram", e.target.value)} placeholder="@usuario" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Descrição do Parceiro</Label>
+                      <Input className="h-8 text-sm" value={c.description} onChange={(e) => updateColab(idx, "description", e.target.value)} placeholder="Ex: Influenciador fitness" />
+                    </div>
+                  </div>
+                  {wizardData.colabs.length > 1 && (
+                    <div className="flex justify-end">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeColab(idx)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs font-mono w-10 text-right">{c.percentage}%</span>
-                {wizardData.colabs.length > 1 && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeColab(idx)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addColab}>
+                <Plus className="mr-1 h-3 w-3" /> Adicionar Colab
+              </Button>
             </div>
-          ))}
-          <Button variant="outline" size="sm" onClick={addColab}>
-            <Plus className="mr-1 h-3 w-3" /> Adicionar Colab
-          </Button>
+          )}
         </CardContent>
       </Card>
 
