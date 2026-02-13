@@ -80,7 +80,7 @@ export default function NewProject() {
             <Input
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="Ex: TechStore Q1 2025"
+              placeholder="Ex: Nome da Marca"
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
               autoFocus
             />
