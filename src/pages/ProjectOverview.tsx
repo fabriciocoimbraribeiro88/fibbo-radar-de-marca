@@ -10,7 +10,9 @@ import {
   BarChart3,
   Calendar,
   Database,
+  Gauge,
 } from "lucide-react";
+import { useLatestFibboScores } from "@/hooks/useFibboScores";
 
 export default function ProjectOverview() {
   const { id } = useParams<{ id: string }>();
@@ -54,11 +56,14 @@ export default function ProjectOverview() {
     enabled: !!id,
   });
 
+  const { data: fibboScores } = useLatestFibboScores(id);
+  const brandFibbo = fibboScores?.find((s) => s.entity_role === "brand");
+
   const statCards = [
     { label: "Entidades", value: stats?.entities ?? 0, icon: Users, path: "sources" },
     { label: "Posts Coletados", value: stats?.posts ?? 0, icon: Instagram, path: "dashboard" },
     { label: "Análises", value: stats?.analyses ?? 0, icon: BarChart3, path: "analyses" },
-    { label: "Perfis", value: stats?.profiles ?? 0, icon: Database, path: "sources" },
+    { label: "Fibbo Score", value: brandFibbo ? brandFibbo.total_score.toFixed(1) : "—", icon: Gauge, path: "fibbo-score" },
   ];
 
   if (isLoading) {

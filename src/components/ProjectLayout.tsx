@@ -11,6 +11,7 @@ import {
   CalendarDays,
   Target,
   FileText,
+  Gauge,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,6 +20,7 @@ const projectNav = [
   { title: "Contexto de Marca", path: "/brand", icon: Palette },
   { title: "Fontes de Dados", path: "/sources", icon: Database },
   { title: "Dashboard", path: "/dashboard", icon: BarChart3 },
+  { title: "Fibbo Score", path: "/fibbo-score", icon: Gauge },
   { title: "Métricas Avançadas", path: "/analyses", icon: Search },
   { title: "Planejamento", path: "/planning", icon: CalendarDays },
   { title: "OKRs", path: "/okrs", icon: Target },
