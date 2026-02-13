@@ -1,71 +1,136 @@
 
-# Corrigir Area de Selecao de Titulos do Planejamento
 
-## Problemas Identificados
+# Reestruturacao do FibboScore: Scores por Canal + Score Geral
 
-### 1. Titulos duplicados/faltando (Bug critico de pareamento)
-A funcao `groupIntoPairs()` agrupa items pelo campo `metadata.slot_index`. Porem, os dados no banco mostram que TODOS os items tem `slot_index: null`. Isso faz com que todos os items com `content_approach: "formula"` caiam no slot 0, criando um unico grupo gigante ao inves de pares A/B corretos.
+## Analise da Situacao Atual
 
-**Causa raiz**: A edge function `generate-planning-titles` gera items no formato `slots` com `slot_index`, mas quando a IA retorna o JSON com `slot_index: 0` para todos (ou o campo nao e preenchido corretamente), o front quebra.
+### O que existe hoje
+- **Tabela `fibbo_scores`**: sem coluna `channel` -- scores sao por entidade, sem distincao de canal
+- **Tabela `monitored_entities`**: sem coluna `platform` -- entidades sao tipadas como brand/competitor/inspiration, mas nao por rede social
+- **Dados reais**: apenas tabelas de Instagram (`instagram_posts`, `instagram_profiles`, `instagram_comments`) existem no banco
+- **Edge function**: calcula um score unico por entidade usando apenas dados Instagram
+- **UI**: `ProjectFibboScore.tsx` exibe score unico com graficos comparativos
+- **Hook**: `useFibboScores.ts` busca da tabela `fibbo_scores`
 
-**Solucao**: Reescrever `groupIntoPairs()` para usar uma estrategia de fallback mais robusta:
-- Se `slot_index` estiver presente e valido, usar ele
-- Senao, agrupar items por `scheduled_date + scheduled_time + format` (pois ambas opcoes A/B compartilham mesma data/hora/formato)
-- Se ainda nao parear, usar agrupamento sequencial (2 a 2, ordenados por data)
+### Limitacao importante
+O sistema atualmente so tem dados de Instagram. TikTok, YouTube, LinkedIn, Twitter e Facebook nao possuem tabelas de dados. A arquitetura sera preparada para multi-canal, mas inicialmente **apenas o canal Instagram produzira scores reais**. Os demais canais serao ativados quando suas respectivas tabelas de dados forem criadas.
 
-### 2. Edicao nao funciona corretamente
-O `saveEdit()` depende de encontrar o "par" correto para rejeitar o sibling. Com o pareamento quebrado, o sibling nao e encontrado ou o item errado e rejeitado.
+---
 
-**Solucao**: Corrigir junto com o fix de pareamento. Alem disso, melhorar o dialog de edicao para ser mais completo.
+## Plano de Implementacao
 
-### 3. Edge function sem slot_index
-A edge function `generate-planning-titles` depende da IA retornar `slot_index` no JSON. Quando a IA nao retorna ou retorna incorretamente, os items ficam sem `slot_index`.
+### FASE 1: Migracao de banco de dados
 
-**Solucao**: Forcar `slot_index` no backend usando o indice do loop, nao o valor da IA.
+Adicionar coluna `channel` na tabela `fibbo_scores` para suportar scores por canal:
 
-## Mudancas Tecnicas
+```sql
+-- Adicionar coluna channel (nullable para retrocompatibilidade)
+ALTER TABLE fibbo_scores ADD COLUMN channel text DEFAULT 'instagram';
 
-### Arquivo 1: `src/components/planning/TitlesReview.tsx`
+-- Atualizar registros existentes
+UPDATE fibbo_scores SET channel = 'instagram' WHERE channel IS NULL;
 
-1. **Reescrever `groupIntoPairs()`**:
-   - Primeiro tenta agrupar por `slot_index` (se presente e unico)
-   - Fallback: agrupa por chave composta `scheduled_date|scheduled_time|format`
-   - Fallback final: agrupa sequencialmente de 2 em 2 por data
-   - Garantir que cada grupo tenha no maximo 2 items
-
-2. **Corrigir `selectOption()`**: 
-   - Garantir que apenas o sibling direto do par seja rejeitado
-   - Usar `queryClient.invalidateQueries` com `await` para evitar race conditions
-
-3. **Corrigir `saveEdit()`**:
-   - Mesma logica de busca do par corrigida
-
-4. **Melhorar contagem de selecionados**: 
-   - Contar corretamente mesmo quando pareamento nao e perfeito (items impares)
-
-5. **Corrigir `handleGenerateBriefings()`**:
-   - Filtrar items aprovados corretamente independente do pareamento
-
-### Arquivo 2: `supabase/functions/generate-planning-titles/index.ts`
-
-1. **Forcar `slot_index` no backend** (linhas 668-701):
-   - Usar o indice do loop `for` ao inves de confiar no `slot.slot_index` da IA
-   - Garantir que cada par A/B receba o mesmo `slot_index` incrementado sequencialmente
-
-```text
-Antes:  const slotIdx = regenerate_slot ?? slot.slot_index ?? 0;
-Depois: const slotIdx = regenerate_slot ?? loopIndex;  // loopIndex do for
+-- Remover o unique constraint antigo e criar novo incluindo channel
+-- (precisa verificar se existe constraint de upsert)
+ALTER TABLE fibbo_scores DROP CONSTRAINT IF EXISTS fibbo_scores_project_id_entity_id_score_date_key;
+ALTER TABLE fibbo_scores ADD CONSTRAINT fibbo_scores_project_entity_date_channel_key 
+  UNIQUE (project_id, entity_id, score_date, channel);
 ```
 
-### Arquivo 3: `src/components/planning/BriefingsReview.tsx`
+### FASE 2: Criar arquivo de tipos e configuracao compartilhada
 
-1. **Corrigir hashtags input**: O campo de hashtags nao salva ao editar (falta `onBlur` handler)
-2. **Corrigir slides edit**: As laminas do carrossel nao salvam edicoes (Input sem `onBlur`)
+**Novo arquivo**: `src/lib/fibboScoreConfig.ts`
 
-## Resultado Esperado
+Contera:
+- Type `SocialChannel` = 'instagram' | 'tiktok' | 'youtube' | 'linkedin' | 'twitter' | 'facebook'
+- Interface `ChannelThresholds` com os thresholds por dimensao (presenca, engajamento, conteudo, competitividade)
+- `CHANNEL_DEFAULTS` com todos os benchmarks calibrados por rede social (conforme definidos no prompt)
+- Interface `FibboScoreConfig` com channels + weights
+- `FIBBO_CONFIG_DEFAULTS` usando os defaults
+- Funcao helper `classifyScore(score)` retornando "Excelente"/"Forte"/"Mediano"/"Em desenvolvimento"/"Critico"
+- Funcao `getChannelLabel(channel)` e `getChannelIcon(channel)` para UI
 
-- Posts aparecem corretamente em pares A/B, mesmo para dados antigos sem `slot_index`
-- Selecionar uma opcao marca a outra como rejeitada corretamente
-- Editar um titulo salva e seleciona corretamente
-- Novos calendarios gerados terao `slot_index` correto desde o inicio
-- Campos de hashtags e laminas salvam edicoes no BriefingsReview
+### FASE 3: Atualizar Edge Function `calculate-fibbo-score`
+
+**Arquivo**: `supabase/functions/calculate-fibbo-score/index.ts`
+
+Mudancas:
+1. Importar/replicar os `CHANNEL_DEFAULTS` e tipos (edge functions nao podem importar de `src/`)
+2. Ler `fibbo_config` do campo `briefing` do projeto, fazer deep merge com defaults
+3. Para cada entidade, detectar canal (por ora, sempre `instagram` ja que so existe dados IG)
+4. Aplicar thresholds do canal especifico nos calculos de cada dimensao
+5. Substituir magic numbers por valores do `ChannelThresholds`:
+   - Presenca: `followerGrowthMaxPct`, `postsPerWeekMax`, `reachRateMaxPct` 
+   - Engajamento: `engagementRateMaxPct`, `commentRateMaxPct`, `saveRateMaxPct`
+   - Conteudo: `consistencyRatioThresholds`, `hashtagLiftThresholdPct`
+   - Competitividade: `engRatioMin`, `engRatioMax`
+6. Incluir `channel` no upsert de cada score
+7. Apos calcular todos os scores por canal, gerar um registro `channel = 'general'` com a media ponderada
+8. Gravar `metrics_snapshot` com breakdown detalhado de cada sub-score
+
+### FASE 4: Atualizar hook `useFibboScores.ts`
+
+**Arquivo**: `src/hooks/useFibboScores.ts`
+
+Mudancas:
+1. Adicionar `channel` ao tipo `FibboScore` e `FibboScoreWithEntity`
+2. `useLatestFibboScores` agora agrupa por `entity_id + channel` em vez de so `entity_id`
+3. Novo helper `useLatestChannelScores(projectId)` que retorna scores agrupados por canal
+4. Expor `generalScore` (o registro com `channel = 'general'`) separado dos canal-especificos
+
+### FASE 5: Criar componente de config admin
+
+**Novo arquivo**: `src/components/fibbo-score/FibboScoreAdmin.tsx`
+
+Componente dialog com:
+- Abas por canal ativo
+- Slider de sensibilidade (5 niveis: Rigoroso 0.6x a Muito Generoso 1.6x) que multiplica os thresholds
+- Secao de pesos dos canais (sliders 0-200%)
+- Preview em tempo real do score
+- Botoes "Salvar", "Restaurar Padrao"
+- Presets globais (Rigoroso/Equilibrado/Generoso) que aplicam a todos os canais
+- Caps de seguranca (engagement max 15%, reach max 30%, posts/semana max 14)
+- Persistencia via `projects.briefing.fibbo_config` com merge strategy
+
+### FASE 6: Reescrever UI `ProjectFibboScore.tsx`
+
+**Arquivo**: `src/pages/ProjectFibboScore.tsx`
+
+Nova estrutura visual:
+1. **Score Geral** destacado no topo (numero grande + classificacao "Forte"/"Mediano"/etc)
+2. **Abas por canal** usando `Tabs` do shadcn -- cada aba mostra:
+   - Score total do canal (0-100)
+   - 4 barras de dimensao (Presenca, Engajamento, Conteudo, Competitividade)
+   - Breakdown detalhado de cada sub-score
+   - Metricas snapshot do canal
+3. **Botao de configuracao** (engrenagem) visivel apenas para owner/admin -- abre `FibboScoreAdmin`
+4. Radar comparativo agora por canal selecionado (brand vs concorrentes no canal)
+5. Evolucao temporal por canal
+6. Canais sem dados nao aparecem nas abas
+
+### FASE 7: Verificacao de permissao owner
+
+Para exibir o botao de config apenas para owner:
+- Buscar `project.created_by` e comparar com `auth.uid()`
+- Ou verificar role do usuario via `user_roles`
+
+---
+
+## Arquivos Afetados
+
+| Arquivo | Acao | Descricao |
+|---|---|---|
+| Migracao SQL | Criar | Adicionar coluna `channel` em `fibbo_scores` |
+| `src/lib/fibboScoreConfig.ts` | Criar | Tipos, thresholds por canal, defaults, helpers |
+| `supabase/functions/calculate-fibbo-score/index.ts` | Reescrever | Calculos parametrizados por canal, deep merge config, upsert com channel |
+| `src/hooks/useFibboScores.ts` | Modificar | Adicionar channel ao tipo, novo hook por canal |
+| `src/components/fibbo-score/FibboScoreAdmin.tsx` | Criar | Painel admin com sliders por canal e pesos |
+| `src/pages/ProjectFibboScore.tsx` | Reescrever | Score geral + abas por canal + botao config |
+
+## Riscos e Mitigacoes
+
+- **Dados so de Instagram**: A arquitetura suporta multi-canal mas so Instagram tera scores inicialmente. A UI mostrara apenas canais com dados.
+- **Retrocompatibilidade**: Registros existentes em `fibbo_scores` serao marcados como `channel = 'instagram'` pela migracao.
+- **Duplicacao de logica edge function vs frontend**: Os thresholds defaults serao duplicados na edge function (necessario pois ela nao importa de `src/`). Manter sincronizados manualmente.
+- **Race condition no briefing**: O save da config lera o briefing atual antes de gravar, fazendo merge.
+
