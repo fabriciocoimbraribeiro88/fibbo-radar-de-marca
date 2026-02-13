@@ -71,7 +71,7 @@ export default function NewAnalysis() {
       setPeriodStart(start);
       setPeriodEnd(end);
     }
-  }, []);
+  }, [periodPreset]);
 
   // Reset sections when channel/type changes
   useEffect(() => {
