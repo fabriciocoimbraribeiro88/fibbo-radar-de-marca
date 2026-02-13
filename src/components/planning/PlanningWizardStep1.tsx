@@ -84,7 +84,7 @@ export default function PlanningWizardStep1({ projectId, wizardData, setWizardDa
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {a.period_start && `${new Date(a.period_start).toLocaleDateString("pt-BR")} – ${new Date(a.period_end!).toLocaleDateString("pt-BR")}`}
+                    {a.period_start && `${new Date(a.period_start).toLocaleDateString("pt-BR")}${a.period_end ? ` – ${new Date(a.period_end).toLocaleDateString("pt-BR")}` : ""}`}
                     {` · ${a.status === "approved" ? "Aprovada" : "Em revisão"}`}
                   </p>
                 </div>
