@@ -6,17 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Target, Palette, Package, ImageIcon, Brain, FileText, LayoutGrid } from "lucide-react";
+import { Target, Package, Brain, FileText, LayoutGrid } from "lucide-react";
 import BrandContextSources from "@/components/brand-context/BrandContextSources";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
-import ContentPillars from "@/components/brand-context/ContentPillars";
 import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
 import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
-import BrandBook from "@/components/brand-context/BrandBook";
 import ProductsCatalog from "@/components/brand-context/ProductsCatalog";
-import BrandReferences from "@/components/brand-context/BrandReferences";
 import StrategicMemory from "@/components/brand-context/StrategicMemory";
-import TensionTerritories from "@/components/brand-context/TensionTerritories";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -69,7 +65,6 @@ export default function ProjectBrand() {
   const tabs = [
     { value: "identity", label: "Identidade", icon: Target },
     { value: "content", label: "Conteúdo", icon: LayoutGrid },
-    { value: "brandbook", label: "Brand Book", icon: Palette },
     { value: "products", label: "Produtos", icon: Package },
     { value: "memory", label: "Memória", icon: Brain },
     { value: "sources", label: "Fontes", icon: FileText },
@@ -99,15 +94,8 @@ export default function ProjectBrand() {
         </TabsContent>
 
         <TabsContent value="content" className="space-y-6">
-          <ContentPillars projectId={id!} briefing={project?.briefing} />
-          <TensionTerritories projectId={id!} briefing={project?.briefing} />
           <HashtagStrategy projectId={id!} briefing={project?.briefing} />
           <SeasonalCalendar projectId={id!} briefing={project?.briefing} segment={project?.segment} />
-          <BrandReferences projectId={id!} briefing={project?.briefing} />
-        </TabsContent>
-
-        <TabsContent value="brandbook">
-          <BrandBook projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
         <TabsContent value="products">
