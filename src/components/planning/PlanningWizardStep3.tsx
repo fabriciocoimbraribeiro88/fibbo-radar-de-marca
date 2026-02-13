@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,7 +78,6 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      // 1. Create planning_calendar
       const { data: calendar, error: calErr } = await supabase
         .from("planning_calendars")
         .insert({
@@ -95,7 +93,14 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
         .single();
       if (calErr) throw calErr;
 
-      // 2. Call edge function
+      // Map colabs to responsibles format for backward compat with edge function
+      const responsibles = wizardData.colabs.map((c, i) => ({
+        name: c.instagram,
+        code: c.instagram.replace("@", "").slice(0, 4).toUpperCase() || `C${i}`,
+        handle: c.instagram.startsWith("@") ? c.instagram : null,
+        percentage: c.percentage,
+      }));
+
       const { data: fnData, error: fnErr } = await supabase.functions.invoke("generate-planning-titles", {
         body: {
           calendar_id: calendar.id,
@@ -108,14 +113,12 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
             posts_per_week: wizardData.postsPerWeek,
             extra_percentage: 25,
             format_mix: wizardData.formatMix,
-            responsibles: wizardData.responsibles,
+            responsibles,
             preferred_times: wizardData.usePreferredTimes ? wizardData.preferredTimes : null,
             context_includes: wizardData.contextIncludes,
             special_instructions: wizardData.specialInstructions,
-            content_approach: wizardData.contentApproach,
-            selected_lenses: wizardData.selectedLenses,
-            provocation_level: wizardData.provocationLevel,
-            category_mix: wizardData.categoryMix,
+            content_approach: "formula",
+            formula_config: { enabled: true },
           },
         },
       });
@@ -159,27 +162,12 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
             {period.start && (
               <div className="flex justify-between"><span className="text-muted-foreground">Período</span><span className="font-medium">{new Date(period.start).toLocaleDateString("pt-BR")} — {new Date(period.end).toLocaleDateString("pt-BR")}</span></div>
             )}
-             {wizardData.channel === "social" && (
+            {wizardData.channel === "social" && (
               <>
-                <div className="flex justify-between"><span className="text-muted-foreground">Abordagem</span><span className="font-medium">{wizardData.contentApproach === "theses" ? "⚡ Teses Narrativas" : "📋 Pilares Tradicionais"}</span></div>
-                {wizardData.contentApproach === "theses" && (
-                  <>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Lentes</span><span className="font-medium text-right">{wizardData.selectedLenses.join(" · ")}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Provocação</span><span className="font-medium">Nível {wizardData.provocationLevel}/5</span></div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Categorias</span>
-                      <span className="font-medium text-right">
-                        {Object.entries(wizardData.categoryMix).filter(([, v]) => v > 0).map(([k, v]) => {
-                          const labels: Record<string, string> = { thesis: "Teses", best_practice: "Cases", seasonal: "Sazonal", connection: "Conexão" };
-                          return `${labels[k] ?? k} ${v}%`;
-                        }).join(" · ")}
-                      </span>
-                    </div>
-                  </>
-                )}
-                <div className="flex justify-between"><span className="text-muted-foreground">Posts</span><span className="font-medium">{totalPosts} planejados + {extraPosts} extras = {totalGenerated} títulos serão gerados</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Abordagem</span><span className="font-medium">✨ F.O.R.M.U.L.A.™</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Posts</span><span className="font-medium">{totalPosts} planejados + {extraPosts} extras = {totalGenerated} títulos</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Mix</span><span className="font-medium">{Object.entries(wizardData.formatMix).filter(([, v]) => v > 0).map(([k, v]) => `${k} ${v}%`).join(" · ")}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Responsáveis</span><span className="font-medium">{wizardData.responsibles.map((r) => `${r.code} ${r.percentage}%`).join(" · ")}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Colabs</span><span className="font-medium">{wizardData.colabs.map((c) => `${c.instagram} ${c.percentage}%`).join(" · ")}</span></div>
               </>
             )}
             <div className="flex justify-between">

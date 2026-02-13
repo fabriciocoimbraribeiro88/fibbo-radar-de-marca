@@ -15,12 +15,10 @@ const CHANNELS: { value: Channel; label: string; icon: typeof Instagram; emoji: 
 
 const CONTEXT_OPTIONS = [
   { key: "identity", label: "Identidade da Marca" },
-  { key: "pillars", label: "Pilares de Conteúdo" },
   { key: "hashtags", label: "Estratégia de Hashtags" },
   { key: "seasonal", label: "Calendário Sazonal" },
   { key: "products", label: "Produtos" },
   { key: "memory", label: "Memória Estratégica" },
-  { key: "references", label: "Referências" },
 ];
 
 interface Props {

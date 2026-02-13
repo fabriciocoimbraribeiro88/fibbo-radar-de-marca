@@ -21,6 +21,13 @@ export type PlanningPhase =
 
 export type Channel = "social" | "ads" | "seo";
 
+export interface Colab {
+  instagram: string;
+  description: string;
+  percentage: number;
+}
+
+/** @deprecated kept for backward compat with edge functions that reference responsible */
 export interface Responsible {
   name: string;
   code: string;
@@ -38,15 +45,10 @@ export interface WizardData {
   periodEnd: string;
   postsPerWeek: number;
   formatMix: Record<string, number>;
-  responsibles: Responsible[];
+  colabs: Colab[];
   preferredTimes: { weekday: string[]; weekend: string[] };
   usePreferredTimes: boolean;
   specialInstructions: string;
-  // Theses approach
-  contentApproach: "theses" | "pillars";
-  selectedLenses: string[];
-  provocationLevel: number;
-  categoryMix: Record<string, number>;
   // Ads config
   adsPlatforms: string[];
   adsBudget: number;
@@ -67,20 +69,16 @@ export interface WizardData {
 const defaultWizardData: WizardData = {
   analysisId: "",
   channel: "social",
-  contextIncludes: ["identity", "pillars", "hashtags", "seasonal", "products", "memory", "references"],
+  contextIncludes: ["identity", "hashtags", "seasonal", "products", "memory"],
   periodPreset: "next_month",
   periodStart: "",
   periodEnd: "",
   postsPerWeek: 3,
   formatMix: { Reels: 40, Carrossel: 30, Estático: 20, Stories: 10 },
-  responsibles: [{ name: "Equipe Interna", code: "INT", handle: null, percentage: 100 }],
+  colabs: [{ instagram: "Equipe Interna", description: "", percentage: 100 }],
   preferredTimes: { weekday: ["09:00", "12:00", "18:00"], weekend: ["11:00"] },
   usePreferredTimes: false,
   specialInstructions: "",
-  contentApproach: "theses",
-  selectedLenses: ["Sociológica", "Psicológica", "Econômica", "Tecnológica", "Contraintuitiva", "Histórica/Futurista"],
-  provocationLevel: 3,
-  categoryMix: { thesis: 40, best_practice: 25, seasonal: 15, connection: 20 },
   adsPlatforms: ["Meta"],
   adsBudget: 5000,
   adsPlatformDistribution: { Meta: 100 },
