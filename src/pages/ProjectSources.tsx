@@ -57,6 +57,7 @@ import {
   ExternalLink,
   Upload,
   FileJson,
+  RefreshCw,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { FetchProgressBar } from "@/components/FetchProgressBar";
@@ -239,19 +240,55 @@ export default function ProjectSources() {
   };
 
   // Edit dialog state
-  const [editDialog, setEditDialog] = useState<{ entityId: string; name: string; handle: string; website: string } | null>(null);
+  const [editDialog, setEditDialog] = useState<{
+    entityId: string;
+    peId: string;
+    name: string;
+    handle: string;
+    website: string;
+    type: EntityType;
+    adPlatforms: string[];
+    adUrls: Record<string, string>;
+  } | null>(null);
 
   const editEntity = useMutation({
-    mutationFn: async (data: { entityId: string; name: string; handle: string; website: string }) => {
+    mutationFn: async (data: {
+      entityId: string;
+      peId: string;
+      name: string;
+      handle: string;
+      website: string;
+      type: EntityType;
+      adPlatforms: string[];
+      adUrls: Record<string, string>;
+    }) => {
+      const metadata = data.adPlatforms.length > 0
+        ? {
+            ad_platforms: data.adPlatforms,
+            ad_library_urls: Object.fromEntries(
+              data.adPlatforms.filter((p) => data.adUrls[p]?.trim()).map((p) => [p, data.adUrls[p].trim()])
+            ),
+          }
+        : null;
+
       const { error } = await supabase
         .from("monitored_entities")
         .update({
           name: data.name,
           instagram_handle: data.handle || null,
           website_url: data.website || null,
+          type: data.type,
+          metadata: metadata as any,
         })
         .eq("id", data.entityId);
       if (error) throw error;
+
+      // Update the entity role in project_entities if type changed
+      const { error: peError } = await supabase
+        .from("project_entities")
+        .update({ entity_role: data.type })
+        .eq("id", data.peId);
+      if (peError) throw peError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-entities", projectId] });
@@ -815,13 +852,36 @@ export default function ProjectSources() {
                               variant="ghost"
                               size="sm"
                               className="rounded-full h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                              title="Atualizar dados"
                               onClick={(ev) => {
                                 ev.stopPropagation();
+                                queryClient.invalidateQueries({ queryKey: ["entity-data-summary"] });
+                                queryClient.invalidateQueries({ queryKey: ["data-fetch-configs"] });
+                                queryClient.invalidateQueries({ queryKey: ["data-fetch-logs"] });
+                                queryClient.invalidateQueries({ queryKey: ["project-entities", projectId] });
+                                queryClient.invalidateQueries({ queryKey: ["project-dashboard-full"] });
+                                toast({ title: "Dados atualizados", description: "Todas as informações foram recarregadas." });
+                              }}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-full h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                const meta = e.metadata as any;
                                 setEditDialog({
                                   entityId: e.id,
+                                  peId: pe.id,
                                   name: e.name,
                                   handle: e.instagram_handle ?? "",
                                   website: e.website_url ?? "",
+                                  type: pe.entity_role as EntityType,
+                                  adPlatforms: meta?.ad_platforms ?? [],
+                                  adUrls: meta?.ad_library_urls ?? {},
                                 });
                               }}
                             >
@@ -1077,46 +1137,131 @@ export default function ProjectSources() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit entity dialog */}
       <Dialog open={!!editDialog} onOpenChange={(open) => !open && setEditDialog(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Fonte</DialogTitle>
           </DialogHeader>
           {editDialog && (
-            <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Nome</Label>
-                <Input
-                  value={editDialog.name}
-                  onChange={(e) => setEditDialog((d) => d ? { ...d, name: e.target.value } : null)}
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Instagram</Label>
-                <div className="relative">
-                  <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="space-y-6 pt-2">
+              {/* Type selector — only for non-brand */}
+              {editDialog.type !== "brand" && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Classificação</Label>
+                  <div className="flex gap-2">
+                    {TYPE_CONFIG.filter(t => t.value !== "brand").map((t) => (
+                      <button
+                        key={t.value}
+                        onClick={() => setEditDialog((d) => d ? { ...d, type: t.value as EntityType } : null)}
+                        className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition-all ${
+                          editDialog.type === t.value
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-muted text-muted-foreground hover:bg-accent"
+                        }`}
+                      >
+                        <t.icon className="h-3.5 w-3.5" />
+                        {t.singular}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Basic info */}
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Nome</Label>
                   <Input
-                    value={editDialog.handle}
-                    onChange={(e) => setEditDialog((d) => d ? { ...d, handle: e.target.value } : null)}
-                    placeholder="@handle"
-                    className="h-11 pl-10"
+                    value={editDialog.name}
+                    onChange={(e) => setEditDialog((d) => d ? { ...d, name: e.target.value } : null)}
+                    className="h-11"
                   />
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Website</Label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={editDialog.website}
-                    onChange={(e) => setEditDialog((d) => d ? { ...d, website: e.target.value } : null)}
-                    placeholder="https://"
-                    className="h-11 pl-10"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Instagram</Label>
+                    <div className="relative">
+                      <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={editDialog.handle}
+                        onChange={(e) => setEditDialog((d) => d ? { ...d, handle: e.target.value } : null)}
+                        placeholder="@handle"
+                        className="h-11 pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Website</Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={editDialog.website}
+                        onChange={(e) => setEditDialog((d) => d ? { ...d, website: e.target.value } : null)}
+                        placeholder="https://"
+                        className="h-11 pl-10"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Ad platforms */}
+              <div className="space-y-3">
+                <Label className="text-xs text-muted-foreground">Bibliotecas de Anúncios</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {AD_PLATFORMS.map((p) => {
+                    const selected = editDialog.adPlatforms.includes(p.value);
+                    return (
+                      <button
+                        key={p.value}
+                        onClick={() =>
+                          setEditDialog((d) => {
+                            if (!d) return null;
+                            const newPlatforms = selected
+                              ? d.adPlatforms.filter((v) => v !== p.value)
+                              : [...d.adPlatforms, p.value];
+                            return { ...d, adPlatforms: newPlatforms };
+                          })
+                        }
+                        className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all border ${
+                          selected
+                            ? "border-primary/30 bg-primary/5 text-foreground"
+                            : "border-border bg-background text-muted-foreground hover:border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        <Megaphone className="h-3.5 w-3.5 shrink-0" />
+                        {p.label}
+                        {selected && <CheckCircle2 className="h-3.5 w-3.5 text-primary ml-auto" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {editDialog.adPlatforms.length > 0 && (
+                  <div className="space-y-3 pt-1">
+                    {editDialog.adPlatforms.map((p) => {
+                      const platform = AD_PLATFORMS.find((a) => a.value === p);
+                      return (
+                        <div key={p} className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">{platform?.label} — URL da biblioteca</Label>
+                          <Input
+                            value={editDialog.adUrls[p] ?? ""}
+                            onChange={(e) =>
+                              setEditDialog((d) => d ? { ...d, adUrls: { ...d.adUrls, [p]: e.target.value } } : null)
+                            }
+                            placeholder={platform?.placeholder}
+                            className="text-xs h-9"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <Button
                 className="w-full h-11 rounded-xl"
                 onClick={() => editDialog && editEntity.mutate(editDialog)}
