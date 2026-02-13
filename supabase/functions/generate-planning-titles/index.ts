@@ -309,7 +309,12 @@ ${ctasByObjective || "   (não definidos — gere CTAs específicos por objetivo
 ${varietyRulesText}
 Responda em JSON.`;
 
-      userPrompt = `Gere um calendário de ${totalWithExtra} posts usando a Metodologia F.O.R.M.U.L.A.™ para Instagram.
+      userPrompt = `Gere um calendário de ${totalBase} posts usando a Metodologia F.O.R.M.U.L.A.™ para Instagram.
+Para CADA post, crie DUAS alternativas (option_a e option_b). Ambas devem:
+- Manter o MESMO formato, data, horário, objetivo e content_type
+- Ter TÍTULOS DIFERENTES com ângulos/abordagens criativas distintas
+- Usar frames e/ou métodos diferentes entre si quando possível
+O usuário vai escolher a opção preferida de cada par.
 
 PERÍODO: ${period_start} a ${period_end} (${weeks} semanas)
 MARCA: ${brandName}
@@ -318,9 +323,6 @@ ${pillarContext}
 
 DISTRIBUIÇÃO DE FORMATOS:
 ${Object.entries(format_mix ?? {}).map(([k, v]) => `- ${k}: ${v}%`).join("\n")}
-
-RESPONSÁVEIS:
-${(responsibles ?? []).map((r: any) => `- ${r.name} (${r.code}): ${r.percentage}%`).join("\n")}
 
 ${preferred_times ? `HORÁRIOS PREFERENCIAIS:\n- Dias úteis: ${preferred_times.weekday?.join(", ")}\n- Fins de semana: ${preferred_times.weekend?.join(", ")}` : ""}
 
@@ -347,28 +349,42 @@ ${inspirationAnalysis ? `─── ANÁLISE DE INSPIRAÇÕES ───\n${inspir
 ${synthesisAnalysis ? `─── SÍNTESE ESTRATÉGICA ───\n${synthesisAnalysis.slice(0, 3000)}` : ""}
 
 REGRAS:
-1. content_type = NOME COMPLETO do pilar relacionado
-2. Cada post DEVE preencher TODOS os 7 filtros F.O.R.M.U.L.A.™
-3. Respeitar distribuição de formatos e responsáveis
-4. Variar frames e métodos ao longo da semana
+1. Gere exatamente ${totalBase} slots, cada um com option_a e option_b
+2. Cada opção DEVE preencher TODOS os 7 filtros F.O.R.M.U.L.A.™
+3. As duas opções do mesmo slot DEVEM ter títulos e abordagens DIFERENTES
+4. Respeitar distribuição de formatos
+5. Variar frames e métodos ao longo da semana
 
 Responda APENAS com JSON válido:
 {
-  "items": [
+  "slots": [
     {
+      "slot_index": 0,
       "scheduled_date": "YYYY-MM-DD",
       "scheduled_time": "HH:MM",
-      "content_type": "NOME COMPLETO DO PILAR",
+      "content_type": "tema ou pilar",
       "format": "Reels|Carrossel|Estático|Stories",
-      "responsible_code": "CODE",
-      "title": "Título com ângulo único e evidência",
-      "formula": {
-        "frame": "key do frame usado",
-        "objective": "key do objetivo",
-        "reference_type": "number|case|quote|comparison|screenshot",
-        "method": "key do método usado",
-        "uniqueness_element": "texto do elemento de singularidade usado",
-        "cta": "CTA específico"
+      "option_a": {
+        "title": "Título com ângulo A",
+        "formula": {
+          "frame": "key",
+          "objective": "key",
+          "reference_type": "number|case|quote|comparison|screenshot",
+          "method": "key",
+          "uniqueness_element": "texto",
+          "cta": "CTA específico"
+        }
+      },
+      "option_b": {
+        "title": "Título com ângulo B diferente",
+        "formula": {
+          "frame": "key diferente se possível",
+          "objective": "mesmo objetivo do slot",
+          "reference_type": "number|case|quote|comparison|screenshot",
+          "method": "key diferente se possível",
+          "uniqueness_element": "texto",
+          "cta": "CTA específico"
+        }
       }
     }
   ]
@@ -608,65 +624,101 @@ Responda APENAS com JSON válido:
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("IA não retornou JSON válido");
     const parsed = JSON.parse(jsonMatch[0]);
-    const generatedItems = parsed.items ?? [];
 
     const isTheses = contentApproach === "theses";
-
-    // Insert items into planning_items
-    // Each "slot" gets 2 options (A/B) for user selection
-    const slotStartIndex = regenerate_slot ?? 0;
     const colabs = parameters.colabs ?? [];
     const colabPercentage = parameters.colab_percentage ?? 0;
     const useColabs = colabs.length > 0 && colabPercentage > 0;
 
-    for (let i = 0; i < generatedItems.length; i++) {
-      const item = generatedItems[i];
-      const slotIndex = regenerate_slot != null ? regenerate_slot : Math.floor(i / 2);
-      
-      // Determine if this slot is a colab based on percentage
-      const totalSlots = Math.ceil(generatedItems.length / 2);
+    let insertCount = 0;
+
+    // Handle new slots format (A/B pairs) — F.O.R.M.U.L.A.™ mode
+    if (parsed.slots && Array.isArray(parsed.slots)) {
+      const totalSlots = parsed.slots.length;
       const colabSlotCount = Math.round(totalSlots * (colabPercentage / 100));
-      const isColab = useColabs && slotIndex < colabSlotCount;
-      const colabHandle = isColab && colabs.length > 0
-        ? colabs[slotIndex % colabs.length]?.instagram ?? null
-        : null;
 
-      const metadata: any = {
-        responsible_code: item.responsible_code,
-        title_status: "pending",
-        slot_index: slotIndex,
-        is_colab: isColab,
-        colab_handle: colabHandle,
-      };
+      for (const slot of parsed.slots) {
+        const slotIdx = regenerate_slot ?? slot.slot_index ?? 0;
+        const isColab = useColabs && slotIdx < colabSlotCount;
+        const colabHandle = isColab && colabs.length > 0
+          ? colabs[slotIdx % colabs.length]?.instagram ?? null
+          : null;
 
-      // F.O.R.M.U.L.A.™ metadata
-      if (formulaEnabled) {
-        metadata.formula = item.formula ?? null;
-        metadata.content_approach = "formula";
+        for (const optionKey of ["option_a", "option_b"]) {
+          const option = slot[optionKey];
+          if (!option) continue;
+
+          const metadata: any = {
+            title_status: "pending",
+            slot_index: slotIdx,
+            is_colab: isColab,
+            colab_handle: colabHandle,
+            content_approach: "formula",
+            formula: option.formula ?? null,
+          };
+
+          await supabase.from("planning_items").insert({
+            calendar_id,
+            title: option.title,
+            scheduled_date: slot.scheduled_date || null,
+            scheduled_time: slot.scheduled_time || null,
+            content_type: slot.content_type || null,
+            format: slot.format || null,
+            channel: channel ?? "social",
+            status: "idea",
+            metadata,
+          });
+          insertCount++;
+        }
       }
-      // Theses metadata
-      else if (isTheses) {
-        metadata.category = item.category ?? "thesis";
-        metadata.territory = item.territory ?? null;
-        metadata.lens = item.lens ?? null;
-        metadata.thesis = item.thesis ?? null;
-        metadata.content_approach = "theses";
-      }
+    }
+    // Fallback: handle flat items array (legacy / theses / regeneration)
+    else {
+      const generatedItems = parsed.items ?? [];
+      for (let i = 0; i < generatedItems.length; i++) {
+        const item = generatedItems[i];
+        const slotIndex = regenerate_slot != null ? regenerate_slot : Math.floor(i / 2);
+        const totalSlots = Math.ceil(generatedItems.length / 2);
+        const colabSlotCount = Math.round(totalSlots * (colabPercentage / 100));
+        const isColab = useColabs && slotIndex < colabSlotCount;
+        const colabHandle = isColab && colabs.length > 0
+          ? colabs[slotIndex % colabs.length]?.instagram ?? null
+          : null;
 
-      await supabase.from("planning_items").insert({
-        calendar_id,
-        title: item.title,
-        scheduled_date: item.scheduled_date || null,
-        scheduled_time: item.scheduled_time || null,
-        content_type: item.content_type || null,
-        format: item.format || null,
-        channel: channel ?? "social",
-        status: "idea",
-        metadata,
-      });
+        const metadata: any = {
+          title_status: "pending",
+          slot_index: slotIndex,
+          is_colab: isColab,
+          colab_handle: colabHandle,
+        };
+
+        if (formulaEnabled) {
+          metadata.formula = item.formula ?? null;
+          metadata.content_approach = "formula";
+        } else if (isTheses) {
+          metadata.category = item.category ?? "thesis";
+          metadata.territory = item.territory ?? null;
+          metadata.lens = item.lens ?? null;
+          metadata.thesis = item.thesis ?? null;
+          metadata.content_approach = "theses";
+        }
+
+        await supabase.from("planning_items").insert({
+          calendar_id,
+          title: item.title,
+          scheduled_date: item.scheduled_date || null,
+          scheduled_time: item.scheduled_time || null,
+          content_type: item.content_type || null,
+          format: item.format || null,
+          channel: channel ?? "social",
+          status: "idea",
+          metadata,
+        });
+        insertCount++;
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, count: generatedItems.length }), {
+    return new Response(JSON.stringify({ success: true, count: insertCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
