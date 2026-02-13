@@ -41,13 +41,24 @@ interface PlanningItem {
 
 /** Group items into pairs (slot_index or sequential) */
 function groupIntoPairs(items: PlanningItem[]): { slotIndex: number; options: PlanningItem[] }[] {
+  // Separate formula items (with content_approach) from legacy items
+  const formulaItems = items.filter((i) => (i.metadata as any)?.content_approach);
+  const legacyItems = items.filter((i) => !(i.metadata as any)?.content_approach);
+
   const slots = new Map<number, PlanningItem[]>();
 
-  items.forEach((item, idx) => {
-    const slotIndex = (item.metadata as any)?.slot_index ?? Math.floor(idx / 2);
+  // Group formula items by slot_index
+  formulaItems.forEach((item) => {
+    const slotIndex = (item.metadata as any)?.slot_index ?? 0;
     if (!slots.has(slotIndex)) slots.set(slotIndex, []);
     slots.get(slotIndex)!.push(item);
   });
+
+  // Group legacy items sequentially in pairs
+  for (let i = 0; i < legacyItems.length; i += 2) {
+    const legacySlotIndex = 1000 + Math.floor(i / 2); // Use high slot index to avoid collisions
+    slots.set(legacySlotIndex, legacyItems.slice(i, i + 2));
+  }
 
   return Array.from(slots.entries())
     .sort(([a], [b]) => a - b)
