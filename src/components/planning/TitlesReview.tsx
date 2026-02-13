@@ -39,30 +39,57 @@ interface PlanningItem {
   [key: string]: any;
 }
 
-/** Group items into pairs (slot_index or sequential) */
+/** Group items into pairs with robust fallback strategy */
 function groupIntoPairs(items: PlanningItem[]): { slotIndex: number; options: PlanningItem[] }[] {
-  // Separate formula items (with content_approach) from legacy items
-  const formulaItems = items.filter((i) => (i.metadata as any)?.content_approach);
-  const legacyItems = items.filter((i) => !(i.metadata as any)?.content_approach);
+  if (items.length === 0) return [];
 
-  const slots = new Map<number, PlanningItem[]>();
+  // Strategy 1: Try slot_index if present and valid (not all null/0)
+  const slotValues = items.map((i) => (i.metadata as any)?.slot_index);
+  const hasValidSlotIndex = slotValues.some((v) => v != null && v !== 0) ||
+    (slotValues.every((v) => v === 0) && items.length <= 2);
+  const uniqueSlots = new Set(slotValues.filter((v) => v != null));
 
-  // Group formula items by slot_index
-  formulaItems.forEach((item) => {
-    const slotIndex = (item.metadata as any)?.slot_index ?? 0;
-    if (!slots.has(slotIndex)) slots.set(slotIndex, []);
-    slots.get(slotIndex)!.push(item);
-  });
-
-  // Group legacy items sequentially in pairs
-  for (let i = 0; i < legacyItems.length; i += 2) {
-    const legacySlotIndex = 1000 + Math.floor(i / 2); // Use high slot index to avoid collisions
-    slots.set(legacySlotIndex, legacyItems.slice(i, i + 2));
+  if (hasValidSlotIndex && uniqueSlots.size > 1) {
+    const slots = new Map<number, PlanningItem[]>();
+    items.forEach((item) => {
+      const idx = (item.metadata as any)?.slot_index ?? 0;
+      if (!slots.has(idx)) slots.set(idx, []);
+      slots.get(idx)!.push(item);
+    });
+    return Array.from(slots.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([slotIndex, options]) => ({ slotIndex, options: options.slice(0, 2) }));
   }
 
-  return Array.from(slots.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([slotIndex, options]) => ({ slotIndex, options }));
+  // Strategy 2: Group by composite key (date + time + format)
+  const compositeGroups = new Map<string, PlanningItem[]>();
+  items.forEach((item) => {
+    const key = `${item.scheduled_date ?? ""}|${item.scheduled_time ?? ""}|${item.format ?? ""}`;
+    if (!compositeGroups.has(key)) compositeGroups.set(key, []);
+    compositeGroups.get(key)!.push(item);
+  });
+
+  // Check if composite key produces valid pairs (most groups have exactly 2)
+  const groupSizes = Array.from(compositeGroups.values()).map((g) => g.length);
+  const hasPairs = groupSizes.filter((s) => s === 2).length >= groupSizes.length * 0.5;
+
+  if (hasPairs && compositeGroups.size > 1) {
+    let slotIdx = 0;
+    return Array.from(compositeGroups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, options]) => ({ slotIndex: slotIdx++, options: options.slice(0, 2) }));
+  }
+
+  // Strategy 3: Sequential pairing (2 by 2, sorted by date)
+  const sorted = [...items].sort((a, b) =>
+    (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "") ||
+    (a.scheduled_time ?? "").localeCompare(b.scheduled_time ?? "")
+  );
+  const result: { slotIndex: number; options: PlanningItem[] }[] = [];
+  for (let i = 0; i < sorted.length; i += 2) {
+    result.push({ slotIndex: Math.floor(i / 2), options: sorted.slice(i, i + 2) });
+  }
+  return result;
 }
 
 interface Props {
@@ -119,7 +146,7 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
       const metadata = { ...(option.metadata ?? {}), title_status: status };
       await supabase.from("planning_items").update({ metadata }).eq("id", option.id);
     }
-    queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
+    await queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
   };
 
   const rejectBoth = async (pair: { slotIndex: number; options: PlanningItem[] }) => {
@@ -179,7 +206,7 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
       metadata,
     }).eq("id", editingItem.id);
 
-    // Reject sibling
+    // Reject sibling — find the pair this item belongs to
     const pair = pairs.find((p) => p.options.some((o) => o.id === editingItem.id));
     if (pair) {
       for (const option of pair.options) {
@@ -191,7 +218,7 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
     }
 
     setEditingItem(null);
-    queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
+    await queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
   };
 
   const handleGenerateBriefings = async () => {

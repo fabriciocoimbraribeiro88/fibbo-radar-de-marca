@@ -266,7 +266,11 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
                       {slides.map((slide: any, si: number) => (
                         <div key={si}>
                           <Label className="text-[10px] text-muted-foreground">{slide.type === "cover" ? "Capa" : slide.type === "cta" ? "CTA" : `Lâmina ${si + 1}`}</Label>
-                          <Input className="h-8 text-sm" defaultValue={slide.text ?? ""} />
+                          <Input className="h-8 text-sm" defaultValue={slide.text ?? ""} onBlur={(e) => {
+                            const newSlides = [...(slides ?? [])];
+                            newSlides[si] = { ...newSlides[si], text: e.target.value };
+                            updateField(item.id, "slides", newSlides);
+                          }} />
                         </div>
                       ))}
                     </div>
@@ -293,7 +297,10 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground font-semibold">Hashtags</Label>
-                  <Input className="h-8 text-sm" defaultValue={item.hashtags?.join(" ") ?? ""} />
+                  <Input className="h-8 text-sm" defaultValue={item.hashtags?.join(" ") ?? ""} onBlur={(e) => {
+                    const tags = e.target.value.split(/\s+/).filter(Boolean);
+                    updateField(item.id, "hashtags", tags);
+                  }} />
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground font-semibold">Brief Visual / Referências</Label>

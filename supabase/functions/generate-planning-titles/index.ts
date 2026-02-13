@@ -665,8 +665,9 @@ Responda APENAS com JSON válido:
       const totalSlots = parsed.slots.length;
       const colabSlotCount = Math.round(totalSlots * (colabPercentage / 100));
 
-      for (const slot of parsed.slots) {
-        const slotIdx = regenerate_slot ?? slot.slot_index ?? 0;
+      for (let loopIndex = 0; loopIndex < parsed.slots.length; loopIndex++) {
+        const slot = parsed.slots[loopIndex];
+        const slotIdx = regenerate_slot ?? loopIndex;
         const isColab = useColabs && slotIdx < colabSlotCount;
         const colabHandle = isColab && colabs.length > 0
           ? colabs[slotIdx % colabs.length]?.instagram ?? null
