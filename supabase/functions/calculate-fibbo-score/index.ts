@@ -126,11 +126,13 @@ Deno.serve(async (req) => {
 
       // ── PRESENÇA (0-25) ──
       const followerGrowth = followers90d > 0 ? ((latestFollowers - followers90d) / followers90d) * 100 : 0;
-      const crescimentoScore = clamp(mapRange(followerGrowth, 0, 20, 0, 8), 0, 8);
+      // Recalibrado: 5% growth in 90d = max (era 20%)
+      const crescimentoScore = clamp(mapRange(followerGrowth, -2, 5, 0, 8), 0, 8);
 
       const weeks90d = 90 / 7;
       const postsPerWeek = posts90d.length / weeks90d;
-      const volumeScore = clamp(mapRange(postsPerWeek, 0, 5, 0, 5), 0, 5);
+      // 3 posts/week = max (era 5)
+      const volumeScore = clamp(mapRange(postsPerWeek, 0, 3, 0, 5), 0, 5);
 
       const weeklyPostCounts = getWeeklyDistribution(posts90d);
       const cvInverse = weeklyPostCounts.length > 1 ? 1 - coefficientOfVariation(weeklyPostCounts) : 0;
@@ -138,7 +140,8 @@ Deno.serve(async (req) => {
 
       const avgViews = posts90d.length > 0 ? avg(posts90d.map((p: any) => p.views_count ?? 0)) : 0;
       const viewsReach = latestFollowers > 0 ? avgViews / latestFollowers : 0;
-      const alcanceScore = clamp(mapRange(viewsReach, 0, 1.5, 0, 4), 0, 4);
+      // Recalibrado: 30% reach = max (era 150%). Para grandes contas, 10-25% é excelente.
+      const alcanceScore = clamp(mapRange(viewsReach, 0, 0.3, 0, 4), 0, 4);
 
       const seoScore = calculateSeoPresenceScore(seo);
 
@@ -149,25 +152,43 @@ Deno.serve(async (req) => {
       const avgComments = posts90d.length > 0 ? avg(posts90d.map((p: any) => p.comments_count ?? 0)) : 0;
       const avgSaves = posts90d.length > 0 ? avg(posts90d.map((p: any) => p.saves_count ?? 0)) : 0;
 
+      // Use logarithmic scaling for eng rate to handle accounts of all sizes
+      // 0.5% = decent, 1.5% = good, 3%+ = excellent
       const engRate = latestFollowers > 0 ? ((avgLikes + avgComments) / latestFollowers) * 100 : 0;
-      const taxaEngScore = clamp(mapRange(engRate, 0, 5, 0, 8), 0, 8);
+      const taxaEngScore = clamp(mapRange(engRate, 0, 3, 0, 10), 0, 10);
 
+      // Comment rate: 0.05% = decent, 0.2% = good for large accounts
       const commRate = latestFollowers > 0 ? (avgComments / latestFollowers) * 100 : 0;
-      const taxaCommScore = clamp(mapRange(commRate, 0, 1, 0, 5), 0, 5);
+      const taxaCommScore = clamp(mapRange(commRate, 0, 0.2, 0, 5), 0, 5);
 
-      const savesRate = latestFollowers > 0 ? (avgSaves / latestFollowers) * 100 : 0;
-      const taxaSavesScore = clamp(mapRange(savesRate, 0, 1, 0, 5), 0, 5);
+      // Saves: if data not available, give baseline score instead of penalizing
+      const hasSavesData = posts90d.some((p: any) => (p.saves_count ?? 0) > 0);
+      let taxaSavesScore: number;
+      if (!hasSavesData) {
+        // No saves data available — give neutral score (don't penalize)
+        taxaSavesScore = 2.5;
+      } else {
+        const savesRate = latestFollowers > 0 ? (avgSaves / latestFollowers) * 100 : 0;
+        taxaSavesScore = clamp(mapRange(savesRate, 0, 0.3, 0, 5), 0, 5);
+      }
 
       const analyzedComments = comments.filter((c: any) => c.sentiment_category);
       const positive = analyzedComments.filter((c: any) => c.sentiment_category === "positive").length;
       const neutral = analyzedComments.filter((c: any) => c.sentiment_category === "neutral").length;
       const sentimentRaw = analyzedComments.length > 0 ? (positive * 10 + neutral * 5) / analyzedComments.length : 5;
-      const sentimentScore = clamp(mapRange(sentimentRaw, 0, 10, 0, 4), 0, 4);
+      // If no sentiment data, give neutral baseline
+      const sentimentScore = analyzedComments.length > 0
+        ? clamp(mapRange(sentimentRaw, 0, 10, 0, 2), 0, 2)
+        : 1;
 
       const eng30d = posts30d.length > 0 ? avg(posts30d.map((p: any) => (p.likes_count ?? 0) + (p.comments_count ?? 0))) : 0;
       const eng30to60 = posts30to60.length > 0 ? avg(posts30to60.map((p: any) => (p.likes_count ?? 0) + (p.comments_count ?? 0))) : 0;
       const trend = eng30to60 > 0 ? (eng30d - eng30to60) / eng30to60 : 0;
-      const tendenciaScore = clamp(mapRange(trend, -0.3, 0.3, 0, 3), 0, 3);
+      // If no comparison data, give neutral
+      const hasTrendData = posts30d.length > 0 && posts30to60.length > 0;
+      const tendenciaScore = hasTrendData
+        ? clamp(mapRange(trend, -0.3, 0.3, 0, 2.5), 0, 2.5)
+        : 1.25;
 
       const engajamento_score = round2(taxaEngScore + taxaCommScore + taxaSavesScore + sentimentScore + tendenciaScore);
 
@@ -490,28 +511,30 @@ function calculateCompetitiveness(
   const brandEngRate = brandFollowers > 0 ? (brandAvgEng / brandFollowers) * 100 : 0;
   const brandTotalEng = brandPosts90d.reduce((s: number, p: any) => s + ((p.likes_count ?? 0) + (p.comments_count ?? 0)), 0);
 
-  // Engajamento relativo (0-8)
-  const engRatio = avgCompEngRate > 0 ? brandEngRate / avgCompEngRate : 1;
-  const engRelScore = clamp(mapRange(engRatio, 0.5, 2, 0, 8), 0, 8);
+      // Engajamento relativo (0-8) — recalibrado: ratio 0.8-1.5 (era 0.5-2)
+      const engRatio = avgCompEngRate > 0 ? brandEngRate / avgCompEngRate : 1;
+      const engRelScore = clamp(mapRange(engRatio, 0.3, 1.5, 0, 8), 0, 8);
 
-  // Crescimento relativo (0-6) - using volume as proxy
-  const volRatio = avgCompVolume > 0 ? brandPosts90d.length / avgCompVolume : 1;
-  const growthRelScore = clamp(mapRange(volRatio, 0.5, 2, 0, 6), 0, 6);
+      // Crescimento relativo (0-6) — recalibrado
+      const volRatio = avgCompVolume > 0 ? brandPosts90d.length / avgCompVolume : 1;
+      const growthRelScore = clamp(mapRange(volRatio, 0.3, 1.5, 0, 6), 0, 6);
 
-  // Volume relativo (0-4)
-  const postRatio = avgCompPosts > 0 ? brandPosts90d.length / avgCompPosts : 1;
-  const volumeRelScore = clamp(mapRange(postRatio, 0.5, 2, 0, 4), 0, 4);
+      // Volume relativo (0-4) — recalibrado
+      const postRatio = avgCompPosts > 0 ? brandPosts90d.length / avgCompPosts : 1;
+      const volumeRelScore = clamp(mapRange(postRatio, 0.3, 1.5, 0, 4), 0, 4);
 
-  // Share of engagement (0-4)
-  const totalEngAll = allTotalEng + brandTotalEng;
-  const shareOfEng = totalEngAll > 0 ? brandTotalEng / totalEngAll : 0.5;
-  const shareScore = clamp(mapRange(shareOfEng, 0, 0.5, 0, 4), 0, 4);
+      // Share of engagement (0-4)
+      const totalEngAll = allTotalEng + brandTotalEng;
+      const shareOfEng = totalEngAll > 0 ? brandTotalEng / totalEngAll : 0.5;
+      const expectedShare = 1 / (compMetrics.length + 1); // fair share
+      const shareRatio = expectedShare > 0 ? shareOfEng / expectedShare : 1;
+      const shareScore = clamp(mapRange(shareRatio, 0.3, 2, 0, 4), 0, 4);
 
-  // SEO relativo (0-3)
-  const brandAvgSeoPos = brandSeo.length > 0 ? avg(brandSeo.map((s: any) => s.position ?? 100)) : 100;
-  const avgCompSeoPos = avg(compMetrics.map((m) => m.avgSeoPos));
-  const seoRatio = avgCompSeoPos > 0 ? avgCompSeoPos / Math.max(brandAvgSeoPos, 1) : 1;
-  const seoRelScore = clamp(mapRange(seoRatio, 0.5, 2, 0, 3), 0, 3);
+      // SEO relativo (0-3)
+      const brandAvgSeoPos = brandSeo.length > 0 ? avg(brandSeo.map((s: any) => s.position ?? 100)) : 100;
+      const avgCompSeoPos = avg(compMetrics.map((m) => m.avgSeoPos));
+      const seoRatio = avgCompSeoPos > 0 ? avgCompSeoPos / Math.max(brandAvgSeoPos, 1) : 1;
+      const seoRelScore = clamp(mapRange(seoRatio, 0.5, 2, 0, 3), 0, 3);
 
   return engRelScore + growthRelScore + volumeRelScore + shareScore + seoRelScore;
 }
