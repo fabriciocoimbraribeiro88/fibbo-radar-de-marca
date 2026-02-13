@@ -7,20 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Check, X, Pencil, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X, Pencil, Loader2, RefreshCw, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DistributionTables from "./DistributionTables";
 import { getFrameLabel, getObjectiveLabel, getMethodLabel, getObjectiveAbbr } from "@/lib/formulaConstants";
 import type { WizardData } from "@/pages/ProjectPlanning";
-
-const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-const STATUS_EMOJI: Record<string, string> = { pending: "⏳", approved: "✅", rejected: "❌", edited: "✏️" };
 
 const OBJ_COLOR: Record<string, string> = {
   awareness: "text-blue-600",
@@ -31,6 +26,33 @@ const OBJ_COLOR: Record<string, string> = {
   product: "text-green-600",
   community: "text-violet-600",
 };
+
+interface PlanningItem {
+  id: string;
+  title: string;
+  format: string | null;
+  content_type: string | null;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  status: string | null;
+  metadata: any;
+  [key: string]: any;
+}
+
+/** Group items into pairs (slot_index or sequential) */
+function groupIntoPairs(items: PlanningItem[]): { slotIndex: number; options: PlanningItem[] }[] {
+  const slots = new Map<number, PlanningItem[]>();
+
+  items.forEach((item, idx) => {
+    const slotIndex = (item.metadata as any)?.slot_index ?? Math.floor(idx / 2);
+    if (!slots.has(slotIndex)) slots.set(slotIndex, []);
+    slots.get(slotIndex)!.push(item);
+  });
+
+  return Array.from(slots.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([slotIndex, options]) => ({ slotIndex, options }));
+}
 
 interface Props {
   projectId: string;
@@ -43,9 +65,10 @@ interface Props {
 export default function TitlesReview({ projectId, calendarId, wizardData, onBriefingsGenerated, onBack }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ title: "", scheduled_date: "", scheduled_time: "", content_type: "", format: "", responsible_code: "" });
+  const [editingItem, setEditingItem] = useState<PlanningItem | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", format: "" });
   const [generatingBriefings, setGeneratingBriefings] = useState(false);
+  const [regeneratingSlot, setRegeneratingSlot] = useState<number | null>(null);
 
   const { data: calendar } = useQuery({
     queryKey: ["planning-calendar", calendarId],
@@ -66,58 +89,82 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
         .neq("status", "cancelled")
         .order("scheduled_date", { ascending: true });
       if (error) throw error;
-      return data;
+      return data as PlanningItem[];
     },
   });
 
-  const hasFormulaItems = useMemo(() => items?.some((i) => (i.metadata as any)?.formula) ?? false, [items]);
+  const pairs = useMemo(() => groupIntoPairs(items ?? []), [items]);
 
-  const approvedCount = items?.filter((i) => i.status === "idea" && (i.metadata as any)?.title_status === "approved").length ?? 0;
-  const rejectedCount = items?.filter((i) => (i.metadata as any)?.title_status === "rejected").length ?? 0;
-  const pendingCount = items?.filter((i) => !(i.metadata as any)?.title_status || (i.metadata as any)?.title_status === "pending").length ?? 0;
-  const totalNeeded = Math.max(1, Math.round((items?.length ?? 0) / 1.25));
-  const canGenerateBriefings = approvedCount >= totalNeeded;
+  const totalSlots = pairs.length;
+  const selectedCount = pairs.filter((p) =>
+    p.options.some((o) => (o.metadata as any)?.title_status === "approved")
+  ).length;
+  const pendingCount = totalSlots - selectedCount;
+  const canGenerateBriefings = selectedCount === totalSlots && totalSlots > 0;
 
-  const updateTitleStatus = async (itemId: string, status: "approved" | "rejected") => {
-    const item = items?.find((i) => i.id === itemId);
-    if (!item) return;
-    const metadata = { ...(item.metadata as any ?? {}), title_status: status };
-    await supabase.from("planning_items").update({ metadata }).eq("id", itemId);
-    queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
-  };
-
-  const approveAll = async () => {
-    if (!items) return;
-    for (const item of items) {
-      const metadata = { ...(item.metadata as any ?? {}), title_status: "approved" };
-      await supabase.from("planning_items").update({ metadata }).eq("id", item.id);
+  const selectOption = async (selectedItem: PlanningItem, pair: { slotIndex: number; options: PlanningItem[] }) => {
+    for (const option of pair.options) {
+      const status = option.id === selectedItem.id ? "approved" : "rejected";
+      const metadata = { ...(option.metadata ?? {}), title_status: status };
+      await supabase.from("planning_items").update({ metadata }).eq("id", option.id);
     }
     queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
   };
 
-  const openEdit = (item: any) => {
+  const rejectBoth = async (pair: { slotIndex: number; options: PlanningItem[] }) => {
+    setRegeneratingSlot(pair.slotIndex);
+    try {
+      // Mark both as rejected
+      for (const option of pair.options) {
+        const metadata = { ...(option.metadata ?? {}), title_status: "rejected" };
+        await supabase.from("planning_items").update({ status: "cancelled", metadata }).eq("id", option.id);
+      }
+
+      // Request regeneration for this slot
+      const { error } = await supabase.functions.invoke("generate-planning-titles", {
+        body: {
+          calendar_id: calendarId,
+          project_id: projectId,
+          regenerate_slot: pair.slotIndex,
+          count: 2,
+        },
+      });
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
+      toast({ title: "Novas opções geradas!", description: `2 novas alternativas para o slot ${pair.slotIndex + 1}.` });
+    } catch (e: any) {
+      toast({ title: "Erro ao regenerar", description: e.message, variant: "destructive" });
+    } finally {
+      setRegeneratingSlot(null);
+    }
+  };
+
+  const openEdit = (item: PlanningItem) => {
     setEditingItem(item);
-    setEditForm({
-      title: item.title,
-      scheduled_date: item.scheduled_date ?? "",
-      scheduled_time: item.scheduled_time ?? "",
-      content_type: item.content_type ?? "",
-      format: item.format ?? "",
-      responsible_code: (item.metadata as any)?.responsible_code ?? "",
-    });
+    setEditForm({ title: item.title, format: item.format ?? "" });
   };
 
   const saveEdit = async () => {
     if (!editingItem) return;
-    const metadata = { ...(editingItem.metadata as any ?? {}), title_status: "approved", responsible_code: editForm.responsible_code };
+    const metadata = { ...(editingItem.metadata ?? {}), title_status: "approved" };
     await supabase.from("planning_items").update({
       title: editForm.title,
-      scheduled_date: editForm.scheduled_date || null,
-      scheduled_time: editForm.scheduled_time || null,
-      content_type: editForm.content_type || null,
       format: editForm.format || null,
       metadata,
     }).eq("id", editingItem.id);
+
+    // Reject sibling
+    const pair = pairs.find((p) => p.options.some((o) => o.id === editingItem.id));
+    if (pair) {
+      for (const option of pair.options) {
+        if (option.id !== editingItem.id) {
+          const md = { ...(option.metadata ?? {}), title_status: "rejected" };
+          await supabase.from("planning_items").update({ metadata: md }).eq("id", option.id);
+        }
+      }
+    }
+
     setEditingItem(null);
     queryClient.invalidateQueries({ queryKey: ["planning-items", calendarId] });
   };
@@ -125,9 +172,9 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
   const handleGenerateBriefings = async () => {
     setGeneratingBriefings(true);
     try {
-      const approvedItems = items?.filter((i) => (i.metadata as any)?.title_status === "approved") ?? [];
+      const approvedItems = (items ?? []).filter((i) => (i.metadata as any)?.title_status === "approved");
       const compactItems = approvedItems.map((i) => {
-        const md = i.metadata as any ?? {};
+        const md = i.metadata ?? {};
         return {
           id: i.id,
           scheduled_date: i.scheduled_date,
@@ -136,13 +183,10 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
           content_type: i.content_type,
           title: i.title,
           metadata: {
-            responsible_code: md.responsible_code,
-            territory: md.territory,
-            lens: md.lens,
-            thesis: md.thesis,
             content_approach: md.content_approach,
-            category: md.category,
             formula: md.formula,
+            is_colab: md.is_colab,
+            colab_handle: md.colab_handle,
           },
         };
       });
@@ -154,10 +198,13 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
         },
       });
       if (error) throw error;
-      const rejectedItems = items?.filter((i) => (i.metadata as any)?.title_status === "rejected") ?? [];
-      for (const ri of rejectedItems) {
+
+      // Cancel rejected items
+      const rejected = (items ?? []).filter((i) => (i.metadata as any)?.title_status === "rejected");
+      for (const ri of rejected) {
         await supabase.from("planning_items").update({ status: "cancelled" }).eq("id", ri.id);
       }
+
       await supabase.from("planning_calendars").update({ status: "briefings_review" }).eq("id", calendarId);
       toast({ title: "Briefings gerados!", description: `${data?.count ?? 0} briefings criados.` });
       onBriefingsGenerated();
@@ -177,141 +224,167 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
           <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Voltar
         </Button>
         <h1 className="text-xl font-semibold text-foreground">
-          Calendário de Títulos — {calendar?.title}
+          Seleção de Títulos — {calendar?.title}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {items?.length ?? 0} títulos gerados ({totalNeeded} necessários + {(items?.length ?? 0) - totalNeeded} extras)
+          {totalSlots} posts · Cada um com 2 opções — selecione a que preferir.
         </p>
       </div>
 
-      {/* Counters */}
+      {/* Progress */}
       <Card className="mb-4">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-4 text-sm">
-            <span>Aprovados: <strong className="text-green-600">{approvedCount}</strong></span>
-            <span>Reprovados: <strong className="text-destructive">{rejectedCount}</strong></span>
-            <span>Pendentes: <strong>{pendingCount}</strong></span>
+            <span>Selecionados: <strong className="text-green-600">{selectedCount}</strong> / {totalSlots}</span>
+            <span>Pendentes: <strong className="text-muted-foreground">{pendingCount}</strong></span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={approveAll}>
-              <Check className="mr-1 h-3 w-3" /> Aprovar Todos
-            </Button>
-            <Button
-              size="sm"
-              disabled={!canGenerateBriefings || generatingBriefings}
-              onClick={handleGenerateBriefings}
-            >
-              {generatingBriefings ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <ArrowRight className="mr-1 h-3 w-3" />}
-              Gerar Briefings
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            disabled={!canGenerateBriefings || generatingBriefings}
+            onClick={handleGenerateBriefings}
+          >
+            {generatingBriefings ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <ArrowRight className="mr-1 h-3 w-3" />}
+            Gerar Briefings
+          </Button>
         </CardContent>
       </Card>
 
       {canGenerateBriefings && (
         <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-700">
-          ✅ Mínimo atingido! Você pode gerar os briefings.
+          ✅ Todos os posts foram selecionados! Você pode gerar os briefings.
         </div>
       )}
 
-      {/* Items table */}
-      <Card className="mb-6 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground w-12">Status</th>
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground w-20">Data</th>
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground w-20">Dia</th>
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground w-16">Horário</th>
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground w-24">Pilar</th>
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground w-24">Formato</th>
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground w-16">Resp.</th>
-                {hasFormulaItems && <th className="p-2 text-center text-xs font-medium text-muted-foreground w-12">Obj.</th>}
-                <th className="p-2 text-left text-xs font-medium text-muted-foreground">Tema / Tese</th>
-                <th className="p-2 text-right text-xs font-medium text-muted-foreground w-28">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items?.map((item) => {
-                const metadata = (item.metadata as any) ?? {};
-                const titleStatus = metadata.title_status ?? "pending";
-                const respCode = metadata.responsible_code ?? "";
-                const territory = metadata.territory;
-                const lens = metadata.lens;
-                const thesis = metadata.thesis;
-                const formulaData = metadata.formula;
-                const date = item.scheduled_date ? new Date(item.scheduled_date + "T12:00:00") : null;
-                const isApproved = titleStatus === "approved";
-                const isRejected = titleStatus === "rejected";
+      {/* Pair cards */}
+      <div className="space-y-4 mb-6">
+        {pairs.map((pair) => {
+          const selected = pair.options.find((o) => (o.metadata as any)?.title_status === "approved");
+          const isRegenerating = regeneratingSlot === pair.slotIndex;
+          const firstItem = pair.options[0];
+          const isColab = (firstItem?.metadata as any)?.is_colab;
 
-                return (
-                  <tr
-                    key={item.id}
-                    className={`border-b transition-colors group ${
-                      isApproved ? "bg-green-500/5" : isRejected ? "bg-destructive/5 opacity-60" : "hover:bg-accent/30"
-                    }`}
-                  >
-                    <td className="p-2 text-center">{STATUS_EMOJI[titleStatus]}</td>
-                    <td className="p-2 text-xs">{date ? date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—"}</td>
-                    <td className="p-2 text-xs">{date ? DAY_NAMES[date.getDay()] : "—"}</td>
-                    <td className="p-2 text-xs font-mono">{item.scheduled_time ?? "—"}</td>
-                    <td className="p-2"><Badge variant="secondary" className="text-[10px]">{item.content_type ?? "—"}</Badge></td>
-                    <td className="p-2 text-xs">{item.format ?? "—"}</td>
-                    <td className="p-2 text-xs font-mono">{respCode || "—"}</td>
-                    {hasFormulaItems && (
-                      <td className="p-2 text-center">
-                        {formulaData?.objective ? (
-                          <span className={`text-[10px] font-bold font-mono ${OBJ_COLOR[formulaData.objective] ?? "text-muted-foreground"}`}>
-                            {getObjectiveAbbr(formulaData.objective)}
-                          </span>
-                        ) : "—"}
-                      </td>
+          return (
+            <Card key={pair.slotIndex} className={`overflow-hidden transition-colors ${selected ? "border-green-500/40 bg-green-500/5" : ""}`}>
+              <CardContent className="p-4">
+                {/* Slot header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-muted-foreground">Post {pair.slotIndex + 1}</span>
+                    {firstItem?.format && (
+                      <Badge variant="secondary" className="text-[10px]">{firstItem.format}</Badge>
                     )}
-                    <td className="p-2">
-                      <p className={`text-xs font-medium text-foreground ${territory ? "uppercase" : ""}`}>{item.title}</p>
-                      {thesis && <p className="text-[10px] text-muted-foreground mt-0.5 italic">{thesis}</p>}
-                      {formulaData && (
-                        <div className="flex gap-1 mt-0.5 flex-wrap">
-                          <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">{getFrameLabel(formulaData.frame)}</Badge>
-                          <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">{getObjectiveLabel(formulaData.objective)}</Badge>
-                          <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">{getMethodLabel(formulaData.method)}</Badge>
-                        </div>
-                      )}
-                      {!formulaData && (territory || lens) && (
-                        <div className="flex gap-1 mt-0.5">
-                          {territory && <Badge variant="outline" className="text-[8px] px-1 py-0">{territory}</Badge>}
-                          {lens && <Badge variant="outline" className="text-[8px] px-1 py-0">{lens}</Badge>}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-2 text-right">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600" onClick={() => updateTitleStatus(item.id, "approved")}>
-                          <Check className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => updateTitleStatus(item.id, "rejected")}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(item)}>
-                          <Pencil className="h-3 w-3" />
+                    {isColab && (
+                      <Badge variant="outline" className="text-[10px] gap-0.5">
+                        <Users className="h-2.5 w-2.5" /> Colab
+                      </Badge>
+                    )}
+                    {(firstItem?.metadata as any)?.formula?.objective && (
+                      <span className={`text-[10px] font-bold font-mono ${OBJ_COLOR[(firstItem.metadata as any).formula.objective] ?? "text-muted-foreground"}`}>
+                        {getObjectiveAbbr((firstItem.metadata as any).formula.objective)}
+                      </span>
+                    )}
+                  </div>
+                  {selected && (
+                    <Badge variant="default" className="text-[10px] bg-green-600">✓ Selecionado</Badge>
+                  )}
+                </div>
+
+                {isRegenerating ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando novas opções...
+                  </div>
+                ) : (
+                  <>
+                    {/* Options A & B */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {pair.options.map((option, optIdx) => {
+                        const metadata = (option.metadata as any) ?? {};
+                        const titleStatus = metadata.title_status ?? "pending";
+                        const isSelected = titleStatus === "approved";
+                        const isRejected = titleStatus === "rejected";
+                        const formulaData = metadata.formula;
+
+                        return (
+                          <div
+                            key={option.id}
+                            className={`relative rounded-lg border p-3 transition-all cursor-pointer ${
+                              isSelected
+                                ? "border-green-500 bg-green-500/10 ring-1 ring-green-500/30"
+                                : isRejected
+                                ? "border-border opacity-40"
+                                : "border-border hover:border-primary/40 hover:bg-accent/20"
+                            }`}
+                            onClick={() => !isSelected && selectOption(option, pair)}
+                          >
+                            {/* Option label */}
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                                Opção {String.fromCharCode(65 + optIdx)}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {isSelected && <Check className="h-3.5 w-3.5 text-green-600" />}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={(e) => { e.stopPropagation(); openEdit(option); }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Title */}
+                            <p className="text-sm font-medium text-foreground leading-snug">{option.title}</p>
+
+                            {/* Formula badges */}
+                            {formulaData && (
+                              <div className="flex gap-1 mt-2 flex-wrap">
+                                <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">
+                                  {getFrameLabel(formulaData.frame)}
+                                </Badge>
+                                <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">
+                                  {getObjectiveLabel(formulaData.objective)}
+                                </Badge>
+                                <Badge variant="outline" className="text-[8px] px-1 py-0 bg-primary/5">
+                                  {getMethodLabel(formulaData.method)}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Reject both */}
+                    {!selected && (
+                      <div className="mt-3 flex justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-muted-foreground hover:text-destructive"
+                          onClick={() => rejectBoth(pair)}
+                        >
+                          <RefreshCw className="mr-1 h-3 w-3" />
+                          Recusar ambas e gerar novas
                         </Button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Distribution tables */}
       {items && items.length > 0 && (
         <DistributionTables items={items.filter((i) => (i.metadata as any)?.title_status !== "rejected")} />
       )}
 
-      {/* Fibbo footer */}
+      {/* Footer */}
       <div className="mt-8 pt-4 border-t border-border text-center">
         <p className="text-xs text-muted-foreground">
           Planejamento gerado por <span className="font-semibold text-foreground">Fibbo Radar</span> — Inteligência Competitiva com IA
@@ -324,37 +397,21 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
           <DialogHeader><DialogTitle>Editar Título</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Tema/Título</Label>
-              <Input value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
+              <Label className="text-xs text-muted-foreground">Título</Label>
+              <Textarea
+                rows={2}
+                value={editForm.title}
+                onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">Data</Label>
-                <Input type="date" value={editForm.scheduled_date} onChange={(e) => setEditForm((f) => ({ ...f, scheduled_date: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Horário</Label>
-                <Input type="time" value={editForm.scheduled_time} onChange={(e) => setEditForm((f) => ({ ...f, scheduled_time: e.target.value }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">Pilar</Label>
-                <Input value={editForm.content_type} onChange={(e) => setEditForm((f) => ({ ...f, content_type: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Formato</Label>
-                <Input value={editForm.format} onChange={(e) => setEditForm((f) => ({ ...f, format: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Responsável</Label>
-                <Input value={editForm.responsible_code} onChange={(e) => setEditForm((f) => ({ ...f, responsible_code: e.target.value }))} />
-              </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Formato</Label>
+              <Input value={editForm.format} onChange={(e) => setEditForm((f) => ({ ...f, format: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingItem(null)}>Cancelar</Button>
-            <Button onClick={saveEdit}>Salvar & Aprovar</Button>
+            <Button onClick={saveEdit}>Salvar & Selecionar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
