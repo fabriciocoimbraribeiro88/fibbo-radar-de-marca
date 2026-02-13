@@ -4,11 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, TrendingUp, Users, MessageCircle, FileText, Swords } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useFibboScores, useLatestFibboScores, type FibboScoreWithEntity } from "@/hooks/useFibboScores";
+import { useEntityDataSummary } from "@/hooks/useEntityDataSummary";
+import { EntityDataSummary } from "@/components/sources/EntityDataSummary";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -78,6 +80,9 @@ export default function ProjectFibboScore() {
   const { data: latestScores } = useLatestFibboScores(projectId);
   const [recalculating, setRecalculating] = useState(false);
 
+  // Get entity IDs for data summary
+  const entityIds = latestScores?.map((s) => s.entity_id).filter(Boolean) as string[] ?? [];
+  const { data: dataSummary } = useEntityDataSummary(entityIds);
   const handleRecalculate = async () => {
     setRecalculating(true);
     try {
@@ -314,6 +319,17 @@ export default function ProjectFibboScore() {
                           <p className="text-[9px] text-muted-foreground">{m.label}</p>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {/* Data summary */}
+                  {s.entity_id && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <EntityDataSummary data={dataSummary?.get(s.entity_id) ?? {
+                        entityId: s.entity_id, totalPosts: 0, postTypes: [], totalLikes: 0, totalComments: 0,
+                        totalSaves: 0, totalShares: 0, totalViews: 0, postsWithHashtags: 0,
+                        realCommentsCount: 0, commentsWithSentiment: 0,
+                        oldestPostDate: null, newestPostDate: null, followers: null,
+                      }} />
                     </div>
                   )}
                 </CardContent>
