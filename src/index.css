@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fibbo Radar Design System — Light-first, Claude Code inspired.
+/* Fibbo Radar Design System — Light-first, Linktree Insights inspired.
    Brand accent: Coral #E87040
    All colors MUST be HSL.
 */
@@ -45,7 +45,7 @@
     --input: 220 13% 88%;
     --ring: 18 79% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 224 14% 30%;
@@ -68,7 +68,7 @@
     --brand-light: 18 85% 65%;
     --brand-dark: 18 79% 48%;
 
-    --background: 240 18% 4%;
+    --background: 240 18% 3%;
     --foreground: 0 0% 100%;
 
     --card: 240 14% 10%;
@@ -119,6 +119,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .font-mono {
@@ -142,5 +144,79 @@
 
   .glow-coral {
     box-shadow: 0 0 40px hsl(18 79% 50% / 0.1);
+  }
+
+  .card-elevated {
+    @apply bg-card rounded-xl shadow-sm border border-border/40 
+           transition-all duration-200;
+  }
+
+  .card-elevated:hover {
+    @apply shadow-md;
+    transform: translateY(-1px);
+  }
+
+  .card-interactive {
+    @apply card-elevated cursor-pointer;
+  }
+
+  .card-interactive:hover {
+    @apply shadow-md border-border/60;
+    transform: translateY(-2px);
+  }
+
+  .card-flat {
+    @apply bg-card rounded-xl border border-border/30;
+  }
+
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-foreground;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-muted-foreground/80 mt-1;
+  }
+
+  .kpi-value {
+    @apply text-2xl font-bold font-mono tabular-nums text-foreground;
+  }
+
+  .kpi-label {
+    @apply text-[10px] font-medium text-muted-foreground mt-0.5;
+  }
+
+  .kpi-trend-up {
+    @apply text-xs font-medium text-emerald-500 flex items-center gap-0.5;
+  }
+
+  .kpi-trend-down {
+    @apply text-xs font-medium text-destructive flex items-center gap-0.5;
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md rounded-xl border border-border/30 shadow-sm;
+  }
+
+  .gradient-card {
+    @apply rounded-xl border border-border/20 shadow-sm;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--accent)) 100%);
+  }
+
+  .divider {
+    @apply h-px bg-gradient-to-r from-transparent via-border to-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
   }
 }
