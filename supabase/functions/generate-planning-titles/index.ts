@@ -63,14 +63,16 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
   try {
-    const { calendar_id, analysis_id, project_id, channel, period_start, period_end, parameters } = await req.json();
+    const body = await req.json();
+    const { calendar_id, analysis_id, project_id, channel, period_start, period_end, regenerate_slot, count } = body;
+    const parameters = body.parameters ?? {};
 
     // 1. Fetch project with full briefing
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     const brandName = project?.brand_name ?? project?.name ?? "Marca";
     const briefing = project?.briefing as any;
 
-    const contentApproach = parameters.content_approach ?? "pillars";
+    const contentApproach = parameters.content_approach ?? "formula";
     const selectedLenses = parameters.selected_lenses ?? [];
     const provocationLevel = parameters.provocation_level ?? 3;
 
@@ -215,7 +217,8 @@ Deno.serve(async (req) => {
     const { posts_per_week, format_mix, responsibles, preferred_times, special_instructions, category_mix } = parameters;
     const weeks = Math.max(1, Math.round((new Date(period_end).getTime() - new Date(period_start).getTime()) / (7 * 86400000)));
     const totalBase = posts_per_week * weeks;
-    const totalWithExtra = Math.ceil(totalBase * 1.25);
+    // Generate 2 options per post (A/B selection)
+    const totalWithExtra = totalBase * 2;
 
     let systemPrompt: string;
     let userPrompt: string;
@@ -610,10 +613,30 @@ Responda APENAS com JSON válido:
     const isTheses = contentApproach === "theses";
 
     // Insert items into planning_items
-    for (const item of generatedItems) {
+    // Each "slot" gets 2 options (A/B) for user selection
+    const slotStartIndex = regenerate_slot ?? 0;
+    const colabs = parameters.colabs ?? [];
+    const colabPercentage = parameters.colab_percentage ?? 0;
+    const useColabs = colabs.length > 0 && colabPercentage > 0;
+
+    for (let i = 0; i < generatedItems.length; i++) {
+      const item = generatedItems[i];
+      const slotIndex = regenerate_slot != null ? regenerate_slot : Math.floor(i / 2);
+      
+      // Determine if this slot is a colab based on percentage
+      const totalSlots = Math.ceil(generatedItems.length / 2);
+      const colabSlotCount = Math.round(totalSlots * (colabPercentage / 100));
+      const isColab = useColabs && slotIndex < colabSlotCount;
+      const colabHandle = isColab && colabs.length > 0
+        ? colabs[slotIndex % colabs.length]?.instagram ?? null
+        : null;
+
       const metadata: any = {
         responsible_code: item.responsible_code,
         title_status: "pending",
+        slot_index: slotIndex,
+        is_colab: isColab,
+        colab_handle: colabHandle,
       };
 
       // F.O.R.M.U.L.A.™ metadata

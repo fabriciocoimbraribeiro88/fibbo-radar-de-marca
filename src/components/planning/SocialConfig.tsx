@@ -65,8 +65,7 @@ export default function SocialConfig({ wizardData, setWizardData, projectId }: P
   }, [period]);
 
   const totalPosts = wizardData.postsPerWeek * weeks;
-  const extraPosts = Math.ceil(totalPosts * 0.25);
-  const totalGenerated = totalPosts + extraPosts;
+  const totalGenerated = totalPosts * 2;
 
   const formatTotal = Object.values(wizardData.formatMix).reduce((a, b) => a + b, 0);
   
@@ -192,12 +191,12 @@ export default function SocialConfig({ wizardData, setWizardData, projectId }: P
               onValueChange={([v]) => setWizardData((d) => ({ ...d, postsPerWeek: v }))}
             />
             <p className="text-xs text-muted-foreground">
-              Total no período: ~{totalPosts} posts · 25% extra para seleção: ~{totalGenerated} posts serão gerados
+              Total: ~{totalPosts} posts × 2 opções cada = ~{totalGenerated} títulos gerados
             </p>
             <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
               <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-[10px] text-muted-foreground">
-                Geramos 25% a mais do planejado para que você possa descartar os que não se encaixam e manter os melhores.
+                Cada post terá 2 alternativas para você escolher a melhor. Se não gostar de nenhuma, novas opções serão geradas.
               </p>
             </div>
           </div>

@@ -46,8 +46,7 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
   }, [period]);
 
   const totalPosts = wizardData.postsPerWeek * weeks;
-  const extraPosts = Math.ceil(totalPosts * 0.25);
-  const totalGenerated = totalPosts + extraPosts;
+  const totalGenerated = totalPosts * 2; // 2 options per post
 
   const brandName = project?.brand_name ?? project?.name ?? "Marca";
   const defaultTitle = useMemo(() => {
@@ -111,7 +110,6 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
           period_end: period.end,
           parameters: {
             posts_per_week: wizardData.postsPerWeek,
-            extra_percentage: 25,
             format_mix: wizardData.formatMix,
             responsibles,
             preferred_times: wizardData.usePreferredTimes ? wizardData.preferredTimes : null,
@@ -119,6 +117,8 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
             special_instructions: wizardData.specialInstructions,
             content_approach: "formula",
             formula_config: { enabled: true },
+            colabs: wizardData.useColabs ? wizardData.colabs : [],
+            colab_percentage: wizardData.useColabs ? wizardData.colabPercentage : 0,
           },
         },
       });
@@ -165,7 +165,7 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
             {wizardData.channel === "social" && (
               <>
                 <div className="flex justify-between"><span className="text-muted-foreground">Abordagem</span><span className="font-medium">✨ F.O.R.M.U.L.A.™</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Posts</span><span className="font-medium">{totalPosts} planejados + {extraPosts} extras = {totalGenerated} títulos</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Posts</span><span className="font-medium">{totalPosts} posts × 2 opções = {totalGenerated} títulos</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Mix</span><span className="font-medium">{Object.entries(wizardData.formatMix).filter(([, v]) => v > 0).map(([k, v]) => `${k} ${v}%`).join(" · ")}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Colabs</span><span className="font-medium">{wizardData.colabs.map((c) => `${c.instagram} ${c.percentage}%`).join(" · ")}</span></div>
               </>
