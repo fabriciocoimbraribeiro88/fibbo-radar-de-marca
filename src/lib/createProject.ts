@@ -61,11 +61,12 @@ export async function createProject(params: CreateProjectParams) {
   if (projectError) throw projectError;
 
   // 2. Add creator as project member (owner)
-  await supabase.from("project_members").insert({
+  const { error: memberError } = await supabase.from("project_members").insert({
     project_id: project.id,
     user_id: user.id,
     role: "owner",
   });
+  if (memberError) throw memberError;
 
   // 3. Create monitored entities and link them
   for (const entity of params.entities) {
@@ -84,11 +85,12 @@ export async function createProject(params: CreateProjectParams) {
     if (entityError) throw entityError;
 
     // Link entity to project
-    await supabase.from("project_entities").insert({
+    const { error: linkError } = await supabase.from("project_entities").insert({
       project_id: project.id,
       entity_id: entityData.id,
       entity_role: entity.type,
     });
+    if (linkError) throw linkError;
 
     // 4. Create data fetch configs for each entity based on selected sources
     const sources: string[] = [];
@@ -98,12 +100,13 @@ export async function createProject(params: CreateProjectParams) {
     if (params.dataSources.seoData) sources.push("seo");
 
     for (const source of sources) {
-      await supabase.from("data_fetch_configs").insert({
+      const { error: configError } = await supabase.from("data_fetch_configs").insert({
         entity_id: entityData.id,
         source_type: source,
         schedule: params.schedule,
         is_active: true,
       });
+      if (configError) throw configError;
     }
   }
 

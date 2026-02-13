@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +45,24 @@ export default function PlanningItemDialog({ item, open, onOpenChange, onSave, o
     status: item.status ?? "idea",
   });
   const [saving, setSaving] = useState(false);
+
+  // Sync form state when item prop changes (e.g. user clicks a different item)
+  useEffect(() => {
+    setForm({
+      title: item.title ?? "",
+      description: item.description ?? "",
+      scheduled_date: item.scheduled_date ?? "",
+      scheduled_time: item.scheduled_time ?? "",
+      content_type: item.content_type ?? "",
+      format: item.format ?? "",
+      copy_text: item.copy_text ?? "",
+      theme: item.theme ?? "",
+      target_audience: item.target_audience ?? "",
+      visual_brief: item.visual_brief ?? "",
+      hashtags: item.hashtags?.join(", ") ?? "",
+      status: item.status ?? "idea",
+    });
+  }, [item]);
 
   const handleSave = async () => {
     setSaving(true);

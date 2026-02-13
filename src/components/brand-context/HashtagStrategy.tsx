@@ -44,6 +44,13 @@ export default function HashtagStrategy({ projectId, briefing }: Props) {
     setData(briefing?.hashtag_strategy ?? emptyData);
   }, [briefing]);
 
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const save = useCallback(async (d: HashtagData) => {
     setSaving(true);
     const merged = { ...(briefing ?? {}), hashtag_strategy: d };
