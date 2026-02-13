@@ -25,9 +25,10 @@ interface Product {
   link: string;
   seo_keywords: string[];
   status: "active" | "launching" | "discontinued";
-  pillar_ids: string[];
   seasonality: string;
+  seasonality_detail?: string;
   differentials: string;
+  notes?: string;
 }
 
 interface Props {
@@ -59,8 +60,8 @@ function emptyProduct(): Product {
   return {
     id: crypto.randomUUID(), name: "", category: "", description: "",
     curve: "A", margin: "high", price_range: "", link: "",
-    seo_keywords: [], status: "active", pillar_ids: [],
-    seasonality: "always", differentials: "",
+    seo_keywords: [], status: "active",
+    seasonality: "always", seasonality_detail: "", differentials: "", notes: "",
   };
 }
 
@@ -79,7 +80,7 @@ export default function ProductsCatalog({ projectId, briefing }: Props) {
   const [filterStatus, setFilterStatus] = useState("all");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pillars: Array<{ id: string; name: string; color: string }> = briefing?.content_pillars ?? [];
+  // pillars removed from product catalog
 
   useEffect(() => {
     setProducts(briefing?.products ?? []);
@@ -131,13 +132,8 @@ export default function ProductsCatalog({ projectId, briefing }: Props) {
     setEditing({ ...editing, seo_keywords: editing.seo_keywords.filter((k) => k !== kw) });
   };
 
-  const togglePillar = (pillarId: string) => {
-    if (!editing) return;
-    const ids = editing.pillar_ids.includes(pillarId)
-      ? editing.pillar_ids.filter((id) => id !== pillarId)
-      : [...editing.pillar_ids, pillarId];
-    setEditing({ ...editing, pillar_ids: ids });
-  };
+
+
 
   // Filtering and sorting
   let filtered = products;
@@ -234,18 +230,9 @@ export default function ProductsCatalog({ projectId, briefing }: Props) {
                           {STATUS_INFO[p.status].emoji} {STATUS_INFO[p.status].label}
                         </Badge>
                       </div>
-                      {p.pillar_ids.length > 0 && (
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <span className="text-[10px] text-muted-foreground">Pilares:</span>
-                          {p.pillar_ids.map((pid) => {
-                            const pillar = pillars.find((pl) => pl.id === pid);
-                            return pillar ? (
-                              <span key={pid} className="inline-flex items-center gap-1 text-[10px]">
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pillar.color }} />
-                                {pillar.name}
-                              </span>
-                            ) : null;
-                          })}
+                      {p.seasonality === "seasonal" && (p as any).seasonality_detail && (
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <span className="text-[10px] text-muted-foreground">📅 {(p as any).seasonality_detail}</span>
                         </div>
                       )}
                       {p.seo_keywords.length > 0 && (
@@ -401,7 +388,7 @@ export default function ProductsCatalog({ projectId, briefing }: Props) {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Sazonalidade</Label>
-                  <Select value={editing.seasonality} onValueChange={(v) => setEditing({ ...editing, seasonality: v })}>
+                  <Select value={editing.seasonality} onValueChange={(v) => setEditing({ ...editing, seasonality: v, ...(v === "always" ? { seasonality_detail: "" } : {}) })}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-card">
                       <SelectItem value="always">Sempre disponível</SelectItem>
@@ -411,32 +398,21 @@ export default function ProductsCatalog({ projectId, briefing }: Props) {
                 </div>
               </div>
 
-              {/* Pillar association */}
-              {pillars.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Pilar associado</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {pillars.map((pl) => (
-                      <button
-                        key={pl.id}
-                        onClick={() => togglePillar(pl.id)}
-                        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors ${
-                          editing.pillar_ids.includes(pl.id)
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground hover:bg-accent"
-                        }`}
-                      >
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pl.color }} />
-                        {pl.name}
-                      </button>
-                    ))}
-                  </div>
+              {editing.seasonality === "seasonal" && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Detalhe da sazonalidade *</Label>
+                  <Input value={(editing as any).seasonality_detail ?? ""} onChange={(e) => setEditing({ ...editing, seasonality_detail: e.target.value } as any)} placeholder="Ex: Black Friday, Verão, Natal, etc." />
                 </div>
               )}
 
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Diferenciais</Label>
                 <Textarea value={editing.differentials} onChange={(e) => setEditing({ ...editing, differentials: e.target.value })} rows={2} />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Observações</Label>
+                <Textarea value={(editing as any).notes ?? ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value } as any)} rows={2} placeholder="Anotações livres sobre este produto..." />
               </div>
             </div>
           )}
