@@ -73,6 +73,10 @@ export default function SeasonalCalendar({ projectId, briefing, segment }: Props
   }, [briefing]);
 
   useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  useEffect(() => {
     const monthsWithDates = new Set(dates.map(d => getMonth(d.date_start)).filter(m => m >= 0));
     setOpenMonths(monthsWithDates);
   }, []);

@@ -47,6 +47,10 @@ export default function TensionTerritories({ projectId, briefing }: Props) {
     setTerritories(briefing?.tension_territories ?? []);
   }, [briefing]);
 
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
   const save = useCallback(async (data: Territory[]) => {
     setSaving(true);
     const merged = { ...(briefing ?? {}), tension_territories: data };

@@ -123,6 +123,10 @@ export default function BrandBook({ projectId, briefing }: Props) {
     setData(deepMergeBB(emptyBrandBook, briefing?.brand_book));
   }, [briefing]);
 
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
   const save = useCallback(async (d: BrandBookData) => {
     setSaving(true);
     const merged = { ...(briefing ?? {}), brand_book: d };

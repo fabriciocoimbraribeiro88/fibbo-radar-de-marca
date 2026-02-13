@@ -85,6 +85,10 @@ export default function ProductsCatalog({ projectId, briefing }: Props) {
     setProducts(briefing?.products ?? []);
   }, [briefing]);
 
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
   const save = useCallback(async (d: Product[]) => {
     setSaving(true);
     const merged = { ...(briefing ?? {}), products: d };
