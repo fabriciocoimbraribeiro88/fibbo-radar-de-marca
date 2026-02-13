@@ -9,9 +9,9 @@ export default function AvgLikesChart({ metrics }: Props) {
   if (!data.length) return null;
 
   return (
-    <Card className="border border-border">
-      <CardContent className="p-4">
-        <p className="text-sm font-medium text-foreground mb-3 text-center">Média de Likes por Post</p>
+    <div className="card-flat">
+      <div className="p-5">
+        <p className="text-xs font-medium text-muted-foreground mb-4 text-center">Média de Likes por Post</p>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
             <XAxis dataKey="name" tick={{ fontSize: 10 }} />
@@ -23,7 +23,7 @@ export default function AvgLikesChart({ metrics }: Props) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

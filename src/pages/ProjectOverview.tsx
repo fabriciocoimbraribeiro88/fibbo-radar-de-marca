@@ -1,16 +1,14 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
   Instagram,
   BarChart3,
-  Calendar,
-  Database,
   Gauge,
+  ArrowRight,
 } from "lucide-react";
 import { useLatestFibboScores } from "@/hooks/useFibboScores";
 
@@ -60,10 +58,10 @@ export default function ProjectOverview() {
   const brandFibbo = fibboScores?.find((s) => s.entity_role === "brand");
 
   const statCards = [
-    { label: "Entidades", value: stats?.entities ?? 0, icon: Users, path: "sources" },
-    { label: "Posts Coletados", value: stats?.posts ?? 0, icon: Instagram, path: "dashboard" },
-    { label: "Análises", value: stats?.analyses ?? 0, icon: BarChart3, path: "analyses" },
-    { label: "Fibbo Score", value: brandFibbo ? brandFibbo.total_score.toFixed(1) : "—", icon: Gauge, path: "fibbo-score" },
+    { label: "Entidades", value: stats?.entities ?? 0, icon: Users, path: "sources", color: "text-blue-500 bg-blue-500/10" },
+    { label: "Posts Coletados", value: stats?.posts ?? 0, icon: Instagram, path: "dashboard", color: "text-emerald-500 bg-emerald-500/10" },
+    { label: "Análises", value: stats?.analyses ?? 0, icon: BarChart3, path: "analyses", color: "text-amber-500 bg-amber-500/10" },
+    { label: "Fibbo Score", value: brandFibbo ? brandFibbo.total_score.toFixed(1) : "—", icon: Gauge, path: "fibbo-score", color: "text-violet-500 bg-violet-500/10" },
   ];
 
   if (isLoading) {
@@ -71,7 +69,7 @@ export default function ProjectOverview() {
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
       </div>
     );
@@ -80,9 +78,9 @@ export default function ProjectOverview() {
   return (
     <div className="max-w-4xl animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">{project?.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {project?.segment && <Badge variant="secondary" className="mr-2">{project.segment}</Badge>}
+        <h1 className="page-title">{project?.name}</h1>
+        <p className="page-subtitle">
+          {project?.segment && <Badge variant="secondary" className="mr-2 bg-accent/60 border-0 rounded-full">{project.segment}</Badge>}
           {project?.brand_description || "Visão geral do projeto."}
         </p>
       </div>
@@ -90,57 +88,58 @@ export default function ProjectOverview() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-8">
         {statCards.map((s) => (
-          <Card
+          <div
             key={s.label}
-            className="cursor-pointer transition-colors hover:bg-accent/50"
+            className="card-interactive group p-4"
             onClick={() => navigate(`/projects/${id}/${s.path}`)}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <s.icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{s.label}</span>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`rounded-xl p-2 ${s.color}`}>
+                <s.icon className="h-4 w-4" />
               </div>
-              <p className="text-2xl font-semibold font-mono text-foreground">{s.value}</p>
-            </CardContent>
-          </Card>
+              <span className="kpi-label">{s.label}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="kpi-value">{s.value}</p>
+              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Brand summary */}
       {project && (
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="text-sm font-medium text-foreground mb-3">Briefing da Marca</h3>
-            <div className="grid gap-3 sm:grid-cols-2 text-sm">
-              <div>
-                <span className="text-xs text-muted-foreground">Marca</span>
-                <p className="text-foreground">{project.brand_name}</p>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground">Instagram</span>
-                <p className="text-foreground">{project.instagram_handle || "—"}</p>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground">Público-Alvo</span>
-                <p className="text-foreground">{project.target_audience || "—"}</p>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground">Tom de Voz</span>
-                <p className="text-foreground">{project.tone_of_voice || "—"}</p>
-              </div>
-              {project.keywords && project.keywords.length > 0 && (
-                <div className="sm:col-span-2">
-                  <span className="text-xs text-muted-foreground">Keywords</span>
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {project.keywords.map((k) => (
-                      <Badge key={k} variant="secondary" className="text-xs">{k}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+        <div className="card-flat p-6">
+          <h3 className="section-label mb-3">BRIEFING DA MARCA</h3>
+          <div className="grid gap-4 sm:grid-cols-2 text-sm">
+            <div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Marca</span>
+              <p className="text-foreground">{project.brand_name}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Instagram</span>
+              <p className="text-foreground">{project.instagram_handle || "—"}</p>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Público-Alvo</span>
+              <p className="text-foreground">{project.target_audience || "—"}</p>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tom de Voz</span>
+              <p className="text-foreground">{project.tone_of_voice || "—"}</p>
+            </div>
+            {project.keywords && project.keywords.length > 0 && (
+              <div className="sm:col-span-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Keywords</span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {project.keywords.map((k) => (
+                    <Badge key={k} variant="secondary" className="text-xs bg-primary/10 text-primary border-0">{k}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

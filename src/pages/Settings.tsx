@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -27,56 +26,43 @@ import {
 type ConnectionStatus = "idle" | "ok" | "error";
 
 function IntegrationCard({
-  name,
-  description,
-  icon: Icon,
-  status,
-  statusLabel,
-  testing,
-  onTest,
+  name, description, icon: Icon, status, statusLabel, testing, onTest,
 }: {
-  name: string;
-  description: string;
-  icon: typeof Key;
-  status: ConnectionStatus;
-  statusLabel?: string;
-  testing: boolean;
-  onTest: () => void;
+  name: string; description: string; icon: typeof Key;
+  status: ConnectionStatus; statusLabel?: string; testing: boolean; onTest: () => void;
 }) {
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-accent p-2">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-medium text-foreground">{name}</h3>
-                {status === "ok" && (
-                  <Badge variant="secondary" className="gap-1 text-[10px]">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                    {statusLabel || "Conectado"}
-                  </Badge>
-                )}
-                {status === "error" && (
-                  <Badge variant="destructive" className="gap-1 text-[10px]">
-                    <XCircle className="h-3 w-3" />
-                    Erro
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">{description}</p>
-            </div>
+    <div className="card-elevated p-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-primary/10 p-2">
+            <Icon className="h-4 w-4 text-primary" />
           </div>
-          <Button variant="outline" size="sm" onClick={onTest} disabled={testing}>
-            {testing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-            Testar Conexão
-          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-foreground">{name}</h3>
+              {status === "ok" && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="text-[10px] text-muted-foreground">{statusLabel || "Conectado"}</span>
+                </div>
+              )}
+              {status === "error" && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-destructive" />
+                  <span className="text-[10px] text-destructive">Erro</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+        <Button variant="outline" size="sm" onClick={onTest} disabled={testing} className="border-border/40 hover:bg-accent/50">
+          {testing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+          Testar Conexão
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -158,31 +144,29 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl animate-fade-in">
-      <h1 className="mb-6 text-xl font-semibold text-foreground">Configurações</h1>
+      <h1 className="page-title mb-6">Configurações</h1>
 
       <Tabs defaultValue="integrations">
-        <TabsList className="mb-6 bg-accent">
-          <TabsTrigger value="team" className="gap-2">
+        <TabsList className="mb-6 border-b border-border/40 bg-transparent h-auto p-0 rounded-none">
+          <TabsTrigger value="team" className="gap-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none">
             <Users className="h-3.5 w-3.5" />
             Equipe
           </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-2">
+          <TabsTrigger value="integrations" className="gap-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none">
             <Link2 className="h-3.5 w-3.5" />
             Integrações
           </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2">
+          <TabsTrigger value="billing" className="gap-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:font-medium data-[state=active]:bg-transparent data-[state=active]:shadow-none">
             <CreditCard className="h-3.5 w-3.5" />
             Uso
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="team">
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="mb-4 text-base font-medium text-foreground">Membros da equipe</h2>
-              <p className="text-sm text-muted-foreground">Em breve.</p>
-            </CardContent>
-          </Card>
+          <div className="card-flat p-6">
+            <h2 className="mb-4 text-base font-medium text-foreground">Membros da equipe</h2>
+            <p className="text-sm text-muted-foreground">Em breve.</p>
+          </div>
         </TabsContent>
 
         <TabsContent value="integrations">
@@ -206,50 +190,46 @@ export default function SettingsPage() {
             />
 
             {claudeStatus === "ok" && (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label htmlFor="claude-model" className="text-sm font-medium text-foreground">
-                        Modelo LLM
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Modelo usado nas análises de inteligência competitiva
-                      </p>
-                    </div>
-                    {loadingModels ? (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Carregando modelos…
-                      </div>
-                    ) : (
-                      <Select value={claudeModel} onValueChange={setClaudeModel}>
-                        <SelectTrigger id="claude-model" className="w-[260px]">
-                          <SelectValue placeholder="Selecione um modelo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {claudeModels.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+              <div className="card-elevated p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="claude-model" className="text-sm font-medium text-foreground">
+                      Modelo LLM
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Modelo usado nas análises de inteligência competitiva
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                  {loadingModels ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando modelos…
+                    </div>
+                  ) : (
+                    <Select value={claudeModel} onValueChange={setClaudeModel}>
+                      <SelectTrigger id="claude-model" className="w-[260px] border-border/40 bg-accent/50">
+                        <SelectValue placeholder="Selecione um modelo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {claudeModels.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </TabsContent>
 
         <TabsContent value="billing">
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="mb-4 text-base font-medium text-foreground">Consumo</h2>
-              <p className="text-sm text-muted-foreground">Em breve.</p>
-            </CardContent>
-          </Card>
+          <div className="card-flat p-6">
+            <h2 className="mb-4 text-base font-medium text-foreground">Consumo</h2>
+            <p className="text-sm text-muted-foreground">Em breve.</p>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

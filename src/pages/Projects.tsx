@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Plus, FolderOpen, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/hooks/useProjects";
@@ -12,12 +12,12 @@ export default function Projects() {
     <div className="mx-auto max-w-5xl animate-fade-in">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Projetos</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="page-title">Projetos</h1>
+          <p className="page-subtitle">
             Gerencie seus projetos de inteligência competitiva.
           </p>
         </div>
-        <Button onClick={() => navigate("/projects/new")}>
+        <Button className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate("/projects/new")}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Projeto
         </Button>
@@ -28,47 +28,43 @@ export default function Projects() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : !projects || projects.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="mb-4 rounded-full bg-accent p-4">
-              <FolderOpen className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h2 className="mb-2 text-lg font-medium text-foreground">
-              Nenhum projeto criado
-            </h2>
-            <p className="mb-6 max-w-sm text-center text-sm text-muted-foreground">
-              Crie um projeto para começar a monitorar marcas e concorrentes.
-            </p>
-            <Button onClick={() => navigate("/projects/new")}>
-              <Plus className="mr-2 h-4 w-4" />
-              Criar primeiro projeto
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="gradient-card p-12 text-center">
+          <FolderOpen className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+          <h2 className="text-base font-medium text-foreground mb-1">
+            Nenhum projeto criado
+          </h2>
+          <p className="text-sm text-muted-foreground/70 mb-6 max-w-sm mx-auto">
+            Crie um projeto para começar a monitorar marcas e concorrentes.
+          </p>
+          <Button className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate("/projects/new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Criar primeiro projeto
+          </Button>
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
-            <Card
+            <div
               key={p.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
+              className="card-interactive p-5"
               onClick={() => navigate(`/projects/${p.id}`)}
             >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{p.name}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{p.brand_name}</p>
-                  </div>
-                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-muted-foreground">
-                    {p.status}
-                  </span>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="font-semibold text-base text-foreground">{p.name}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{p.brand_name}</p>
                 </div>
-                <div className="flex gap-3 text-xs text-muted-foreground">
-                  {p.segment && <span>{p.segment}</span>}
-                  {p.instagram_handle && <span>{p.instagram_handle}</span>}
-                </div>
-              </CardContent>
-            </Card>
+                <Badge variant="secondary" className="bg-accent/60 text-foreground/80 border-0 rounded-full text-[10px]">
+                  {p.status}
+                </Badge>
+              </div>
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                {p.segment && <span>{p.segment}</span>}
+                {p.instagram_handle && (
+                  <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5">{p.instagram_handle}</span>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}

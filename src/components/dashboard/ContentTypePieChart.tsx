@@ -14,12 +14,12 @@ interface Props { metrics: EntityMetrics; handle: string | null }
 
 export default function ContentTypePieChart({ metrics, handle }: Props) {
   const data = Object.entries(metrics.postTypes).map(([name, value]) => ({ name, value }));
-  if (!data.length) return <Card className="border border-border"><CardContent className="py-8 text-center text-xs text-muted-foreground">Sem dados de tipo de conteúdo</CardContent></Card>;
+  if (!data.length) return <div className="card-flat"><div className="py-8 text-center text-xs text-muted-foreground">Sem dados de tipo de conteúdo</div></div>;
 
   return (
-    <Card className="border border-border">
-      <CardContent className="p-4">
-        <p className="text-sm font-medium text-foreground mb-3 text-center">
+    <div className="card-flat">
+      <div className="p-5">
+        <p className="text-xs font-medium text-muted-foreground mb-4 text-center">
           Distribuição por Tipo de Conteúdo {handle ? `@${handle.replace("@", "")}` : ""}
         </p>
         <ResponsiveContainer width="100%" height={280}>
@@ -31,7 +31,7 @@ export default function ContentTypePieChart({ metrics, handle }: Props) {
             <Legend wrapperStyle={{ fontSize: 10 }} />
           </PieChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

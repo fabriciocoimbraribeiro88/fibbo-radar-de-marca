@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Target, Package, Brain, FileText, LayoutGrid } from "lucide-react";
 import BrandContextSources from "@/components/brand-context/BrandContextSources";
@@ -57,7 +56,7 @@ export default function ProjectBrand() {
     return (
       <div className="max-w-3xl space-y-4">
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
   }
@@ -73,21 +72,26 @@ export default function ProjectBrand() {
   return (
     <div className="max-w-3xl animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Contexto de Marca</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="page-title">Contexto de Marca</h1>
+        <p className="page-subtitle">
           Briefing completo da marca para contextualizar as análises. Preencha manualmente ou use IA.
         </p>
       </div>
 
       <Tabs defaultValue="identity" className="space-y-6">
-        <TabsList className="flex flex-wrap h-auto gap-1">
+        <div className="bg-accent/50 rounded-xl p-1 inline-flex flex-wrap gap-0.5">
           {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5 text-xs sm:text-sm">
-              <tab.icon className="h-3.5 w-3.5" />
-              {tab.label}
-            </TabsTrigger>
+            <TabsList key={tab.value} className="bg-transparent p-0 h-auto">
+              <TabsTrigger
+                value={tab.value}
+                className="gap-1.5 text-xs sm:text-sm rounded-lg px-4 py-2 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-medium hover:bg-card/80"
+              >
+                <tab.icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </TabsTrigger>
+            </TabsList>
           ))}
-        </TabsList>
+        </div>
 
         <TabsContent value="identity" className="space-y-6">
           <BrandContextForm

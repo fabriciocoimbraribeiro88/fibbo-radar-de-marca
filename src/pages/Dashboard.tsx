@@ -3,7 +3,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/hooks/useProjects";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,6 +13,8 @@ import {
   Database,
   ArrowRight,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -52,45 +53,43 @@ export default function Dashboard() {
   const firstName =
     user?.user_metadata?.full_name?.split(" ")[0] ?? "usuário";
 
+  const statItems = [
+    { label: "Projetos", value: projects?.length ?? 0, icon: FolderOpen, color: "text-primary bg-primary/10" },
+    { label: "Entidades", value: stats?.entities ?? 0, icon: Database, color: "text-blue-500 bg-blue-500/10" },
+    { label: "Posts Coletados", value: stats?.posts ?? 0, icon: BarChart3, color: "text-emerald-500 bg-emerald-500/10" },
+    { label: "Análises", value: stats?.analyses ?? 0, icon: Search, color: "text-violet-500 bg-violet-500/10" },
+  ];
+
   return (
-    <div className="mx-auto max-w-5xl animate-fade-in space-y-8">
+    <div className="mx-auto max-w-6xl animate-fade-in space-y-10">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">
-          Olá, {firstName} 👋
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="page-title">Olá, {firstName} 👋</h1>
+        <p className="page-subtitle">
           Aqui está o panorama geral dos seus projetos.
         </p>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: "Projetos", value: projects?.length ?? 0, icon: FolderOpen },
-          { label: "Entidades", value: stats?.entities ?? 0, icon: Database },
-          { label: "Posts Coletados", value: stats?.posts ?? 0, icon: BarChart3 },
-          { label: "Análises", value: stats?.analyses ?? 0, icon: Search },
-        ].map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="rounded-lg bg-accent p-2">
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
+        {statItems.map((stat) => (
+          <div key={stat.label} className="card-elevated p-5">
+            <div className="flex items-center gap-3">
+              <div className={`rounded-xl p-2.5 ${stat.color}`}>
+                <stat.icon className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-xl font-bold font-mono text-foreground">
+                <p className="kpi-value">
                   {isLoading ? (
                     <Skeleton className="h-6 w-12" />
                   ) : (
                     stat.value.toLocaleString("pt-BR")
                   )}
                 </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {stat.label}
-                </p>
+                <p className="kpi-label">{stat.label}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
@@ -100,7 +99,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-foreground">
             Seus Projetos
           </h2>
-          <Button size="sm" onClick={() => navigate("/projects/new")}>
+          <Button size="sm" className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate("/projects/new")}>
             <Plus className="mr-1 h-4 w-4" />
             Novo Projeto
           </Button>
@@ -109,37 +108,35 @@ export default function Dashboard() {
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+              <Skeleton key={i} className="h-20 w-full rounded-xl" />
             ))}
           </div>
         ) : !projects?.length ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <FolderOpen className="h-10 w-10 text-muted-foreground mb-3" />
-              <h3 className="text-base font-medium text-foreground mb-1">
-                Nenhum projeto ainda
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Crie seu primeiro projeto para começar a monitorar.
-              </p>
-              <Button onClick={() => navigate("/projects/new")}>
-                <Plus className="mr-1 h-4 w-4" />
-                Criar Projeto
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="gradient-card p-12 text-center">
+            <FolderOpen className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+            <h3 className="text-base font-medium text-foreground mb-1">
+              Nenhum projeto ainda
+            </h3>
+            <p className="text-sm text-muted-foreground/70 mb-6 max-w-sm mx-auto">
+              Crie seu primeiro projeto para começar a monitorar.
+            </p>
+            <Button className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate("/projects/new")}>
+              <Plus className="mr-1 h-4 w-4" />
+              Criar Projeto
+            </Button>
+          </div>
         ) : (
           <div className="space-y-2">
             {projects.map((project) => (
-              <Card
+              <div
                 key={project.id}
-                className="cursor-pointer transition-shadow hover:shadow-md"
+                className="card-interactive group border-l-[3px] border-l-primary/60"
                 onClick={() => navigate(`/projects/${project.id}`)}
               >
-                <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center justify-between p-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground truncate">
+                      <p className="text-base font-semibold text-foreground truncate">
                         {project.name}
                       </p>
                       {project.brand_name && (
@@ -148,19 +145,18 @@ export default function Dashboard() {
                         </span>
                       )}
                       {project.instagram_handle && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="bg-primary/10 text-primary text-xs rounded-full px-2 py-0.5">
                           @{project.instagram_handle.replace("@", "")}
                         </span>
                       )}
                     </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: ptBR })}
+                    </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
-                </CardContent>
-                <p className="px-4 pb-3 text-[10px] text-muted-foreground">
-                  Criado em{" "}
-                  {new Date(project.created_at).toLocaleDateString("pt-BR")}
-                </p>
-              </Card>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0 ml-2" />
+                </div>
+              </div>
             ))}
           </div>
         )}
