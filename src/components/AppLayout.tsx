@@ -63,7 +63,7 @@ export default function AppLayout() {
           <div className="flex h-full flex-col">
             {/* Logo */}
             <div className="flex items-center gap-2 px-4 py-5">
-              <img alt="Fibbo" className="h-7 object-scale-down" src="/lovable-uploads/0c66dfd1-3724-4bcb-8d41-621e37ac6cff.png" />
+              <img alt="Fibbo" className="h-[2.1rem] object-scale-down" src="/lovable-uploads/0c66dfd1-3724-4bcb-8d41-621e37ac6cff.png" />
               <div className="flex items-center gap-1 text-muted-foreground">
                 
                 
