@@ -1,4 +1,4 @@
-import { Outlet, useParams, useLocation } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { NavLink } from "@/components/NavLink";
@@ -11,20 +11,33 @@ import {
   CalendarDays,
   Target,
   FileText,
-  Gauge,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const projectNav = [
-  { title: "Visão Geral", path: "", icon: LayoutDashboard, end: true },
-  { title: "Contexto de Marca", path: "/brand", icon: Palette },
-  { title: "Fontes de Dados", path: "/sources", icon: Database },
-  { title: "Dashboard", path: "/dashboard", icon: BarChart3 },
-  { title: "Fibbo Score", path: "/fibbo-score", icon: Gauge },
-  { title: "Métricas Avançadas", path: "/analyses", icon: Search },
-  { title: "Planejamento", path: "/planning", icon: CalendarDays },
-  { title: "OKRs", path: "/okrs", icon: Target },
-  { title: "Relatórios", path: "/reports", icon: FileText },
+const NAV_GROUPS = [
+  {
+    label: "CONFIGURAÇÃO",
+    items: [
+      { title: "Visão Geral", path: "", icon: LayoutDashboard, end: true },
+      { title: "Contexto de Marca", path: "/brand", icon: Palette },
+      { title: "Fontes de Dados", path: "/sources", icon: Database },
+    ],
+  },
+  {
+    label: "ANÁLISE",
+    items: [
+      { title: "Dashboard", path: "/dashboard", icon: BarChart3 },
+      { title: "Métricas Avançadas", path: "/analyses", icon: Search },
+    ],
+  },
+  {
+    label: "AÇÃO",
+    items: [
+      { title: "Planejamento", path: "/planning", icon: CalendarDays },
+      { title: "OKRs", path: "/okrs", icon: Target },
+      { title: "Relatórios", path: "/reports", icon: FileText },
+    ],
+  },
 ];
 
 export default function ProjectLayout() {
@@ -49,17 +62,17 @@ export default function ProjectLayout() {
   return (
     <div className="flex gap-0 -m-6 min-h-[calc(100vh-3.5rem)]">
       {/* Sub-sidebar */}
-      <aside className="w-56 shrink-0 border-r border-border bg-card/50 p-4">
+      <aside className="w-56 shrink-0 border-r border-border/20 bg-card/50 backdrop-blur-sm p-4">
         {/* Project name */}
-        <div className="mb-4 px-2">
+        <div className="mb-5 px-2">
           {isLoading ? (
             <Skeleton className="h-5 w-32" />
           ) : (
             <>
-              <h2 className="text-sm font-semibold text-foreground truncate">
+              <h2 className="text-base font-bold text-foreground truncate">
                 {project?.name}
               </h2>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
                 {project?.brand_name}
               </p>
             </>
@@ -67,18 +80,25 @@ export default function ProjectLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="space-y-0.5">
-          {projectNav.map((item) => (
-            <NavLink
-              key={item.path}
-              to={`${basePath}${item.path}`}
-              end={item.end}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              activeClassName="bg-accent text-foreground font-medium"
-            >
-              <item.icon className="h-3.5 w-3.5" />
-              <span>{item.title}</span>
-            </NavLink>
+        <nav className="space-y-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="section-label px-2.5 mb-1.5">{group.label}</p>
+              <div className="space-y-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={`${basePath}${item.path}`}
+                    end={item.end}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+                    activeClassName="bg-primary/10 text-primary font-medium"
+                  >
+                    <item.icon className="h-3.5 w-3.5" />
+                    <span>{item.title}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </aside>

@@ -189,12 +189,12 @@ export default function ProjectDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-in space-y-6">
+    <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">
             {data?.projectName} — {filteredPosts.length} posts de {resolvedEntities.length} entidade(s)
           </p>
         </div>
@@ -204,7 +204,7 @@ export default function ProjectDashboard() {
             size="sm"
             onClick={handleRefresh}
             disabled={isFetching}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs border-border/40 hover:bg-accent/50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             Atualizar
@@ -213,24 +213,26 @@ export default function ProjectDashboard() {
       </div>
 
       {/* Filters */}
-      <DashboardFilters
-        period={period}
-        onPeriodChange={(p) => {
-          setPeriod(p);
-          if (p.preset !== "all") setPostLimit("all");
-        }}
-        postLimit={postLimit}
-        onPostLimitChange={setPostLimit}
-        sourceMode={sourceMode}
-        onSourceModeChange={(m) => {
-          setSourceMode(m);
-          setSelectedEntityIds(new Set());
-        }}
-        selectedEntityIds={selectedEntityIds}
-        onToggleEntity={handleToggleEntity}
-        entities={filterEntities}
-        brandEntityId={brandEntityId}
-      />
+      <div className="card-flat p-4">
+        <DashboardFilters
+          period={period}
+          onPeriodChange={(p) => {
+            setPeriod(p);
+            if (p.preset !== "all") setPostLimit("all");
+          }}
+          postLimit={postLimit}
+          onPostLimitChange={setPostLimit}
+          sourceMode={sourceMode}
+          onSourceModeChange={(m) => {
+            setSourceMode(m);
+            setSelectedEntityIds(new Set());
+          }}
+          selectedEntityIds={selectedEntityIds}
+          onToggleEntity={handleToggleEntity}
+          entities={filterEntities}
+          brandEntityId={brandEntityId}
+        />
+      </div>
 
       {/* Big Numbers */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -241,23 +243,24 @@ export default function ProjectDashboard() {
           { label: "Média Comentários", value: fmt(bigNumbers.avgComments), icon: MessageCircle },
           { label: "Taxa Engajamento", value: `${bigNumbers.engRate.toFixed(2)}%`, icon: TrendingUp },
         ].map((stat) => (
-          <Card key={stat.label} className="border border-border">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
+          <div key={stat.label} className="card-elevated p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="rounded-lg bg-accent/80 p-2">
                 <stat.icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground">{stat.label}</span>
               </div>
-              <p className="text-xl font-bold font-mono text-foreground">{stat.value}</p>
-            </CardContent>
-          </Card>
+              <span className="kpi-label">{stat.label}</span>
+            </div>
+            <p className="kpi-value">{stat.value}</p>
+          </div>
         ))}
       </div>
 
       {/* ═══ COMPARATIVE SECTION ═══ */}
       {isComparative && entityMetrics.length > 1 && (
         <div className="space-y-4">
+          <div className="divider" />
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Análise Comparativa</h2>
+            <p className="section-label mb-1">ANÁLISE COMPARATIVA</p>
             <p className="text-xs text-muted-foreground">Comparando {entityMetrics.length} entidades</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -283,9 +286,10 @@ export default function ProjectDashboard() {
 
       {/* ═══ PER-ENTITY SECTIONS ═══ */}
       {entityMetrics.map((em) => (
-        <div key={em.entityId} className="space-y-4 pt-4 border-t border-border">
+        <div key={em.entityId} className="space-y-4 pt-4">
+          <div className="divider" />
           {/* Entity header */}
-          <div className="flex items-center gap-3">
+          <div className="bg-accent/30 rounded-xl px-4 py-3 flex items-center gap-3">
             <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: em.color }} />
             <div className="flex items-baseline gap-2">
               <h3 className="text-sm font-semibold text-foreground">{em.name}</h3>
@@ -293,7 +297,7 @@ export default function ProjectDashboard() {
                 <span className="text-xs text-muted-foreground">@{em.handle.replace("@", "")}</span>
               )}
             </div>
-            <Badge variant="secondary" className="text-[10px] ml-auto">{em.totalPosts} posts</Badge>
+            <Badge variant="secondary" className="text-[10px] ml-auto bg-accent/60 border-0 rounded-full">{em.totalPosts} posts</Badge>
           </div>
 
           {/* Entity big numbers */}
@@ -309,12 +313,10 @@ export default function ProjectDashboard() {
               { label: "Virais", value: fmt(em.viralHits) },
               { label: "% Viral", value: `${em.viralRate.toFixed(1)}%` },
             ].map((item) => (
-              <Card key={item.label} className="border border-border">
-                <CardContent className="p-3 text-center">
-                  <p className="text-lg font-bold font-mono text-foreground">{item.value}</p>
-                  <p className="text-[9px] text-muted-foreground">{item.label}</p>
-                </CardContent>
-              </Card>
+              <div key={item.label} className="card-flat p-3 text-center">
+                <p className="text-lg font-bold font-mono text-foreground">{item.value}</p>
+                <p className="text-[9px] text-muted-foreground">{item.label}</p>
+              </div>
             ))}
           </div>
 

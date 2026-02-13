@@ -48,17 +48,19 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="mb-10 flex flex-col items-center gap-3">
-          <img src={fibboLogo} alt="Fibbo" className="h-10" />
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Radar className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Radar</span>
+          <div className="relative">
+            <div className="absolute inset-0 glow-coral rounded-full blur-xl opacity-30" />
+            <img src={fibboLogo} alt="Fibbo" className="h-12 relative" />
           </div>
+          <span className="bg-primary/10 text-primary rounded-full px-3 py-0.5 text-xs font-medium">
+            Radar
+          </span>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="glass-card p-8">
           <h2 className="mb-1 text-lg font-semibold text-foreground">
             {isLogin ? "Entrar" : "Criar conta"}
           </h2>
@@ -79,7 +81,7 @@ export default function Login() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Seu nome"
-                    className="pl-9"
+                    className="pl-9 bg-accent/50 border-border/40 rounded-lg focus:ring-2 focus:ring-primary/20"
                     required
                   />
                 </div>
@@ -96,7 +98,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="pl-9"
+                  className="pl-9 bg-accent/50 border-border/40 rounded-lg focus:ring-2 focus:ring-primary/20"
                   required
                 />
               </div>
@@ -112,14 +114,14 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="pl-9"
+                  className="pl-9 bg-accent/50 border-border/40 rounded-lg focus:ring-2 focus:ring-primary/20"
                   minLength={6}
                   required
                 />
               </div>
             </div>
 
-            <Button type="submit" className="mt-2 w-full" disabled={loading}>
+            <Button type="submit" className="mt-2 w-full gradient-coral text-white rounded-lg py-2.5 font-medium shadow-md hover:shadow-lg transition-all" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isLogin ? "Entrar" : "Criar conta"}
             </Button>
@@ -129,7 +131,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
             >
               {isLogin
                 ? "Não tem conta? Criar agora"
