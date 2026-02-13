@@ -53,13 +53,13 @@ import {
   Trash2,
   Settings2,
   Megaphone,
-  // Search removed - not needed
   MoreHorizontal,
   ExternalLink,
   Upload,
   FileJson,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { FetchProgressBar } from "@/components/FetchProgressBar";
 import type { Database } from "@/integrations/supabase/types";
 import { useEntityDataSummary } from "@/hooks/useEntityDataSummary";
 import { EntityDataSummary } from "@/components/sources/EntityDataSummary";
@@ -79,12 +79,6 @@ const AD_PLATFORMS = [
   { value: "linkedin_ads", label: "LinkedIn Ads", placeholder: "https://www.linkedin.com/ad-library/..." },
   { value: "tiktok_ads", label: "TikTok Ads", placeholder: "https://library.tiktok.com/..." },
 ];
-
-
-// FetchProgressBar extracted to shared component
-
-// FetchProgressBar extracted to shared component
-import { FetchProgressBar } from "@/components/FetchProgressBar";
 
 interface CollectOptions {
   mode: "all" | "count" | "json";

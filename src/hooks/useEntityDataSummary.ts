@@ -31,21 +31,22 @@ export function useEntityDataSummary(entityIds: string[]) {
         // Posts per entity
         Promise.all(
           entityIds.map(async (eid) => {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from("instagram_posts")
               .select("posted_at, likes_count, comments_count, views_count, saves_count, shares_count, post_type, hashtags")
               .eq("entity_id", eid);
+            if (error) throw error;
             return { entityId: eid, posts: data ?? [] };
           })
         ),
         // Comments per entity (via post_ids)
         Promise.all(
           entityIds.map(async (eid) => {
-            // Get post ids for this entity
-            const { data: postRows } = await supabase
+            const { data: postRows, error: postErr } = await supabase
               .from("instagram_posts")
               .select("id")
               .eq("entity_id", eid);
+            if (postErr) throw postErr;
             const postIds = postRows?.map((p) => p.id) ?? [];
             if (!postIds.length) return { entityId: eid, total: 0, withSentiment: 0 };
 
@@ -55,17 +56,19 @@ export function useEntityDataSummary(entityIds: string[]) {
             const PAGE = 1000;
             for (let i = 0; i < postIds.length; i += PAGE) {
               const batch = postIds.slice(i, i + PAGE);
-              const { count: totalCount } = await supabase
+              const { count: totalCount, error: tcErr } = await supabase
                 .from("instagram_comments")
                 .select("id", { count: "exact", head: true })
                 .in("post_id", batch);
+              if (tcErr) throw tcErr;
               total += totalCount ?? 0;
 
-              const { count: sentCount } = await supabase
+              const { count: sentCount, error: scErr } = await supabase
                 .from("instagram_comments")
                 .select("id", { count: "exact", head: true })
                 .in("post_id", batch)
                 .not("sentiment", "is", null);
+              if (scErr) throw scErr;
               withSentiment += sentCount ?? 0;
             }
             return { entityId: eid, total, withSentiment };
@@ -74,12 +77,13 @@ export function useEntityDataSummary(entityIds: string[]) {
         // Latest profile per entity
         Promise.all(
           entityIds.map(async (eid) => {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from("instagram_profiles")
               .select("followers_count")
               .eq("entity_id", eid)
               .order("snapshot_date", { ascending: false })
               .limit(1);
+            if (error) throw error;
             return { entityId: eid, followers: data?.[0]?.followers_count ?? null };
           })
         ),
