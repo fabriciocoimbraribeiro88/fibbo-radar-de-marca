@@ -10,8 +10,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+  SidebarTrigger } from
+"@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -22,39 +22,39 @@ import {
   Search,
   LogOut,
   Radar,
-  ChevronDown,
-} from "lucide-react";
+  ChevronDown } from
+"lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuTrigger } from
+"@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import fibboLogo from "@/assets/fibbo-logo.png";
 
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Projetos", url: "/projects", icon: FolderOpen },
-  { title: "Configurações", url: "/settings", icon: Settings },
-];
+{ title: "Dashboard", url: "/", icon: LayoutDashboard },
+{ title: "Projetos", url: "/projects", icon: FolderOpen },
+{ title: "Configurações", url: "/settings", icon: Settings }];
+
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const initials = user?.user_metadata?.full_name
-    ? user.user_metadata.full_name
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() || "?";
+  const initials = user?.user_metadata?.full_name ?
+  user.user_metadata.full_name.
+  split(" ").
+  map((n: string) => n[0]).
+  join("").
+  toUpperCase().
+  slice(0, 2) :
+  user?.email?.slice(0, 2).toUpperCase() || "?";
 
   return (
     <SidebarProvider>
@@ -63,7 +63,7 @@ export default function AppLayout() {
           <div className="flex h-full flex-col">
             {/* Logo */}
             <div className="flex items-center gap-2 px-4 py-5">
-              <img src={fibboLogo} alt="Fibbo" className="h-7" />
+              <img alt="Fibbo" className="h-7" src="/lovable-uploads/12d04c57-8921-438c-b47f-b84a35617376.png" />
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Radar className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-medium">Radar</span>
@@ -75,21 +75,21 @@ export default function AppLayout() {
               <SidebarGroup>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {navItems.map((item) => (
-                      <SidebarMenuItem key={item.title}>
+                    {navItems.map((item) =>
+                    <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton asChild>
                           <NavLink
-                            to={item.url}
-                            end={item.url === "/"}
-                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                            activeClassName="bg-accent text-foreground font-medium"
-                          >
+                          to={item.url}
+                          end={item.url === "/"}
+                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                          activeClassName="bg-accent text-foreground font-medium">
+
                             <item.icon className="h-4 w-4" />
                             <span>{item.title}</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    ))}
+                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -137,8 +137,8 @@ export default function AppLayout() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Buscar..."
-                  className="h-8 w-64 border-0 bg-accent pl-9 text-sm"
-                />
+                  className="h-8 w-64 border-0 bg-accent pl-9 text-sm" />
+
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -157,6 +157,6 @@ export default function AppLayout() {
           </main>
         </div>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>);
+
 }
