@@ -125,8 +125,22 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
         body: {
           calendar_id: calendarId,
           project_id: projectId,
+          analysis_id: wizardData.analysisId,
+          channel: wizardData.channel,
+          period_start: wizardData.periodStart,
+          period_end: wizardData.periodEnd,
           regenerate_slot: pair.slotIndex,
           count: 2,
+          parameters: {
+            content_approach: "formula",
+            posts_per_week: wizardData.postsPerWeek,
+            format_mix: wizardData.formatMix,
+            preferred_times: wizardData.usePreferredTimes ? wizardData.preferredTimes : null,
+            special_instructions: wizardData.specialInstructions,
+            colabs: wizardData.colabs,
+            colab_percentage: wizardData.colabPercentage,
+            formula_config: { enabled: true },
+          },
         },
       });
       if (error) throw error;
