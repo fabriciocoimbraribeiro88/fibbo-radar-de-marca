@@ -359,10 +359,11 @@ export default function ProjectSources() {
     setJsonFile(null);
 
     if (!hasError) {
-      toast({ title: "Importação concluída!", description: `${totalImported} posts importados` });
+      toast({ title: "Importação concluída!", description: `${totalImported} posts importados. Comentários analisados automaticamente.` });
       queryClient.invalidateQueries({ queryKey: ["data-fetch-configs"] });
       queryClient.invalidateQueries({ queryKey: ["data-fetch-logs"] });
       queryClient.invalidateQueries({ queryKey: ["project-entities"] });
+      queryClient.invalidateQueries({ queryKey: ["entity-comments"] });
     }
   };
 

@@ -26,6 +26,7 @@ export interface SentimentMetrics {
   score: number; // 0-10
   categories: Record<string, number>;
   topNegative: CommentWithPost[];
+  topPositive: CommentWithPost[];
 }
 
 export function useEntityComments(entityId: string | undefined) {
@@ -110,6 +111,12 @@ export function computeSentimentMetrics(comments: CommentWithPost[]): SentimentM
     .sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0))
     .slice(0, 5);
 
+  // Top positive comments sorted by likes
+  const topPositive = comments
+    .filter((c) => c.sentiment === "positive")
+    .sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0))
+    .slice(0, 5);
+
   return {
     total,
     analyzed: analyzedCount,
@@ -122,5 +129,6 @@ export function computeSentimentMetrics(comments: CommentWithPost[]): SentimentM
     score,
     categories,
     topNegative,
+    topPositive,
   };
 }
