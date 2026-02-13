@@ -11,8 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, ArrowRight, Check, X, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getFrameLabel, getObjectiveLabel, getMethodLabel } from "@/lib/formulaConstants";
 
 const STATUS_EMOJI: Record<string, string> = { pending: "⏳", approved: "✅", rejected: "❌" };
 const DAY_NAMES_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -71,7 +72,6 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
     if (["copy_text", "theme", "target_audience", "visual_brief", "description", "title", "hashtags"].includes(field)) {
       await supabase.from("planning_items").update({ [field]: value }).eq("id", itemId);
     } else {
-      // metadata field
       const metadata = { ...(item.metadata as any ?? {}), [field]: value };
       await supabase.from("planning_items").update({ metadata }).eq("id", itemId);
     }
@@ -90,12 +90,10 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
   const handleFinalize = async () => {
     setFinalizing(true);
     try {
-      // Update approved items to "briefed" status
       const approved = items?.filter((i) => (i.metadata as any)?.briefing_status === "approved") ?? [];
       for (const item of approved) {
         await supabase.from("planning_items").update({ status: "briefed" }).eq("id", item.id);
       }
-      // Cancel rejected
       const rejected = items?.filter((i) => (i.metadata as any)?.briefing_status === "rejected") ?? [];
       for (const item of rejected) {
         await supabase.from("planning_items").update({ status: "cancelled" }).eq("id", item.id);
@@ -149,6 +147,7 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
           const dayShort = date ? DAY_NAMES_SHORT[date.getDay()] : "";
           const dateStr = date ? date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—";
           const slides = md.slides as any[] | undefined;
+          const hasFormula = !!(md.formula || md.formula_analysis);
 
           return (
             <AccordionItem key={item.id} value={item.id} className="border rounded-lg overflow-hidden">
@@ -160,11 +159,66 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
                   <Badge variant="secondary" className="text-[9px]">{item.format ?? ""}</Badge>
                   <Badge variant="secondary" className="text-[9px]">{item.content_type ?? ""}</Badge>
                   {md.territory && <Badge variant="outline" className="text-[8px]">{md.lens ?? ""}</Badge>}
+                  {md.formula && (
+                    <Badge variant="outline" className="text-[8px] bg-primary/5">
+                      {getFrameLabel(md.formula.frame)}
+                    </Badge>
+                  )}
+                  {md.formula_score != null && (
+                    <span className={`text-[10px] font-bold font-mono ${
+                      md.formula_score >= 80 ? "text-green-600" : md.formula_score >= 60 ? "text-amber-600" : "text-destructive"
+                    }`}>
+                      {md.formula_score}
+                    </span>
+                  )}
                   <span className="text-xs font-mono text-muted-foreground">{md.responsible_code ?? ""}</span>
                   <span className="text-sm font-medium text-foreground truncate flex-1">{item.title}</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4 space-y-4">
+                {/* F.O.R.M.U.L.A.™ Analysis Card */}
+                {hasFormula && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-semibold text-foreground">Análise F.O.R.M.U.L.A.™</h4>
+                        {md.formula_score != null && (
+                          <span className={`text-sm font-bold font-mono ${
+                            md.formula_score >= 80 ? "text-green-600" :
+                            md.formula_score >= 60 ? "text-amber-600" : "text-destructive"
+                          }`}>
+                            {md.formula_score}/100
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {[
+                          { letter: "F", label: "Frame", value: getFrameLabel(md.formula?.frame), ok: md.formula_analysis?.frame_applied },
+                          { letter: "O", label: "Objective", value: getObjectiveLabel(md.formula?.objective), ok: md.formula_analysis?.objective_clear },
+                          { letter: "R", label: "Reference", value: md.formula?.reference_type, ok: md.formula_analysis?.reference_present },
+                          { letter: "M", label: "Method", value: getMethodLabel(md.formula?.method), ok: md.formula_analysis?.method_followed },
+                          { letter: "U", label: "Uniqueness", value: md.formula?.uniqueness_element, ok: md.formula_analysis?.uniqueness_present },
+                          { letter: "L", label: "Language", value: "Tom adequado", ok: md.formula_analysis?.language_compliant },
+                          { letter: "A", label: "Action", value: md.formula?.cta, ok: md.formula_analysis?.cta_specific },
+                        ].map(({ letter, label, value, ok }) => (
+                          <div key={letter} className="flex items-center gap-2 text-xs">
+                            <span className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">{letter}</span>
+                            <span className="text-muted-foreground w-16 shrink-0">{label}:</span>
+                            <span className="text-foreground truncate flex-1">{value ?? "—"}</span>
+                            {ok === true ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                            ) : ok === false ? (
+                              <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                            ) : (
+                              <span className="text-muted-foreground text-[10px] shrink-0">—</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Thesis context (if theses approach) */}
                 {md.thesis && (
                   <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 space-y-2">
@@ -186,7 +240,6 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
                   <Textarea rows={2} className="mt-1" defaultValue={md.concept ?? ""} onBlur={(e) => updateField(item.id, "concept", e.target.value)} />
                 </div>
 
-                {/* Argument/Evidence/Resolution for theses approach */}
                 {md.argument && (
                   <div>
                     <Label className="text-xs text-muted-foreground font-semibold">Argumento Central</Label>
@@ -206,7 +259,6 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
                   </div>
                 )}
 
-                {/* Format-specific content */}
                 {(item.format === "Carrossel" && slides) ? (
                   <div>
                     <Label className="text-xs text-muted-foreground font-semibold">Lâminas</Label>
