@@ -916,9 +916,12 @@ export default function ProjectSources() {
                         {isExpanded && !isExecuting && (
                           <div className="border-t border-border px-5 py-4 space-y-4 bg-muted/30">
                             {/* Data summary */}
-                            {dataSummary?.get(e.id) && (
-                              <EntityDataSummary data={dataSummary.get(e.id)!} />
-                            )}
+                            <EntityDataSummary data={dataSummary?.get(e.id) ?? {
+                              entityId: e.id, totalPosts: 0, postTypes: [], totalLikes: 0, totalComments: 0,
+                              totalSaves: 0, totalShares: 0, totalViews: 0, postsWithHashtags: 0,
+                              realCommentsCount: 0, commentsWithSentiment: 0,
+                              oldestPostDate: null, newestPostDate: null, followers: null,
+                            }} />
 
                             {/* Ad library links */}
                             {adLibraryUrls && Object.keys(adLibraryUrls).length > 0 && (
@@ -980,7 +983,7 @@ export default function ProjectSources() {
                             )}
 
                             {/* No details */}
-                            {(!adLibraryUrls || Object.keys(adLibraryUrls).length === 0) && recentLogs.length === 0 && (
+                            {(!adLibraryUrls || Object.keys(adLibraryUrls).length === 0) && recentLogs.length === 0 && !dataSummary?.get(e.id) && (
                               <p className="text-xs text-muted-foreground text-center py-2">
                                 Nenhum detalhe adicional disponível.
                               </p>
