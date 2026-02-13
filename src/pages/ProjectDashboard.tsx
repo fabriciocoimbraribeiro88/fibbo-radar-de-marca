@@ -40,6 +40,10 @@ import LikesTimelineChart from "@/components/dashboard/LikesTimelineChart";
 import ThemeDistributionChart from "@/components/dashboard/ThemeDistributionChart";
 import TopPostsTable from "@/components/dashboard/TopPostsTable";
 import SentimentAnalysisSection from "@/components/dashboard/SentimentAnalysisSection";
+import { useMetaAdInsights } from "@/hooks/useMetaAdInsights";
+import MetaAdsOverviewCard from "@/components/dashboard/MetaAdsOverviewCard";
+import MetaAdsSpendChart from "@/components/dashboard/MetaAdsSpendChart";
+import MetaAdsCampaignTable from "@/components/dashboard/MetaAdsCampaignTable";
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -71,6 +75,7 @@ export default function ProjectDashboard() {
   const { id: projectId } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { data, isLoading, isFetching, error } = useProjectDashboardData(projectId);
+  const { data: metaInsights } = useMetaAdInsights(projectId);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["project-dashboard-full", projectId] });
@@ -346,6 +351,21 @@ export default function ProjectDashboard() {
           />
         </div>
       ))}
+
+      {/* ═══ META ADS SECTION ═══ */}
+      {metaInsights && metaInsights.totals && (
+        <div className="space-y-4 pt-4 border-t border-border">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Meta Ads Performance</h2>
+            <p className="text-xs text-muted-foreground">Dados reais de campanhas pagas (últimos 30 dias)</p>
+          </div>
+          <MetaAdsOverviewCard totals={metaInsights.totals} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MetaAdsSpendChart daily={metaInsights.daily} currency={metaInsights.totals.currency} />
+            <MetaAdsCampaignTable campaigns={metaInsights.campaigns} currency={metaInsights.totals.currency} />
+          </div>
+        </div>
+      )}
 
       {/* Empty filtered state */}
       {filteredPosts.length === 0 && allPosts.length > 0 && (

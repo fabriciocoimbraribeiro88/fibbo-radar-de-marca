@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.calculate-fibbo-score]
 verify_jwt = false
+
+[functions.test-meta-ads]
+verify_jwt = false
+
+[functions.fetch-meta-ads]
+verify_jwt = false

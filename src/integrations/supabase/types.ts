@@ -21,6 +21,9 @@ export type Database = {
           ad_id: string | null
           ad_title: string | null
           ad_type: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          campaign_objective: string | null
           cta_text: string | null
           ended_at: string | null
           entity_id: string | null
@@ -31,6 +34,7 @@ export type Database = {
           impressions_estimate: string | null
           is_active: boolean | null
           landing_page_url: string | null
+          meta_account_ref: string | null
           metadata: Json | null
           platform: string | null
           started_at: string | null
@@ -41,6 +45,9 @@ export type Database = {
           ad_id?: string | null
           ad_title?: string | null
           ad_type?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          campaign_objective?: string | null
           cta_text?: string | null
           ended_at?: string | null
           entity_id?: string | null
@@ -51,6 +58,7 @@ export type Database = {
           impressions_estimate?: string | null
           is_active?: boolean | null
           landing_page_url?: string | null
+          meta_account_ref?: string | null
           metadata?: Json | null
           platform?: string | null
           started_at?: string | null
@@ -61,6 +69,9 @@ export type Database = {
           ad_id?: string | null
           ad_title?: string | null
           ad_type?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          campaign_objective?: string | null
           cta_text?: string | null
           ended_at?: string | null
           entity_id?: string | null
@@ -71,6 +82,7 @@ export type Database = {
           impressions_estimate?: string | null
           is_active?: boolean | null
           landing_page_url?: string | null
+          meta_account_ref?: string | null
           metadata?: Json | null
           platform?: string | null
           started_at?: string | null
@@ -81,6 +93,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "monitored_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_library_meta_account_ref_fkey"
+            columns: ["meta_account_ref"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -768,6 +787,165 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "instagram_profiles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_ad_accounts: {
+        Row: {
+          id: string
+          meta_account_id: string
+          account_name: string | null
+          business_name: string | null
+          currency: string | null
+          timezone_name: string | null
+          account_status: number | null
+          entity_id: string | null
+          project_id: string | null
+          is_active: boolean | null
+          last_synced_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          meta_account_id: string
+          account_name?: string | null
+          business_name?: string | null
+          currency?: string | null
+          timezone_name?: string | null
+          account_status?: number | null
+          entity_id?: string | null
+          project_id?: string | null
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          meta_account_id?: string
+          account_name?: string | null
+          business_name?: string | null
+          currency?: string | null
+          timezone_name?: string | null
+          account_status?: number | null
+          entity_id?: string | null
+          project_id?: string | null
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ad_accounts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ad_accounts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_ad_insights: {
+        Row: {
+          id: string
+          meta_account_id: string
+          account_ref: string | null
+          entity_id: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          campaign_status: string | null
+          campaign_objective: string | null
+          ad_id: string | null
+          ad_name: string | null
+          date_start: string
+          date_stop: string
+          impressions: number | null
+          clicks: number | null
+          spend: number | null
+          cpc: number | null
+          cpm: number | null
+          ctr: number | null
+          reach: number | null
+          frequency: number | null
+          actions: Json | null
+          cost_per_action: Json | null
+          level: string | null
+          fetched_at: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          meta_account_id: string
+          account_ref?: string | null
+          entity_id?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          campaign_status?: string | null
+          campaign_objective?: string | null
+          ad_id?: string | null
+          ad_name?: string | null
+          date_start: string
+          date_stop: string
+          impressions?: number | null
+          clicks?: number | null
+          spend?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          ctr?: number | null
+          reach?: number | null
+          frequency?: number | null
+          actions?: Json | null
+          cost_per_action?: Json | null
+          level?: string | null
+          fetched_at?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          meta_account_id?: string
+          account_ref?: string | null
+          entity_id?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          campaign_status?: string | null
+          campaign_objective?: string | null
+          ad_id?: string | null
+          ad_name?: string | null
+          date_start?: string
+          date_stop?: string
+          impressions?: number | null
+          clicks?: number | null
+          spend?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          ctr?: number | null
+          reach?: number | null
+          frequency?: number | null
+          actions?: Json | null
+          cost_per_action?: Json | null
+          level?: string | null
+          fetched_at?: string | null
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ad_insights_account_ref_fkey"
+            columns: ["account_ref"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ad_insights_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "monitored_entities"

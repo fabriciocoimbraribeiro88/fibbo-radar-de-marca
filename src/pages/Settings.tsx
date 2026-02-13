@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ import {
   CheckCircle2,
   XCircle,
   Brain,
+  Megaphone,
+  ExternalLink,
 } from "lucide-react";
 
 type ConnectionStatus = "idle" | "ok" | "error";
@@ -82,6 +85,7 @@ function IntegrationCard({
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [testingApify, setTestingApify] = useState(false);
   const [apifyStatus, setApifyStatus] = useState<ConnectionStatus>("idle");
@@ -153,6 +157,38 @@ export default function SettingsPage() {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setTestingClaude(false);
+    }
+  };
+
+  // ── Meta Ads ──
+  const [testingMeta, setTestingMeta] = useState(false);
+  const [metaStatus, setMetaStatus] = useState<ConnectionStatus>("idle");
+  const [metaUser, setMetaUser] = useState("");
+  const [metaAccountsCount, setMetaAccountsCount] = useState(0);
+
+  const testMeta = async () => {
+    setTestingMeta(true);
+    setMetaStatus("idle");
+    try {
+      const { data, error } = await supabase.functions.invoke("test-meta-ads");
+      if (error) throw error;
+      if (data?.success) {
+        setMetaStatus("ok");
+        setMetaUser(data.user?.name || "");
+        setMetaAccountsCount(data.accounts?.length ?? 0);
+        toast({
+          title: "Meta Ads conectado!",
+          description: `${data.accounts?.length ?? 0} contas de anúncio encontradas`,
+        });
+      } else {
+        setMetaStatus("error");
+        toast({ title: "Erro Meta Ads", description: data?.error, variant: "destructive" });
+      }
+    } catch (err: any) {
+      setMetaStatus("error");
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setTestingMeta(false);
     }
   };
 
@@ -236,6 +272,42 @@ export default function SettingsPage() {
                         </SelectContent>
                       </Select>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <IntegrationCard
+              name="Meta Ads (Marketing API)"
+              description="Dados reais de performance: impressões, cliques, gastos e conversões"
+              icon={Megaphone}
+              status={metaStatus}
+              statusLabel={metaUser ? `Conectado (${metaUser})` : "Conectado"}
+              testing={testingMeta}
+              onTest={testMeta}
+            />
+
+            {metaStatus === "ok" && (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {metaAccountsCount} conta(s) de anúncio encontradas
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Gerencie as contas e vincule aos projetos na página dedicada
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate("/meta-ads")}
+                      className="gap-2"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Gerenciar Contas
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

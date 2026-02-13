@@ -21,7 +21,7 @@ import {
   Bell,
   Search,
   LogOut,
-
+  Megaphone,
   ChevronDown } from
 "lucide-react";
 import {
@@ -39,6 +39,7 @@ import fibboLogo from "@/assets/fibbo-logo.png";
 const navItems = [
 { title: "Dashboard", url: "/", icon: LayoutDashboard },
 { title: "Projetos", url: "/projects", icon: FolderOpen },
+{ title: "Meta Ads", url: "/meta-ads", icon: Megaphone },
 { title: "Configurações", url: "/settings", icon: Settings }];
 
 

@@ -23,6 +23,7 @@ import ProjectDashboard from "@/pages/ProjectDashboard";
 import ProjectReports from "@/pages/ProjectReports";
 import ProjectFibboScore from "@/pages/ProjectFibboScore";
 import SettingsPage from "@/pages/Settings";
+import MetaAdsManager from "@/pages/MetaAdsManager";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="reports" element={<ProjectReports />} />
               </Route>
 
+              <Route path="/meta-ads" element={<MetaAdsManager />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
