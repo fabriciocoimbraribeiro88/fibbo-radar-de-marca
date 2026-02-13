@@ -33,26 +33,19 @@ export default function ProjectOverview() {
   const { data: stats } = useQuery({
     queryKey: ["project-overview-stats", id],
     queryFn: async () => {
-      const [entitiesRes, analysesRes, postsRes, profilesRes] = await Promise.all([
-        supabase.from("project_entities").select("id", { count: "exact", head: true }).eq("project_id", id!),
+      const { data: peData } = await supabase
+        .from("project_entities")
+        .select("id, entity_id")
+        .eq("project_id", id!);
+      const entityIds = peData?.map((e) => e.entity_id) ?? [];
+
+      const [analysesRes, postsRes, profilesRes] = await Promise.all([
         supabase.from("analyses").select("id", { count: "exact", head: true }).eq("project_id", id!),
-        supabase
-          .from("instagram_posts")
-          .select("id", { count: "exact", head: true })
-          .in(
-            "entity_id",
-            (await supabase.from("project_entities").select("entity_id").eq("project_id", id!)).data?.map((e) => e.entity_id) ?? []
-          ),
-        supabase
-          .from("instagram_profiles")
-          .select("id", { count: "exact", head: true })
-          .in(
-            "entity_id",
-            (await supabase.from("project_entities").select("entity_id").eq("project_id", id!)).data?.map((e) => e.entity_id) ?? []
-          ),
+        supabase.from("instagram_posts").select("id", { count: "exact", head: true }).in("entity_id", entityIds),
+        supabase.from("instagram_profiles").select("id", { count: "exact", head: true }).in("entity_id", entityIds),
       ]);
       return {
-        entities: entitiesRes.count ?? 0,
+        entities: peData?.length ?? 0,
         analyses: analysesRes.count ?? 0,
         posts: postsRes.count ?? 0,
         profiles: profilesRes.count ?? 0,
@@ -62,10 +55,10 @@ export default function ProjectOverview() {
   });
 
   const statCards = [
-    { label: "Entidades", value: stats?.entities ?? 0, icon: Users, path: "entities" },
+    { label: "Entidades", value: stats?.entities ?? 0, icon: Users, path: "sources" },
     { label: "Posts Coletados", value: stats?.posts ?? 0, icon: Instagram, path: "dashboard" },
     { label: "Análises", value: stats?.analyses ?? 0, icon: BarChart3, path: "analyses" },
-    { label: "Perfis", value: stats?.profiles ?? 0, icon: Database, path: "data-sources" },
+    { label: "Perfis", value: stats?.profiles ?? 0, icon: Database, path: "sources" },
   ];
 
   if (isLoading) {

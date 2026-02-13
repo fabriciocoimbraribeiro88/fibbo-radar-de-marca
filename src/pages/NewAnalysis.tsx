@@ -164,7 +164,7 @@ export default function NewAnalysis() {
   const canNext = () => {
     if (step === 0) {
       if (!analysisType) return false;
-      if (periodMode === "date" && (!periodStart || !periodEnd)) return false;
+      if (periodMode === "date" && (!periodStart || !periodEnd || new Date(periodStart) >= new Date(periodEnd))) return false;
       if (isLargeDataset && !largeDatasetAck) return false;
       return true;
     }
@@ -228,9 +228,8 @@ export default function NewAnalysis() {
           title: "Análise iniciada!",
           description: "Acompanhe o progresso na próxima tela.",
         });
+        navigate(`/projects/${projectId}/analyses/${data.id}`);
       }
-
-      navigate(`/projects/${projectId}/analyses/${data.id}`);
     } catch (err: any) {
       toast({ title: "Erro ao criar análise", description: err.message, variant: "destructive" });
     } finally {
