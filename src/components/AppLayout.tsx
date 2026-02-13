@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import fibboLogo from "@/assets/fibbo-logo.png";
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
@@ -45,7 +46,7 @@ export default function AppLayout() {
             <img
               alt="Fibbo"
               className="h-[1.8rem] object-scale-down"
-              src="/lovable-uploads/0c66dfd1-3724-4bcb-8d41-621e37ac6cff.png"
+              src={fibboLogo}
             />
             <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
               Radar
