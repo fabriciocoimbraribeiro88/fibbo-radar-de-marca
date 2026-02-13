@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
     const brandName = project?.brand_name ?? project?.name ?? "Marca";
     const briefing = project?.briefing as any;
+    const formula = briefing?.formula ?? null;
 
     // 2. Build brand context (compact)
     let brandContext = `MARCA: ${brandName} | Segmento: ${project?.segment ?? "—"} | Tom: ${project?.tone_of_voice ?? "—"} | Público: ${project?.target_audience ?? "—"}`;
@@ -69,6 +70,15 @@ Deno.serve(async (req) => {
 
     const fullContext = brandContext + referencesContext + memoryContext;
 
+    // Build F.O.R.M.U.L.A.™ language context (used when items have formula metadata)
+    let formulaLanguageContext = "";
+    if (formula) {
+      const powerWords = (formula.power_words ?? []).join(", ");
+      const forbiddenPatterns = (formula.forbidden_patterns ?? []).join(", ");
+      if (powerWords) formulaLanguageContext += `\nPalavras de força: ${powerWords}`;
+      if (forbiddenPatterns) formulaLanguageContext += `\nPROIBIDO usar: ${forbiddenPatterns}`;
+    }
+
     // 5. Process in batches
     const allItems = approved_items ?? [];
     let totalBriefings = 0;
@@ -80,22 +90,57 @@ Deno.serve(async (req) => {
 
       console.log(`[generate-planning-briefings] Batch ${batchNum}/${totalBatches} (${batch.length} items)`);
 
+      // Detect if batch has formula items
+      const hasFormulaItems = batch.some((i: any) => i.metadata?.formula);
+      const isTheses = batch.some((i: any) => i.metadata?.territory);
+
       const itemsList = batch.map((i: any, idx: number) => {
         const md = i.metadata ?? {};
         const globalIdx = batchStart + idx;
         let line = `POST ${globalIdx}: ${i.scheduled_date} ${i.scheduled_time} ${i.format} "${i.title}"`;
-        if (md.territory) line += ` [${md.territory}|${md.lens ?? ""}]`;
-        if (md.thesis) line += ` Tese: ${md.thesis.substring(0, 150)}`;
+
+        // F.O.R.M.U.L.A.™ item context
+        if (md.formula) {
+          const f = md.formula;
+          line += `\n  F.O.R.M.U.L.A.™: Frame=${f.frame} | Objetivo=${f.objective} | Referência=${f.reference_type} | Método=${f.method} | Singularidade=${f.uniqueness_element} | CTA=${f.cta}`;
+        }
+        // Theses item context
+        else if (md.territory) {
+          line += ` [${md.territory}|${md.lens ?? ""}]`;
+          if (md.thesis) line += ` Tese: ${md.thesis.substring(0, 150)}`;
+        }
         return line;
       }).join("\n");
 
-      const isTheses = batch.some((i: any) => i.metadata?.territory);
+      let systemPrompt: string;
+      let userPrompt: string;
 
-      const systemPrompt = isTheses
-        ? `Você é um Arquiteto de Narrativas de Marca. Crie briefings seguindo: 1) HEADLINE (manter título), 2) ARGUMENTO CENTRAL (2-3 parágrafos acessíveis), 3) EVIDÊNCIA (dado/case/analogia), 4) RESOLUÇÃO (conexão com marca ou pergunta). Tom: intelectual acessível. Responda em JSON.`
-        : `Você é um estrategista de conteúdo digital. Crie briefings detalhados para redes sociais. Responda em JSON.`;
+      if (hasFormulaItems) {
+        // ── F.O.R.M.U.L.A.™ briefing mode ──
+        systemPrompt = `Você é um Estrategista de Conteúdo que aplica a Metodologia F.O.R.M.U.L.A.™. Crie briefings detalhados seguindo rigorosamente os 7 filtros de cada post.
 
-      const userPrompt = `Gere briefings para estes ${batch.length} posts.
+Para cada post:
+1) HEADLINE — manter o título original
+2) ARGUMENTO CENTRAL — desenvolver o ângulo de ataque (frame) em 2-3 parágrafos
+3) EVIDÊNCIA — incluir evidência concreta alinhada ao reference_type definido
+4) RESOLUÇÃO — CTA claro e específico alinhado ao objetivo
+
+Regras de linguagem:${formulaLanguageContext}
+Tom: ${project?.tone_of_voice ?? "intelectual acessível"}
+
+Ao gerar cada briefing:
+- Desenvolva o ângulo de ataque (frame) no argumento central
+- Alinhe o CTA ao objetivo definido
+- Inclua evidência concreta (reference)
+- Siga a estrutura narrativa do método escolhido
+- Destaque o elemento proprietário da marca (uniqueness)
+- Use as palavras de força e respeite os proibidos
+
+Após gerar cada briefing, avalie com formula_score (0-100) e formula_analysis.
+
+Responda em JSON.`;
+
+        userPrompt = `Gere briefings F.O.R.M.U.L.A.™ para estes ${batch.length} posts.
 
 ${fullContext}
 
@@ -104,13 +149,55 @@ ${itemsList}
 
 Para cada post gere:
 - objective, concept, copy_text (caption Instagram completa), theme (CTA), visual_brief, hashtags (array), target_audience
-${isTheses ? "- argument (2-3 parágrafos), evidence (exemplo concreto), resolution (provocação final)" : ""}
+- argument (2-3 parágrafos desenvolvendo o frame), evidence (exemplo concreto do reference_type), resolution (provocação final com CTA)
+- Para Carrossel: slides (array {slide, type, text})
+- Para Reels: script (roteiro)
+- Para Estático: image_text
+- formula_score (0-100): pontuação de aderência à F.O.R.M.U.L.A.™
+- formula_analysis: {"frame_applied": bool, "objective_clear": bool, "reference_present": bool, "method_followed": bool, "uniqueness_present": bool, "language_compliant": bool, "cta_specific": bool}
+
+JSON: {"briefings": [{"item_index": N, "objective": "...", "formula_score": 85, "formula_analysis": {...}, ...}]}
+item_index deve usar os números dos posts acima (${batchStart} a ${batchStart + batch.length - 1}).`;
+
+      } else if (isTheses) {
+        systemPrompt = `Você é um Arquiteto de Narrativas de Marca. Crie briefings seguindo: 1) HEADLINE (manter título), 2) ARGUMENTO CENTRAL (2-3 parágrafos acessíveis), 3) EVIDÊNCIA (dado/case/analogia), 4) RESOLUÇÃO (conexão com marca ou pergunta). Tom: intelectual acessível. Responda em JSON.`;
+
+        userPrompt = `Gere briefings para estes ${batch.length} posts.
+
+${fullContext}
+
+POSTS:
+${itemsList}
+
+Para cada post gere:
+- objective, concept, copy_text (caption Instagram completa), theme (CTA), visual_brief, hashtags (array), target_audience
+- argument (2-3 parágrafos), evidence (exemplo concreto), resolution (provocação final)
 - Para Carrossel: slides (array {slide, type, text})
 - Para Reels: script (roteiro)
 - Para Estático: image_text
 
 JSON: {"briefings": [{"item_index": N, "objective": "...", ...}]}
 item_index deve usar os números dos posts acima (${batchStart} a ${batchStart + batch.length - 1}).`;
+
+      } else {
+        systemPrompt = `Você é um estrategista de conteúdo digital. Crie briefings detalhados para redes sociais. Responda em JSON.`;
+
+        userPrompt = `Gere briefings para estes ${batch.length} posts.
+
+${fullContext}
+
+POSTS:
+${itemsList}
+
+Para cada post gere:
+- objective, concept, copy_text (caption Instagram completa), theme (CTA), visual_brief, hashtags (array), target_audience
+- Para Carrossel: slides (array {slide, type, text})
+- Para Reels: script (roteiro)
+- Para Estático: image_text
+
+JSON: {"briefings": [{"item_index": N, "objective": "...", ...}]}
+item_index deve usar os números dos posts acima (${batchStart} a ${batchStart + batch.length - 1}).`;
+      }
 
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -150,6 +237,27 @@ item_index deve usar os números dos posts acima (${batchStart} a ${batchStart +
         const existingItem = await supabase.from("planning_items").select("metadata").eq("id", approvedItem.id).single();
         const existingMeta = (existingItem.data?.metadata as any) ?? {};
 
+        const updatedMetadata: any = {
+          ...existingMeta,
+          objective: b.objective,
+          concept: b.concept,
+          argument: b.argument ?? null,
+          evidence: b.evidence ?? null,
+          resolution: b.resolution ?? null,
+          slides: b.slides,
+          script: b.script,
+          image_text: b.image_text,
+          briefing_status: "pending",
+        };
+
+        // Save F.O.R.M.U.L.A.™ score and analysis if present
+        if (b.formula_score !== undefined) {
+          updatedMetadata.formula_score = b.formula_score;
+        }
+        if (b.formula_analysis) {
+          updatedMetadata.formula_analysis = b.formula_analysis;
+        }
+
         await supabase.from("planning_items").update({
           copy_text: b.copy_text || null,
           theme: b.theme || null,
@@ -157,18 +265,7 @@ item_index deve usar os números dos posts acima (${batchStart} a ${batchStart +
           target_audience: b.target_audience || null,
           description: b.concept || null,
           hashtags: b.hashtags || null,
-          metadata: {
-            ...existingMeta,
-            objective: b.objective,
-            concept: b.concept,
-            argument: b.argument ?? null,
-            evidence: b.evidence ?? null,
-            resolution: b.resolution ?? null,
-            slides: b.slides,
-            script: b.script,
-            image_text: b.image_text,
-            briefing_status: "pending",
-          },
+          metadata: updatedMetadata,
         }).eq("id", approvedItem.id);
         totalBriefings++;
       }

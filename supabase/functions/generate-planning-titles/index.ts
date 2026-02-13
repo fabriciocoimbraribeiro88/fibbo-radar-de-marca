@@ -5,6 +5,57 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Frame labels in Portuguese
+const FRAME_LABELS: Record<string, string> = {
+  villain: "Vilão Claro",
+  surprising_number: "Número Surpreendente",
+  binary_comparison: "Comparação Binária",
+  future_vs_past: "Futuro vs Passado",
+  myth_vs_reality: "Mito vs Realidade",
+  own_framework: "Framework Próprio",
+  timing: "Timing",
+  problem_solution: "Problema→Solução",
+  behind_scenes: "Behind the Scenes",
+  contrarian: "Contrarian",
+  extreme_case: "Caso Extremo",
+  actionable_checklist: "Checklist Acionável",
+  timeline_journey: "Timeline/Jornada",
+  aggressive_comparison: "Comparativo Agressivo",
+  prediction: "Predição",
+  vulnerable: "Vulnerável",
+};
+
+// Method labels in Portuguese
+const METHOD_LABELS: Record<string, string> = {
+  pas: "PAS",
+  bab: "BAB",
+  numbered_list: "Lista Numerada",
+  timeline: "Timeline",
+  comparative: "Comparativo",
+  framework: "Framework",
+  case_study: "Case Study",
+  myth_busting: "Mito-Detonado",
+  checklist: "Checklist",
+  behind_scenes: "Behind the Scenes",
+  strong_opinion: "Opinião Forte",
+  trend: "Tendência",
+  common_mistake: "Erro Comum",
+  competitor_comparison: "Competidor",
+  data_storytelling: "Data Storytelling",
+  ugc_testimonial: "UGC/Depoimento",
+};
+
+// Objective labels in Portuguese
+const OBJECTIVE_LABELS: Record<string, string> = {
+  awareness: "Awareness",
+  education: "Educação",
+  authority: "Autoridade",
+  conversion: "Conversão",
+  community: "Comunidade",
+  social_proof: "Prova Social",
+  product: "Produto",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -23,13 +74,18 @@ Deno.serve(async (req) => {
     const selectedLenses = parameters.selected_lenses ?? [];
     const provocationLevel = parameters.provocation_level ?? 3;
 
+    // ── F.O.R.M.U.L.A.™ detection ──
+    const formulaConfig = parameters.formula_config ?? null;
+    const formulaEnabled = formulaConfig?.enabled === true;
+    const formula = briefing?.formula ?? null;
+
     // 2. Build pillar context
     const contentPillars = briefing?.content_pillars ?? [];
     let pillarContext = "";
     if (contentPillars.length > 0) {
       pillarContext = "PILARES DE CONTEÚDO DA MARCA:\n" + contentPillars.map((p: any, i: number) =>
         `${i + 1}. [${p.id?.slice(0, 4)?.toUpperCase() ?? `P${i + 1}`}] ${p.name} (${p.percentage}%)\n   Objetivo: ${p.objective ?? "—"}\n   Descrição: ${p.description ?? "—"}\n   Formatos preferidos: ${(p.preferred_formats ?? []).join(", ")}`
-      ).join("\n") + "\n\nIMPORTANTE: Use o NOME COMPLETO de cada pilar no campo content_type.\n";
+      ).join("\n") + "\nIMPORTANTE: Use o NOME COMPLETO de cada pilar no campo content_type.\n";
     }
 
     // 3. Build tension territories context
@@ -161,19 +217,175 @@ Deno.serve(async (req) => {
     const totalBase = posts_per_week * weeks;
     const totalWithExtra = Math.ceil(totalBase * 1.25);
 
-    // Build the prompt based on content approach
-    const isTheses = contentApproach === "theses";
-    const catMix = category_mix ?? { thesis: 40, best_practice: 25, seasonal: 15, connection: 20 };
+    let systemPrompt: string;
+    let userPrompt: string;
 
-    const provocationGuide = {
-      1: "Tom consultivo e educativo. Apresente insights de forma construtiva e propositiva.",
-      2: "Tom moderado. Questione práticas comuns de forma respeitosa mas com opinião clara.",
-      3: "Tom assertivo. Defenda posições claras com argumentos sólidos. Não tenha medo de contrariar o senso comum.",
-      4: "Tom provocativo. Desafie crenças estabelecidas com teses ousadas. Gere desconforto produtivo.",
-      5: "Tom confrontador. Teses radicais que forçam a audiência a repensar tudo. Polêmica intelectual controlada.",
-    }[provocationLevel] ?? "";
+    // ════════════════════════════════════════════════════════════════
+    // ██  F.O.R.M.U.L.A.™ MODE
+    // ════════════════════════════════════════════════════════════════
+    if (formulaEnabled) {
+      const frameWeights = formulaConfig.frame_weights ?? {};
+      const objectiveMix = formulaConfig.objective_mix ?? {};
+      const methodWeights = formulaConfig.method_weights ?? {};
+      const varietyRules = formulaConfig.variety_rules ?? {};
 
-    const lensesDescription = `AS LENTES NARRATIVAS ATIVAS PARA ESTE PERÍODO:
+      // Build active frames list
+      const activeFrames = Object.entries(frameWeights)
+        .filter(([, w]) => (w as number) !== 0)
+        .map(([key]) => FRAME_LABELS[key] ?? key)
+        .join(", ");
+
+      // Build objective distribution
+      const objectiveDistribution = Object.entries(objectiveMix)
+        .filter(([, v]) => (v as number) > 0)
+        .map(([key, v]) => `${OBJECTIVE_LABELS[key] ?? key}: ${v}%`)
+        .join(", ");
+
+      // Build active methods list
+      const activeMethods = Object.entries(methodWeights)
+        .filter(([, w]) => (w as number) !== 0)
+        .map(([key]) => METHOD_LABELS[key] ?? key)
+        .join(", ");
+
+      // Build uniqueness elements
+      const uniquenessElements = (formula?.uniqueness_elements ?? [])
+        .map((u: any) => `- ${u.label}: ${u.description}`)
+        .join("\n");
+
+      // Build power words and forbidden patterns
+      const powerWords = (formula?.power_words ?? []).join(", ");
+      const forbiddenPatterns = (formula?.forbidden_patterns ?? []).join(", ");
+
+      // Build CTAs by objective
+      const ctasByObjective = Object.entries(formula?.ctas_by_objective ?? {})
+        .map(([key, cta]) => `- ${OBJECTIVE_LABELS[key] ?? key}: ${cta}`)
+        .join("\n");
+
+      // Build variety rules text
+      let varietyRulesText = "";
+      if (varietyRules.noRepeatFrame) varietyRulesText += "- Nunca usar o mesmo frame 2x seguidas\n";
+      if (varietyRules.noRepeatMethod) varietyRulesText += "- Nunca repetir método em posts consecutivos\n";
+      if (varietyRules.maxSameObjective) varietyRulesText += `- Máximo ${varietyRules.maxSameObjective}% de posts com mesmo objetivo\n`;
+      if (varietyRules.minRealData) varietyRulesText += `- Pelo menos ${varietyRules.minRealData}% dos posts devem citar dados/números reais\n`;
+      if (varietyRules.minProvocative) varietyRulesText += `- Pelo menos ${varietyRules.minProvocative}% dos posts devem ter elemento provocativo/contrarian\n`;
+
+      systemPrompt = `Você é um Estrategista de Conteúdo que aplica a Metodologia F.O.R.M.U.L.A.™ para criar calendários anti-genéricos.
+
+## METODOLOGIA F.O.R.M.U.L.A.™ OBRIGATÓRIA
+
+Cada post DEVE seguir os 7 filtros:
+
+1. **Frame (Enquadramento)** — Escolha 1 dos ângulos de ataque ATIVOS:
+   ${activeFrames}
+
+2. **Objective (Objetivo)** — Cada post tem UM objetivo com a distribuição:
+   ${objectiveDistribution}
+
+3. **Reference (Referência)** — OBRIGATÓRIO evidência concreta:
+   - Número específico, case, citação, comparativo antes/depois, screenshot
+   - Posts sem evidência são PROIBIDOS
+
+4. **Method (Método)** — Formato narrativo ATIVO:
+   ${activeMethods}
+
+5. **Uniqueness (Singularidade)** — Cada post deve usar 1 elemento da marca:
+${uniquenessElements || "   (não definidos — gere com base no posicionamento da marca)"}
+   Se o concorrente pode copiar o post trocando o logo, o post está ERRADO.
+
+6. **Language (Linguagem)** — Regras:
+   - Palavras de força: ${powerWords || "(não definidas)"}
+   - PROIBIDO: ${forbiddenPatterns || "(não definidos)"}
+   - Tom: ${project?.tone_of_voice ?? "—"}
+
+7. **Action (CTA)** — CTA específico por objetivo:
+${ctasByObjective || "   (não definidos — gere CTAs específicos por objetivo)"}
+
+### REGRAS ANTI-GENÉRICO:
+❌ NÃO criar posts tipo "O que é X?", "Entenda Y", "Conheça Z", "A importância de W", "Como fazer K" (sem especificidade)
+✅ CRIAR posts com tese única, ângulo diferenciado, evidência concreta
+${varietyRulesText}
+Responda em JSON.`;
+
+      userPrompt = `Gere um calendário de ${totalWithExtra} posts usando a Metodologia F.O.R.M.U.L.A.™ para Instagram.
+
+PERÍODO: ${period_start} a ${period_end} (${weeks} semanas)
+MARCA: ${brandName}
+
+${pillarContext}
+
+DISTRIBUIÇÃO DE FORMATOS:
+${Object.entries(format_mix ?? {}).map(([k, v]) => `- ${k}: ${v}%`).join("\n")}
+
+RESPONSÁVEIS:
+${(responsibles ?? []).map((r: any) => `- ${r.name} (${r.code}): ${r.percentage}%`).join("\n")}
+
+${preferred_times ? `HORÁRIOS PREFERENCIAIS:\n- Dias úteis: ${preferred_times.weekday?.join(", ")}\n- Fins de semana: ${preferred_times.weekend?.join(", ")}` : ""}
+
+${special_instructions ? `INSTRUÇÕES ESPECIAIS: ${special_instructions}` : ""}
+
+CONTEXTO DA MARCA:
+${brandContext}
+
+${referencesContext}
+${memoryContext}
+${hashtagContext}
+${seasonalContext}
+${productsContext}
+
+─── ANÁLISE DA MARCA ───
+${brandAnalysis.slice(0, 4000)}
+
+${competitorAnalysis ? `─── ANÁLISE DE CONCORRENTES ───\n${competitorAnalysis.slice(0, 4000)}` : ""}
+
+${influencerAnalysis ? `─── ANÁLISE DE INFLUENCERS ───\n${influencerAnalysis.slice(0, 3000)}` : ""}
+
+${inspirationAnalysis ? `─── ANÁLISE DE INSPIRAÇÕES ───\n${inspirationAnalysis.slice(0, 3000)}` : ""}
+
+${synthesisAnalysis ? `─── SÍNTESE ESTRATÉGICA ───\n${synthesisAnalysis.slice(0, 3000)}` : ""}
+
+REGRAS:
+1. content_type = NOME COMPLETO do pilar relacionado
+2. Cada post DEVE preencher TODOS os 7 filtros F.O.R.M.U.L.A.™
+3. Respeitar distribuição de formatos e responsáveis
+4. Variar frames e métodos ao longo da semana
+
+Responda APENAS com JSON válido:
+{
+  "items": [
+    {
+      "scheduled_date": "YYYY-MM-DD",
+      "scheduled_time": "HH:MM",
+      "content_type": "NOME COMPLETO DO PILAR",
+      "format": "Reels|Carrossel|Estático|Stories",
+      "responsible_code": "CODE",
+      "title": "Título com ângulo único e evidência",
+      "formula": {
+        "frame": "key do frame usado",
+        "objective": "key do objetivo",
+        "reference_type": "number|case|quote|comparison|screenshot",
+        "method": "key do método usado",
+        "uniqueness_element": "texto do elemento de singularidade usado",
+        "cta": "CTA específico"
+      }
+    }
+  ]
+}`;
+
+    // ════════════════════════════════════════════════════════════════
+    // ██  THESES MODE (existing)
+    // ════════════════════════════════════════════════════════════════
+    } else if (contentApproach === "theses") {
+      const catMix = category_mix ?? { thesis: 40, best_practice: 25, seasonal: 15, connection: 20 };
+
+      const provocationGuide = {
+        1: "Tom consultivo e educativo. Apresente insights de forma construtiva e propositiva.",
+        2: "Tom moderado. Questione práticas comuns de forma respeitosa mas com opinião clara.",
+        3: "Tom assertivo. Defenda posições claras com argumentos sólidos. Não tenha medo de contrariar o senso comum.",
+        4: "Tom provocativo. Desafie crenças estabelecidas com teses ousadas. Gere desconforto produtivo.",
+        5: "Tom confrontador. Teses radicais que forçam a audiência a repensar tudo. Polêmica intelectual controlada.",
+      }[provocationLevel] ?? "";
+
+      const lensesDescription = `AS LENTES NARRATIVAS ATIVAS PARA ESTE PERÍODO:
 ${selectedLenses.map((l: string) => {
   const descs: Record<string, string> = {
     "Sociológica": "Impacto no coletivo, normas sociais, estruturas de poder, movimentos culturais",
@@ -186,10 +398,6 @@ ${selectedLenses.map((l: string) => {
   return `- ${l}: ${descs[l] ?? ""}`;
 }).join("\n")}`;
 
-    let systemPrompt: string;
-    let userPrompt: string;
-
-    if (isTheses) {
       systemPrompt = `Você é um Arquiteto de Narrativas de Marca e Estrategista de Conteúdo. Seu trabalho é criar um calendário EQUILIBRADO que combina diferentes tipos de conteúdo para maximizar resultados.
 
 O calendário deve ter um MIX OBRIGATÓRIO de 4 categorias de posts:
@@ -308,8 +516,11 @@ Responda APENAS com JSON válido:
     }
   ]
 }`;
+
+    // ════════════════════════════════════════════════════════════════
+    // ██  PILLARS MODE (existing legacy)
+    // ════════════════════════════════════════════════════════════════
     } else {
-      // Traditional pillars approach (existing behavior)
       systemPrompt = `Você é um estrategista de conteúdo digital sênior especializado em Instagram. 
 Você analisa profundamente o histórico de performance, referências de sucesso/fracasso, concorrentes e influencers para criar calendários editoriais com posts GENUINAMENTE DIVERSOS.
 
@@ -396,6 +607,8 @@ Responda APENAS com JSON válido:
     const parsed = JSON.parse(jsonMatch[0]);
     const generatedItems = parsed.items ?? [];
 
+    const isTheses = contentApproach === "theses";
+
     // Insert items into planning_items
     for (const item of generatedItems) {
       const metadata: any = {
@@ -403,8 +616,13 @@ Responda APENAS com JSON válido:
         title_status: "pending",
       };
 
-      // Add theses-specific metadata
-      if (isTheses) {
+      // F.O.R.M.U.L.A.™ metadata
+      if (formulaEnabled) {
+        metadata.formula = item.formula ?? null;
+        metadata.content_approach = "formula";
+      }
+      // Theses metadata
+      else if (isTheses) {
         metadata.category = item.category ?? "thesis";
         metadata.territory = item.territory ?? null;
         metadata.lens = item.lens ?? null;
