@@ -215,8 +215,12 @@ Deno.serve(async (req) => {
     }
 
     const { posts_per_week, format_mix, responsibles, preferred_times, special_instructions, category_mix } = parameters;
-    const weeks = Math.max(1, Math.round((new Date(period_end).getTime() - new Date(period_start).getTime()) / (7 * 86400000)));
-    const totalBase = posts_per_week * weeks;
+    const startMs = period_start ? new Date(period_start).getTime() : 0;
+    const endMs = period_end ? new Date(period_end).getTime() : 0;
+    const weeks = (startMs && endMs && endMs > startMs)
+      ? Math.max(1, Math.round((endMs - startMs) / (7 * 86400000)))
+      : 1;
+    const totalBase = (posts_per_week ?? 3) * weeks;
     // Generate 2 options per post (A/B selection)
     const totalWithExtra = totalBase * 2;
 
@@ -620,10 +624,34 @@ Responda APENAS com JSON válido:
 
     const aiData = await aiResponse.json();
     let content = aiData.choices?.[0]?.message?.content ?? "";
-    
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("IA não retornou JSON válido");
-    const parsed = JSON.parse(jsonMatch[0]);
+
+    // Robust JSON extraction: strip markdown fences, find JSON boundaries
+    content = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const jsonStart = content.search(/[\{\[]/);
+    const lastBrace = content.lastIndexOf("}");
+    const lastBracket = content.lastIndexOf("]");
+    const jsonEnd = Math.max(lastBrace, lastBracket);
+    if (jsonStart === -1 || jsonEnd === -1) {
+      console.error("AI raw response (no JSON found):", content.slice(0, 500));
+      throw new Error("IA não retornou JSON válido");
+    }
+    let jsonStr = content.substring(jsonStart, jsonEnd + 1);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (_e) {
+      // Try fixing common issues
+      jsonStr = jsonStr
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x1F\x7F]/g, "");
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (e2) {
+        console.error("JSON parse failed after repair:", jsonStr.slice(0, 500));
+        throw new Error("IA não retornou JSON válido");
+      }
+    }
 
     const isTheses = contentApproach === "theses";
     const colabs = parameters.colabs ?? [];
