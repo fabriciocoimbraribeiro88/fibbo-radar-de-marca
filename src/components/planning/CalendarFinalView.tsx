@@ -101,6 +101,7 @@ export default function CalendarFinalView({ projectId, calendarId, onBack }: Pro
     a.href = url;
     a.download = `${calendar?.title ?? "calendario"}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
     toast({ title: "Calendário exportado!" });
   };
 
@@ -133,6 +134,7 @@ export default function CalendarFinalView({ projectId, calendarId, onBack }: Pro
     a.href = url;
     a.download = `briefings-${calendar?.title ?? "conteudo"}.md`;
     a.click();
+    URL.revokeObjectURL(url);
     toast({ title: "Briefings exportados!" });
   };
 

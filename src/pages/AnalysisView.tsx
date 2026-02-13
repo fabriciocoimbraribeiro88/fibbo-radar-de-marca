@@ -149,7 +149,7 @@ export default function AnalysisView() {
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">
               {analysis?.period_start &&
-                `${new Date(analysis.period_start).toLocaleDateString("pt-BR")} – ${new Date(analysis.period_end!).toLocaleDateString("pt-BR")}`}
+                `${new Date(analysis.period_start).toLocaleDateString("pt-BR")}${analysis.period_end ? ` – ${new Date(analysis.period_end).toLocaleDateString("pt-BR")}` : ""}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -267,8 +267,12 @@ export default function AnalysisView() {
                   {analysis?.period_start && (
                     <p className="text-sm text-muted-foreground">
                       {new Date(analysis.period_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                      {" — "}
-                      {new Date(analysis.period_end!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                      {analysis.period_end && (
+                        <>
+                          {" — "}
+                          {new Date(analysis.period_end).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                        </>
+                      )}
                     </p>
                   )}
                   <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">

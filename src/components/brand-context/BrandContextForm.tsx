@@ -68,13 +68,23 @@ export default function BrandContextForm({ projectId, briefing }: Props) {
     setForm(deepMerge(emptyBriefing, briefing));
   }, [briefing]);
 
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const save = useCallback(
     async (data: BriefingData) => {
       if (!projectId) return;
       setSaveStatus("saving");
+      // Merge with existing briefing to preserve other components' data
+      // (content_pillars, tension_territories, hashtag_strategy, etc.)
+      const merged = { ...(briefing ?? {}), ...data };
       const { error } = await supabase
         .from("projects")
-        .update({ briefing: data as any })
+        .update({ briefing: merged as any })
         .eq("id", projectId);
       if (!error) {
         setSaveStatus("saved");
@@ -84,7 +94,7 @@ export default function BrandContextForm({ projectId, briefing }: Props) {
         setSaveStatus("idle");
       }
     },
-    [projectId, queryClient]
+    [projectId, queryClient, briefing]
   );
 
   const update = (path: string, value: string) => {

@@ -71,7 +71,7 @@ export default function NewAnalysis() {
       setPeriodStart(start);
       setPeriodEnd(end);
     }
-  }, []);
+  }, [periodPreset]);
 
   // Reset sections when channel/type changes
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function NewAnalysis() {
       }
       setTitle(`${brandName} - ${channelLabel} - ${typeLabel} - ${periodLabel}`);
     }
-  }, [step, project]);
+  }, [step, project, channel, analysisType, periodMode, postsLimit, periodStart, periodEnd]);
 
   const { data: projectEntities } = useQuery({
     queryKey: ["project-entities-full", projectId],

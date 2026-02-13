@@ -1,52 +1,52 @@
 project_id = "hpuklcgcbrgnulrwtkwc"
 
 [functions.fetch-instagram]
-verify_jwt = false
+verify_jwt = true
 
 [functions.run-analysis-pipeline]
-verify_jwt = false
+verify_jwt = true
 
 [functions.test-anthropic]
-verify_jwt = false
+verify_jwt = true
 
 [functions.test-apify]
-verify_jwt = false
+verify_jwt = true
 
 [functions.list-anthropic-models]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-brand-source]
-verify_jwt = false
+verify_jwt = true
 
 [functions.fill-brand-context]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-instagram-json]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-entity-data]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-content-pillars]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-hashtag-strategy]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-planning-titles]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-planning-briefings]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-seasonal-calendar]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-okrs]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-comments]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-sentiment]
-verify_jwt = false
+verify_jwt = true
