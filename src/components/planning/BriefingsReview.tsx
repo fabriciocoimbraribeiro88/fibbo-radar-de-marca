@@ -68,7 +68,7 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
   const updateField = async (itemId: string, field: string, value: any) => {
     const item = items?.find((i) => i.id === itemId);
     if (!item) return;
-    if (["copy_text", "theme", "target_audience", "visual_brief", "description", "title"].includes(field)) {
+    if (["copy_text", "theme", "target_audience", "visual_brief", "description", "title", "hashtags"].includes(field)) {
       await supabase.from("planning_items").update({ [field]: value }).eq("id", itemId);
     } else {
       // metadata field
