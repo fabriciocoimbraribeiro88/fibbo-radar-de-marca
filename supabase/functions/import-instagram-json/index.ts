@@ -188,12 +188,36 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-trigger sentiment analysis if comments were imported
+    let sentimentResult: any = null;
+    if (totalComments > 0) {
+      try {
+        console.log(`Auto-triggering sentiment analysis for entity ${entity_id} (${totalComments} comments)`);
+        const sentimentResp = await fetch(
+          `${supabaseUrl}/functions/v1/analyze-sentiment`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${serviceRoleKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ entity_id }),
+          }
+        );
+        sentimentResult = await sentimentResp.json();
+        console.log(`Sentiment analysis result: ${JSON.stringify(sentimentResult)}`);
+      } catch (e) {
+        console.error("Sentiment analysis auto-trigger failed (non-blocking):", e);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: errors.length === 0,
         total_imported: totalImported,
         total_comments: totalComments,
         total_received: posts.length,
+        sentiment_analyzed: sentimentResult?.analyzed ?? 0,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
