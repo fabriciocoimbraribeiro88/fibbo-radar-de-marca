@@ -35,10 +35,11 @@ export default function Login() {
           description: "Verifique seu email para confirmar o cadastro.",
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Algo deu errado. Tente novamente.";
       toast({
         title: "Erro",
-        description: err.message || "Algo deu errado. Tente novamente.",
+        description: message,
         variant: "destructive",
       });
     } finally {

@@ -21,7 +21,7 @@ export default function Dashboard() {
   const { data: projects, isLoading } = useProjects();
 
   const { data: stats } = useQuery({
-    queryKey: ["dashboard-stats", projects?.length],
+    queryKey: ["dashboard-stats", projects?.map(p => p.id).sort()],
     queryFn: async () => {
       const projectIds = (projects ?? []).map((p) => p.id);
       if (!projectIds.length) return { entities: 0, posts: 0, analyses: 0 };
