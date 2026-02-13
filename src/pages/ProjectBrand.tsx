@@ -5,13 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Target, Package, Brain, FileText, LayoutGrid } from "lucide-react";
+import { Target, Package, FileText, LayoutGrid } from "lucide-react";
 import BrandContextSources from "@/components/brand-context/BrandContextSources";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
 import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
 import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
 import ProductsCatalog from "@/components/brand-context/ProductsCatalog";
-import StrategicMemory from "@/components/brand-context/StrategicMemory";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -65,7 +64,6 @@ export default function ProjectBrand() {
     { value: "identity", label: "Identidade", icon: Target },
     { value: "content", label: "Conteúdo", icon: LayoutGrid },
     { value: "products", label: "Produtos", icon: Package },
-    { value: "memory", label: "Memória", icon: Brain },
     { value: "sources", label: "Fontes", icon: FileText },
   ];
 
@@ -111,10 +109,6 @@ export default function ProjectBrand() {
           <ProductsCatalog projectId={id!} briefing={project?.briefing} />
         </TabsContent>
 
-        <TabsContent value="memory">
-          <StrategicMemory projectId={id!} briefing={project?.briefing} />
-        </TabsContent>
-
         <TabsContent value="sources">
           <BrandContextSources projectId={id!} />
         </TabsContent>
@@ -122,3 +116,4 @@ export default function ProjectBrand() {
     </div>
   );
 }
+
