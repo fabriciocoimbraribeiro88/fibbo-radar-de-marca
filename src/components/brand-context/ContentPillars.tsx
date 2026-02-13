@@ -58,6 +58,10 @@ export default function ContentPillars({ projectId, briefing }: Props) {
     setPillars(briefing?.content_pillars ?? []);
   }, [briefing]);
 
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
   const save = useCallback(async (data: Pillar[]) => {
     setSaving(true);
     const merged = { ...(briefing ?? {}), content_pillars: data };
