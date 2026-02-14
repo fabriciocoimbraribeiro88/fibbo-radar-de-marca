@@ -13,6 +13,8 @@ import {
   Search,
   Database,
   ArrowRight,
+  Clock,
+  CalendarDays,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -26,9 +28,9 @@ export default function Projects() {
     queryKey: ["dashboard-stats", projects?.map(p => p.id).sort()],
     queryFn: async () => {
       const projectIds = (projects ?? []).map((p) => p.id);
-      if (!projectIds.length) return { entities: 0, posts: 0, analyses: 0 };
+      if (!projectIds.length) return { entities: 0, posts: 0, analyses: 0, lastPostAt: null as string | null, activePlannings: 0 };
 
-      const [entitiesRes, postsRes, analysesRes] = await Promise.all([
+      const [entitiesRes, postsRes, analysesRes, lastPostRes, planningsRes] = await Promise.all([
         supabase
           .from("project_entities")
           .select("entity_id", { count: "exact", head: true })
@@ -40,12 +42,24 @@ export default function Projects() {
           .from("entity_reports")
           .select("id", { count: "exact", head: true })
           .in("project_id", projectIds),
+        supabase
+          .from("instagram_posts")
+          .select("fetched_at")
+          .order("fetched_at", { ascending: false })
+          .limit(1),
+        supabase
+          .from("planning_calendars")
+          .select("id", { count: "exact", head: true })
+          .in("project_id", projectIds)
+          .eq("status", "draft"),
       ]);
 
       return {
         entities: entitiesRes.count ?? 0,
         posts: postsRes.count ?? 0,
         analyses: analysesRes.count ?? 0,
+        lastPostAt: lastPostRes.data?.[0]?.fetched_at ?? null,
+        activePlannings: planningsRes.count ?? 0,
       };
     },
     enabled: !!projects?.length,
@@ -54,10 +68,15 @@ export default function Projects() {
   const firstName =
     user?.user_metadata?.full_name?.split(" ")[0] ?? "usuário";
 
-  const statItems = [
+  const lastCollectedLabel = stats?.lastPostAt
+    ? formatDistanceToNow(new Date(stats.lastPostAt), { addSuffix: true, locale: ptBR })
+    : "—";
+
+  const statItems: { label: string; value: string | number; icon: typeof Database; color: string }[] = [
     { label: "Marcas Monitoradas", value: stats?.entities ?? 0, icon: Database, color: "text-blue-500 bg-blue-500/10" },
     { label: "Posts Coletados", value: stats?.posts ?? 0, icon: BarChart3, color: "text-emerald-500 bg-emerald-500/10" },
-    { label: "Análises", value: stats?.analyses ?? 0, icon: Search, color: "text-violet-500 bg-violet-500/10" },
+    { label: "Última Coleta", value: lastCollectedLabel, icon: Clock, color: "text-amber-500 bg-amber-500/10" },
+    { label: "Planejamentos Ativos", value: stats?.activePlannings ?? 0, icon: CalendarDays, color: "text-violet-500 bg-violet-500/10" },
   ];
 
   return (
@@ -71,7 +90,7 @@ export default function Projects() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {statItems.map((stat) => (
           <div key={stat.label} className="card-elevated p-5">
             <div className="flex items-center gap-3">
@@ -79,11 +98,11 @@ export default function Projects() {
                 <stat.icon className="h-4 w-4" />
               </div>
               <div>
-                <p className="kpi-value">
+                <p className={typeof stat.value === "number" ? "kpi-value" : "text-sm font-semibold text-foreground"}>
                   {isLoading ? (
                     <Skeleton className="h-6 w-12" />
                   ) : (
-                    stat.value.toLocaleString("pt-BR")
+                    typeof stat.value === "number" ? stat.value.toLocaleString("pt-BR") : stat.value
                   )}
                 </p>
                 <p className="kpi-label">{stat.label}</p>
