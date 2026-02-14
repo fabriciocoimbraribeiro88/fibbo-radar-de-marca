@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, Plus, Instagram, Megaphone, Search, Check } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { differenceInWeeks } from "date-fns";
 
@@ -21,6 +23,28 @@ const STEPS = [
   { key: "briefings", label: "Briefings", statuses: ["briefings_review"] },
   { key: "creatives", label: "Criativos", statuses: ["approved", "active"] },
 ] as const;
+
+type FilterKey = "all" | "editorial" | "titles" | "briefings" | "creatives" | "done";
+
+const FILTER_OPTIONS: { value: FilterKey; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "editorial", label: "Editorial" },
+  { value: "titles", label: "Títulos" },
+  { value: "briefings", label: "Briefings" },
+  { value: "creatives", label: "Criativos" },
+  { value: "done", label: "Concluídos" },
+];
+
+function matchesFilter(status: string | null, filter: FilterKey): boolean {
+  if (filter === "all") {
+    // Hide completed by default
+    return status !== "done";
+  }
+  if (filter === "done") return status === "done";
+  const step = STEPS.find((s) => s.key === filter);
+  if (!step) return true;
+  return (step.statuses as readonly string[]).includes(status ?? "draft");
+}
 
 function getStepIndex(status: string | null): number {
   const s = status ?? "draft";
@@ -44,6 +68,8 @@ export default function ProductionKanban({
   onOpenBriefingsReview,
   onOpenCreatives,
 }: Props) {
+  const [filter, setFilter] = useState<FilterKey>("all");
+
   const { data: calendars, isLoading } = useQuery({
     queryKey: ["planning-calendars", projectId],
     queryFn: async () => {
@@ -91,6 +117,24 @@ export default function ProductionKanban({
     else if (status === "approved" || status === "active") onOpenCreatives(cal.id);
   };
 
+  const hasCalendars = calendars && calendars.length > 0;
+
+  const filteredCalendars = useMemo(
+    () => (calendars ?? []).filter((cal) => matchesFilter(cal.status, filter)),
+    [calendars, filter]
+  );
+
+  const counts = useMemo(() => {
+    const c: Record<FilterKey, number> = { all: 0, editorial: 0, titles: 0, briefings: 0, creatives: 0, done: 0 };
+    for (const cal of calendars ?? []) {
+      if (cal.status !== "done") c.all++;
+      for (const opt of FILTER_OPTIONS) {
+        if (opt.value !== "all" && matchesFilter(cal.status, opt.value)) c[opt.value]++;
+      }
+    }
+    return c;
+  }, [calendars]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -103,8 +147,6 @@ export default function ProductionKanban({
       </div>
     );
   }
-
-  const hasCalendars = calendars && calendars.length > 0;
 
   return (
     <>
@@ -120,6 +162,32 @@ export default function ProductionKanban({
           Novo Planejamento
         </Button>
       </div>
+
+      {/* Filter bar */}
+      {hasCalendars && (
+        <div className="mb-4">
+          <ToggleGroup
+            type="single"
+            value={filter}
+            onValueChange={(v) => { if (v) setFilter(v as FilterKey); }}
+            className="flex flex-wrap gap-1"
+          >
+            {FILTER_OPTIONS.map((opt) => (
+              <ToggleGroupItem
+                key={opt.value}
+                value={opt.value}
+                size="sm"
+                className="text-xs px-3 h-8 rounded-full data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                {opt.label}
+                {counts[opt.value] > 0 && (
+                  <span className="ml-1.5 text-[10px] opacity-70">{counts[opt.value]}</span>
+                )}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      )}
 
       {!hasCalendars ? (
         <Card className="border-dashed">
@@ -137,7 +205,11 @@ export default function ProductionKanban({
         </Card>
       ) : (
         <div className="space-y-4">
-          {calendars.map((cal) => {
+          {filteredCalendars.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Nenhum planejamento nesta etapa.
+            </p>
+          ) : filteredCalendars.map((cal) => {
             const ChannelIcon = CHANNEL_ICONS[cal.type ?? "social"] ?? CalendarDays;
             const summary = itemsByCalendar?.[cal.id];
             const totalItems = summary?.total ?? 0;
