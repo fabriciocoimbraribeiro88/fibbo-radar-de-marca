@@ -390,6 +390,68 @@ export type Database = {
           },
         ]
       }
+      checkins: {
+        Row: {
+          checklist: Json
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          nps_feedback: string | null
+          nps_score: number | null
+          participants: string[] | null
+          project_id: string
+          reference_date: string
+          status: string
+          summary: string | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nps_feedback?: string | null
+          nps_score?: number | null
+          participants?: string[] | null
+          project_id: string
+          reference_date?: string
+          status?: string
+          summary?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nps_feedback?: string | null
+          nps_score?: number | null
+          participants?: string[] | null
+          project_id?: string
+          reference_date?: string
+          status?: string
+          summary?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkins_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creative_outputs: {
         Row: {
           created_at: string | null
