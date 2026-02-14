@@ -1,12 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FORMULA_OBJECTIVES } from "@/lib/formulaConstants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Plus, X, Sparkles, Award } from "lucide-react";
 
@@ -45,7 +43,6 @@ export default function SocialProofBank({ projectId, briefing }: SocialProofBank
   const [newText, setNewText] = useState("");
   const [newSource, setNewSource] = useState("");
   const [newMetric, setNewMetric] = useState("");
-  const [newUseIn, setNewUseIn] = useState<string[]>([]);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const save = useCallback((data: SocialProofEntry[]) => {
@@ -71,30 +68,20 @@ export default function SocialProofBank({ projectId, briefing }: SocialProofBank
       source: newSource.trim(),
       metric_value: newMetric.trim() || undefined,
       is_verified: false,
-      use_in: newUseIn,
+      use_in: [],
       is_ai_generated: false,
     };
     const updated = [...entries, entry];
     setEntries(updated);
     save(updated);
     setAdding(false);
-    setNewText(""); setNewSource(""); setNewMetric(""); setNewUseIn([]);
+    setNewText(""); setNewSource(""); setNewMetric("");
   };
 
   const removeEntry = (id: string) => {
     const updated = entries.filter((e) => e.id !== id);
     setEntries(updated);
     save(updated);
-  };
-
-  const toggleVerified = (id: string) => {
-    const updated = entries.map(e => e.id === id ? { ...e, is_verified: !e.is_verified } : e);
-    setEntries(updated);
-    save(updated);
-  };
-
-  const toggleUseIn = (obj: string) => {
-    setNewUseIn(prev => prev.includes(obj) ? prev.filter(o => o !== obj) : [...prev, obj]);
   };
 
   const total = entries.length;
@@ -126,16 +113,7 @@ export default function SocialProofBank({ projectId, briefing }: SocialProofBank
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>Fonte: {e.source}</span>
               {e.metric_value && <span>Valor: {e.metric_value}</span>}
-              <label className="flex items-center gap-1 cursor-pointer">
-                <Checkbox checked={e.is_verified} onCheckedChange={() => toggleVerified(e.id)} className="h-3 w-3" />
-                Verificado
-              </label>
             </div>
-            {e.use_in.length > 0 && (
-              <div className="flex gap-1 flex-wrap">
-                {e.use_in.map(o => <Badge key={o} variant="outline" className="text-[9px]">{FORMULA_OBJECTIVES.find(obj => obj.key === o)?.label ?? o}</Badge>)}
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -152,16 +130,6 @@ export default function SocialProofBank({ projectId, briefing }: SocialProofBank
           <div className="flex gap-2">
             <Input className="flex-1 h-8 text-xs" placeholder="Fonte (ex: Cliente X)" value={newSource} onChange={(e) => setNewSource(e.target.value)} />
             <Input className="w-[120px] h-8 text-xs" placeholder="Valor (ex: 340%)" value={newMetric} onChange={(e) => setNewMetric(e.target.value)} />
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground mb-1">Usar em:</p>
-            <div className="flex flex-wrap gap-1">
-              {FORMULA_OBJECTIVES.map(o => (
-                <Badge key={o.key} variant={newUseIn.includes(o.key) ? "default" : "outline"} className="text-[10px] cursor-pointer" onClick={() => toggleUseIn(o.key)}>
-                  {o.label}
-                </Badge>
-              ))}
-            </div>
           </div>
           <div className="flex gap-2">
             <Button size="sm" className="h-8 text-xs" onClick={addEntry}>Adicionar</Button>
