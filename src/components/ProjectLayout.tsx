@@ -8,11 +8,10 @@ import {
   BarChart3,
   Search,
   CalendarDays,
-  Target,
   ChevronRight,
   FileText,
   Paintbrush,
-  ClipboardCheck,
+  Trophy,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -42,8 +41,7 @@ const NAV_GROUPS = [
   {
     label: "RESULTADOS",
     items: [
-      { title: "OKRs", path: "/okrs", icon: Target },
-      { title: "Check-in", path: "/checkin", icon: ClipboardCheck },
+      { title: "Resultados", path: "/results", icon: Trophy },
     ],
   },
 ];
@@ -58,6 +56,7 @@ const PATH_LABELS: Record<string, string> = {
   planning: "Planejamento",
   briefings: "Briefings",
   creatives: "Criativos",
+  results: "Resultados",
   okrs: "OKRs",
   checkin: "Check-in",
   new: "Nova",
