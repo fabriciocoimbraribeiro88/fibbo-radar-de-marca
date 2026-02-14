@@ -6,7 +6,7 @@ import { ResultsOverview } from "@/components/results/ResultsOverview";
 import { OKRsPanel } from "@/components/results/OKRsPanel";
 import { ReportsPanel } from "@/components/results/ReportsPanel";
 import { NPSPanel } from "@/components/results/NPSPanel";
-import { ResultsSettings } from "@/components/results/ResultsSettings";
+
 
 export default function ProjectResults() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -38,7 +38,7 @@ export default function ProjectResults() {
           <TabsTrigger value="okrs">OKRs</TabsTrigger>
           <TabsTrigger value="reports">Relatórios</TabsTrigger>
           <TabsTrigger value="nps">NPS</TabsTrigger>
-          <TabsTrigger value="settings">Configuração</TabsTrigger>
+          
         </TabsList>
 
         <TabsContent value="overview">
@@ -57,9 +57,6 @@ export default function ProjectResults() {
           <NPSPanel projectId={projectId} />
         </TabsContent>
 
-        <TabsContent value="settings">
-          <ResultsSettings projectId={projectId} />
-        </TabsContent>
       </Tabs>
     </div>
   );
