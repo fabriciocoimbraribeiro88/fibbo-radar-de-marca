@@ -53,7 +53,7 @@ export default function ProjectOKRs() {
 
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedQuarter, setSelectedQuarter] = useState(currentQuarter);
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
   // Dialogs
   const [objDialog, setObjDialog] = useState(false);
