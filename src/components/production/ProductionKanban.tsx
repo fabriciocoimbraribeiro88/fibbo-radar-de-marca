@@ -4,7 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, Plus, Instagram, Megaphone, Search } from "lucide-react";
+import { CalendarDays, Plus, Instagram, Megaphone, Search, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { differenceInWeeks } from "date-fns";
 
 const CHANNEL_ICONS: Record<string, typeof Instagram> = {
   social: Instagram,
@@ -13,12 +15,17 @@ const CHANNEL_ICONS: Record<string, typeof Instagram> = {
   seo: Search,
 };
 
-const PIPELINE_COLUMNS = [
-  { key: "editorial", label: "Editorial", statuses: ["draft"], emoji: "📝" },
-  { key: "titles", label: "Títulos", statuses: ["titles_review"], emoji: "✏️" },
-  { key: "briefings", label: "Briefings", statuses: ["briefings_review"], emoji: "📋" },
-  { key: "creatives", label: "Criativos", statuses: ["approved", "active"], emoji: "🎨" },
+const STEPS = [
+  { key: "editorial", label: "Editorial", statuses: ["draft"] },
+  { key: "titles", label: "Títulos", statuses: ["titles_review"] },
+  { key: "briefings", label: "Briefings", statuses: ["briefings_review"] },
+  { key: "creatives", label: "Criativos", statuses: ["approved", "active"] },
 ] as const;
+
+function getStepIndex(status: string | null): number {
+  const s = status ?? "draft";
+  return STEPS.findIndex((step) => (step.statuses as readonly string[]).includes(s));
+}
 
 interface Props {
   projectId: string;
@@ -50,22 +57,28 @@ export default function ProductionKanban({
     },
   });
 
-  const { data: itemCounts } = useQuery({
-    queryKey: ["planning-item-counts", projectId],
+  const { data: itemsByCalendar } = useQuery({
+    queryKey: ["planning-items-summary", projectId],
     queryFn: async () => {
       if (!calendars?.length) return {};
       const ids = calendars.map((c) => c.id);
       const { data, error } = await supabase
         .from("planning_items")
-        .select("calendar_id")
+        .select("calendar_id, format")
         .in("calendar_id", ids)
         .neq("status", "cancelled");
       if (error) throw error;
-      const counts: Record<string, number> = {};
+
+      const result: Record<string, { total: number; formats: Record<string, number> }> = {};
       for (const item of data ?? []) {
-        counts[item.calendar_id] = (counts[item.calendar_id] ?? 0) + 1;
+        if (!result[item.calendar_id]) {
+          result[item.calendar_id] = { total: 0, formats: {} };
+        }
+        result[item.calendar_id].total++;
+        const fmt = item.format ?? "Outro";
+        result[item.calendar_id].formats[fmt] = (result[item.calendar_id].formats[fmt] ?? 0) + 1;
       }
-      return counts;
+      return result;
     },
     enabled: !!calendars?.length,
   });
@@ -82,9 +95,9 @@ export default function ProductionKanban({
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-48" />
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-36" />
           ))}
         </div>
       </div>
@@ -123,69 +136,111 @@ export default function ProductionKanban({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-4 gap-4">
-          {PIPELINE_COLUMNS.map((col) => {
-            const colStatuses = col.statuses as readonly string[];
-            const columnCalendars = calendars.filter((c) =>
-              colStatuses.includes(c.status ?? "draft")
-            );
+        <div className="space-y-4">
+          {calendars.map((cal) => {
+            const ChannelIcon = CHANNEL_ICONS[cal.type ?? "social"] ?? CalendarDays;
+            const summary = itemsByCalendar?.[cal.id];
+            const totalItems = summary?.total ?? 0;
+            const formats = summary?.formats ?? {};
+            const currentStepIdx = getStepIndex(cal.status);
+
+            // Posts per week
+            let postsPerWeek: string | null = null;
+            if (totalItems > 0 && cal.period_start && cal.period_end) {
+              const weeks = Math.max(1, differenceInWeeks(new Date(cal.period_end), new Date(cal.period_start)));
+              postsPerWeek = (totalItems / weeks).toFixed(1).replace(/\.0$/, "");
+            }
+
+            // Top formats sorted by count
+            const sortedFormats = Object.entries(formats)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 3);
 
             return (
-              <div key={col.key} className="space-y-3">
-                {/* Column header */}
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm">{col.emoji}</span>
-                  <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
-                    {col.label}
-                  </span>
-                  <Badge variant="secondary" className="text-[9px] ml-auto">
-                    {columnCalendars.length}
-                  </Badge>
-                </div>
+              <Card
+                key={cal.id}
+                className="cursor-pointer hover:bg-accent/30 transition-colors"
+                onClick={() => handleClick(cal)}
+              >
+                <CardContent className="p-5">
+                  {/* Header row */}
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <ChannelIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground line-clamp-1">
+                        {cal.title}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
+                        {cal.period_start && cal.period_end && (
+                          <span>
+                            {new Date(cal.period_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                            {" – "}
+                            {new Date(cal.period_end).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                          </span>
+                        )}
+                        {totalItems > 0 && <span>{totalItems} posts</span>}
+                        {postsPerWeek && <span>{postsPerWeek}/sem</span>}
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Cards */}
-                <div className="space-y-2 min-h-[120px]">
-                  {columnCalendars.map((cal) => {
-                    const ChannelIcon = CHANNEL_ICONS[cal.type ?? "social"] ?? CalendarDays;
-                    const totalItems = itemCounts?.[cal.id] ?? 0;
+                  {/* Format badges */}
+                  {sortedFormats.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {sortedFormats.map(([fmt, count]) => (
+                        <Badge key={fmt} variant="secondary" className="text-[10px] font-normal">
+                          {fmt} {Math.round((count / totalItems) * 100)}%
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
 
-                    return (
-                      <Card
-                        key={cal.id}
-                        className="cursor-pointer hover:bg-accent/30 transition-colors"
-                        onClick={() => handleClick(cal)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-2">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 mt-0.5">
-                              <ChannelIcon className="h-3.5 w-3.5 text-primary" />
+                  {/* Stepper */}
+                  <div className="flex items-center gap-0">
+                    {STEPS.map((step, idx) => {
+                      const isCompleted = idx < currentStepIdx;
+                      const isCurrent = idx === currentStepIdx;
+
+                      return (
+                        <div key={step.key} className="flex items-center flex-1 last:flex-none">
+                          <div className="flex items-center gap-1.5">
+                            <div
+                              className={cn(
+                                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
+                                isCurrent && "bg-primary text-primary-foreground shadow-sm",
+                                isCompleted && "bg-primary/20 text-primary",
+                                !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {isCompleted ? <Check className="h-3 w-3" /> : idx + 1}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground line-clamp-2">
-                                {cal.title}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                {cal.period_start && cal.period_end && (
-                                  <span className="text-[9px] text-muted-foreground">
-                                    {new Date(cal.period_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
-                                    {" – "}
-                                    {new Date(cal.period_end).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
-                                  </span>
-                                )}
-                                {totalItems > 0 && (
-                                  <span className="text-[9px] text-muted-foreground">
-                                    · {totalItems} posts
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+                            <span
+                              className={cn(
+                                "text-[11px] font-medium whitespace-nowrap hidden sm:inline",
+                                isCurrent && "text-foreground",
+                                isCompleted && "text-primary",
+                                !isCompleted && !isCurrent && "text-muted-foreground"
+                              )}
+                            >
+                              {step.label}
+                            </span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
+                          {idx < STEPS.length - 1 && (
+                            <div
+                              className={cn(
+                                "flex-1 h-px mx-2",
+                                idx < currentStepIdx ? "bg-primary/40" : "bg-border"
+                              )}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
