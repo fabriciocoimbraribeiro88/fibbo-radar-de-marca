@@ -2,7 +2,6 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { key: "editorial", label: "Editorial" },
   { key: "titles", label: "Títulos" },
   { key: "briefings", label: "Briefings" },
   { key: "creatives", label: "Criativos" },
@@ -81,21 +80,19 @@ export default function ProductionStepper({ currentStep, completedSteps, onStepC
 /** Map a planning_calendar status to the current production step */
 export function statusToStep(status: string | null): ProductionStep {
   switch (status) {
-    case "titles_review":
-      return "titles";
     case "briefings_review":
       return "briefings";
     case "approved":
     case "active":
       return "creatives";
     default:
-      return "editorial";
+      return "titles";
   }
 }
 
 /** Get all completed steps given the current step */
 export function getCompletedSteps(current: ProductionStep): ProductionStep[] {
-  const order: ProductionStep[] = ["editorial", "titles", "briefings", "creatives"];
+  const order: ProductionStep[] = ["titles", "briefings", "creatives"];
   const idx = order.indexOf(current);
   return order.slice(0, idx);
 }
