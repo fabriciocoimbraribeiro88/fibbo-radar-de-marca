@@ -10,7 +10,6 @@ import {
   Search,
   CalendarDays,
   Target,
-  FileText,
   ChevronRight,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +18,6 @@ const NAV_GROUPS = [
   {
     label: "CONFIGURAÇÃO",
     items: [
-      { title: "Visão Geral", path: "", icon: LayoutDashboard, end: true },
       { title: "Fontes de Dados", path: "/sources", icon: Database },
       { title: "Contexto de Marca", path: "/brand", icon: Palette },
     ],
@@ -36,7 +34,6 @@ const NAV_GROUPS = [
     items: [
       { title: "Planejamento", path: "/planning", icon: CalendarDays },
       { title: "OKRs", path: "/okrs", icon: Target },
-      { title: "Relatórios", path: "/reports", icon: FileText },
     ],
   },
 ];
@@ -50,8 +47,6 @@ const PATH_LABELS: Record<string, string> = {
   analyses: "Métricas Avançadas",
   planning: "Planejamento",
   okrs: "OKRs",
-  reports: "Relatórios",
-  
   new: "Nova",
 };
 
@@ -84,21 +79,23 @@ export default function ProjectLayout() {
     <div className="flex gap-0 -m-6 min-h-[calc(100vh-3.5rem)]">
       {/* Sub-sidebar */}
       <aside className="w-56 shrink-0 border-r border-border/20 bg-card/50 backdrop-blur-sm p-4 custom-scrollbar overflow-auto">
-        {/* Project name */}
-        <div className="mb-5 px-2">
+        {/* Project name — clickable to go to overview */}
+        <Link to={basePath} className="block mb-5 px-2 group">
           {isLoading ? (
             <Skeleton className="h-5 w-32" />
           ) : (
             <>
-              <h2 className="text-base font-bold text-foreground truncate">
+              <h2 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">
                 {project?.name}
               </h2>
-              <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
-                {project?.brand_name}
-              </p>
+              {project?.instagram_handle && (
+                <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                  @{project.instagram_handle.replace("@", "")}
+                </p>
+              )}
             </>
           )}
-        </div>
+        </Link>
 
         {/* Navigation */}
         <nav className="space-y-4">
@@ -110,7 +107,6 @@ export default function ProjectLayout() {
                   <NavLink
                     key={item.path}
                     to={`${basePath}${item.path}`}
-                    end={item.end}
                     className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
                     activeClassName="bg-primary/10 text-primary font-medium"
                   >

@@ -65,6 +65,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { useEntityDataSummary } from "@/hooks/useEntityDataSummary";
 import { EntityDataSummary } from "@/components/sources/EntityDataSummary";
 import BrandContextSources from "@/components/brand-context/BrandContextSources";
+import ContextStrengthBar from "@/components/brand-context/ContextStrengthBar";
 
 type EntityType = Database["public"]["Enums"]["entity_type"];
 
@@ -716,10 +717,10 @@ export default function ProjectSources() {
               <div key="brand">
                 <div className="flex items-center gap-2 mb-3">
                   <Crown className="h-4 w-4 text-primary" />
-                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Marca</h2>
+                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">SUA MARCA</h2>
                 </div>
-                <Card className="border-primary/15 bg-primary/[0.02]">
-                  <CardContent className="p-5">
+                <Card className="border-l-4 border-l-primary bg-primary/[0.03]">
+                  <CardContent className="p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3.5">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -754,22 +755,30 @@ export default function ProjectSources() {
                     {executingId === "brand" && collectStatus && (
                       <p className="text-xs text-muted-foreground mt-1">{collectStatus}</p>
                     )}
+                    {/* Brand context sources inline */}
+                    <Separator className="my-2" />
+                    <BrandContextSources projectId={projectId!} />
+                    {/* Context strength mini bar */}
+                    <ContextStrengthBar projectId={projectId!} compact />
                   </CardContent>
                 </Card>
               </div>
             );
           }
           if (group.items.length === 0) return null;
+          const isBrandGroup = group.value === "brand";
           return (
             <div key={group.value}>
               <div className="flex items-center gap-2 mb-3">
-                <group.icon className={`h-4 w-4 ${group.value === "brand" ? "text-primary" : "text-muted-foreground"}`} />
+                <group.icon className={`h-4 w-4 ${isBrandGroup ? "text-primary" : "text-muted-foreground"}`} />
                 <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {group.label}
+                  {isBrandGroup ? "SUA MARCA" : group.label}
                 </h2>
-                <Badge variant="secondary" className="text-[10px] h-5 rounded-full">
-                  {group.items.length}
-                </Badge>
+                {!isBrandGroup && (
+                  <Badge variant="secondary" className="text-[10px] h-5 rounded-full">
+                    {group.items.length}
+                  </Badge>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -786,7 +795,7 @@ export default function ProjectSources() {
                   return (
                     <Card
                       key={pe.id}
-                      className={`transition-all duration-200 ${isExpanded ? "ring-1 ring-border shadow-sm" : "hover:shadow-sm"}`}
+                      className={`transition-all duration-200 ${isBrandGroup ? "border-l-4 border-l-primary bg-primary/[0.03]" : ""} ${isExpanded ? "ring-1 ring-border shadow-sm" : "hover:shadow-sm"}`}
                     >
                       <CardContent className="p-0">
                         {/* Main row */}
@@ -996,6 +1005,13 @@ export default function ProjectSources() {
                   );
                 })}
               </div>
+              {/* Brand-specific: context sources + strength bar */}
+              {isBrandGroup && (
+                <div className="mt-4 space-y-3 pl-1">
+                  <BrandContextSources projectId={projectId!} />
+                  <ContextStrengthBar projectId={projectId!} compact />
+                </div>
+              )}
             </div>
           );
         })}
@@ -1279,9 +1295,8 @@ export default function ProjectSources() {
         </DialogContent>
       </Dialog>
 
-      {/* Brand Context Sources section */}
-      <Separator className="my-8" />
-      <BrandContextSources projectId={projectId!} />
+
+
 
       {/* Remove confirmation */}
       <AlertDialog open={!!removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)}>
