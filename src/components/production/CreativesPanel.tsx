@@ -432,7 +432,7 @@ export default function CreativesPanel({ projectId, calendarId, onCompleted }: P
   const markAsCompleted = async () => {
     const { error } = await supabase
       .from("planning_calendars")
-      .update({ status: "done" })
+      .update({ status: "completed" })
       .eq("id", calendarId);
 
     if (error) {
