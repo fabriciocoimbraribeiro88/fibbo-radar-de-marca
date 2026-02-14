@@ -7,11 +7,8 @@ import {
   Database,
   BarChart3,
   Search,
-  CalendarDays,
-  CalendarRange,
+  Layers,
   ChevronRight,
-  FileText,
-  Paintbrush,
   Target,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,10 +31,7 @@ const NAV_GROUPS = [
   {
     label: "AÇÃO",
     items: [
-      { title: "Calendário", path: "/calendar", icon: CalendarRange },
-      { title: "Editorial", path: "/planning", icon: CalendarDays },
-      { title: "Briefings", path: "/briefings", icon: FileText },
-      { title: "Criativos", path: "/creatives", icon: Paintbrush },
+      { title: "Produção", path: "/production", icon: Layers },
     ],
   },
   {
@@ -55,12 +49,8 @@ const PATH_LABELS: Record<string, string> = {
   sources: "Fontes",
   dashboard: "Dashboard",
   analyses: "Relatório",
-  planning: "Editorial",
-  calendar: "Calendário",
-  briefings: "Briefings",
-  creatives: "Criativos",
+  production: "Produção",
   okrs: "OKRs",
-  
   new: "Nova",
 };
 
