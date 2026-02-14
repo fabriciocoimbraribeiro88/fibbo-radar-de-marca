@@ -50,14 +50,14 @@ export default function ProjectAnalyses() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="page-title">Métricas Avançadas</h1>
+            <h1 className="page-title">Relatório</h1>
             <p className="page-subtitle">
-              Métricas avançadas de inteligência competitiva do projeto.
+              Relatórios de inteligência competitiva do projeto.
             </p>
           </div>
           <Button className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Análise
+            Novo Relatório
           </Button>
         </div>
       </div>
@@ -69,13 +69,13 @@ export default function ProjectAnalyses() {
       ) : !analyses?.length ? (
         <div className="gradient-card p-12 text-center">
           <Search className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-          <p className="text-base font-medium text-foreground mb-1">Nenhuma métrica criada</p>
+          <p className="text-base font-medium text-foreground mb-1">Nenhum relatório criado</p>
           <p className="text-sm text-muted-foreground/70 mb-6 max-w-sm mx-auto">
-            Crie sua primeira métrica avançada para gerar insights estratégicos.
+            Crie seu primeiro relatório para gerar insights estratégicos.
           </p>
           <Button className="gradient-coral text-white rounded-lg shadow-sm" onClick={() => navigate(`/projects/${projectId}/analyses/new`)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Métrica
+            Novo Relatório
           </Button>
         </div>
       ) : (

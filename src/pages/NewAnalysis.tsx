@@ -241,7 +241,7 @@ export default function NewAnalysis() {
     <div className="max-w-3xl animate-fade-in">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Nova Análise</h1>
+        <h1 className="text-xl font-semibold text-foreground">Novo Relatório</h1>
       </div>
 
       {/* Progress */}
