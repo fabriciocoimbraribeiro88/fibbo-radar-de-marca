@@ -276,14 +276,16 @@ export default function ProjectDashboard() {
             <Badge variant="secondary" className="text-[10px] ml-auto bg-accent/60 border-0 rounded-full">{em.totalPosts} posts</Badge>
           </div>
 
-          {/* Entity big numbers — simplified to 5 */}
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          {/* Entity big numbers — 7 metrics with hit/viral */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {[
               { label: "Seguidores", value: fmt(em.followers) },
               { label: "Posts", value: fmt(em.totalPosts) },
               { label: "Média Likes", value: fmt(em.avgLikes) },
               { label: "Média Coment.", value: fmt(em.avgComments) },
               { label: "Taxa Eng.", value: `${em.engagementRate.toFixed(2)}%` },
+              { label: "Hits", value: `${em.hits} (${em.totalPosts > 0 ? ((em.hits / em.totalPosts) * 100).toFixed(0) : 0}%)` },
+              { label: "Virais", value: `${em.viralHits} (${em.viralRate.toFixed(0)}%)` },
             ].map((item) => (
               <div key={item.label} className="card-flat p-3 text-center">
                 <p className="text-lg font-bold font-mono text-foreground">{item.value}</p>
