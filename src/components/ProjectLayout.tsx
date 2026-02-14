@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { NavLink } from "@/components/NavLink";
 import {
-  LayoutDashboard,
   Palette,
   Database,
   BarChart3,
@@ -13,6 +12,7 @@ import {
   ChevronRight,
   FileText,
   Paintbrush,
+  ClipboardCheck,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -37,7 +37,13 @@ const NAV_GROUPS = [
       { title: "Planejamento", path: "/planning", icon: CalendarDays },
       { title: "Briefings", path: "/briefings", icon: FileText },
       { title: "Criativos", path: "/creatives", icon: Paintbrush },
+    ],
+  },
+  {
+    label: "RESULTADOS",
+    items: [
       { title: "OKRs", path: "/okrs", icon: Target },
+      { title: "Check-in", path: "/checkin", icon: ClipboardCheck },
     ],
   },
 ];
@@ -53,6 +59,7 @@ const PATH_LABELS: Record<string, string> = {
   briefings: "Briefings",
   creatives: "Criativos",
   okrs: "OKRs",
+  checkin: "Check-in",
   new: "Nova",
 };
 

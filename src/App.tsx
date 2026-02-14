@@ -20,6 +20,7 @@ import ProjectPlanning from "@/pages/ProjectPlanning";
 import ProjectBriefings from "@/pages/ProjectBriefings";
 import ProjectCreatives from "@/pages/ProjectCreatives";
 import ProjectOKRs from "@/pages/ProjectOKRs";
+import ProjectCheckins from "@/pages/ProjectCheckins";
 import ProjectDashboard from "@/pages/ProjectDashboard";
 import SettingsPage from "@/pages/Settings";
 import Index from "@/pages/Index";
@@ -67,6 +68,7 @@ const App = () => (
                 <Route path="briefings" element={<ProjectBriefings />} />
                 <Route path="creatives" element={<ProjectCreatives />} />
                 <Route path="okrs" element={<ProjectOKRs />} />
+                <Route path="checkin" element={<ProjectCheckins />} />
               </Route>
 
               <Route path="/settings" element={<SettingsPage />} />
