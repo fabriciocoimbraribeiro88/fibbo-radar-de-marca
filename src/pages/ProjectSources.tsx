@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -533,6 +534,49 @@ export default function ProjectSources() {
   ) : undefined;
 
   const getTypeConfig = (type: EntityType) => TYPE_CONFIG.find((t) => t.value === type) ?? TYPE_CONFIG[1];
+  // ─── Contracted services state (must be before early return) ───
+  const [services, setServicesState] = useState<{ channels: string[]; package_name?: string; start_date?: string; renewal_date?: string; monthly_fee?: number }>({ channels: [] });
+  const [svcSaveTimer, setSvcSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (project?.contracted_services && typeof project.contracted_services === "object") {
+      const cs = project.contracted_services as any;
+      setServicesState({
+        channels: cs.channels ?? [],
+        package_name: cs.package_name ?? "",
+        start_date: cs.start_date ?? "",
+        renewal_date: cs.renewal_date ?? "",
+        monthly_fee: cs.monthly_fee ?? undefined,
+      });
+    }
+  }, [project]);
+
+  const saveSvc = useCallback((updated: typeof services) => {
+    if (svcSaveTimer) clearTimeout(svcSaveTimer);
+    const timer = setTimeout(async () => {
+      await supabase.from("projects").update({ contracted_services: updated as any }).eq("id", projectId!);
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["contracted-services", projectId] });
+    }, 2000);
+    setSvcSaveTimer(timer);
+  }, [projectId, svcSaveTimer, queryClient]);
+
+  useEffect(() => { return () => { if (svcSaveTimer) clearTimeout(svcSaveTimer); }; }, [svcSaveTimer]);
+
+  const toggleSvcChannel = (ch: string) => {
+    const updated = { ...services };
+    updated.channels = updated.channels.includes(ch)
+      ? updated.channels.filter((c) => c !== ch)
+      : [...updated.channels, ch];
+    setServicesState(updated);
+    saveSvc(updated);
+  };
+
+  const updateSvcField = (field: string, value: any) => {
+    const updated = { ...services, [field]: value };
+    setServicesState(updated);
+    saveSvc(updated);
+  };
 
   if (isLoading) {
     return (
@@ -563,6 +607,54 @@ export default function ProjectSources() {
 
   return (
     <div className="max-w-3xl animate-fade-in">
+      {/* Contracted Services */}
+      <Card className="p-5 mb-8">
+        <h3 className="text-sm font-semibold mb-1">Serviços Contratados</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Selecione os serviços incluídos no contrato. Isso controla quais canais aparecem em análises, planejamento e dashboard.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {[
+            { ch: "social", icon: Instagram, title: "Social", desc: "Redes sociais, conteúdo orgânico" },
+            { ch: "ads", icon: Megaphone, title: "Ads", desc: "Tráfego pago, campanhas" },
+            { ch: "seo", icon: Globe, title: "SEO", desc: "Otimização orgânica, keywords" },
+          ].map(({ ch, icon: Icon, title, desc }) => (
+            <Card
+              key={ch}
+              className={`p-4 cursor-pointer transition-all ${services.channels.includes(ch) ? "border-primary/50 bg-primary/5" : "opacity-60"}`}
+              onClick={() => toggleSvcChannel(ch)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{title}</span>
+                </div>
+                <Switch checked={services.channels.includes(ch)} onCheckedChange={() => toggleSvcChannel(ch)} onClick={(e) => e.stopPropagation()} />
+              </div>
+              <p className="text-[10px] text-muted-foreground">{desc}</p>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Pacote</Label>
+            <Input value={services.package_name ?? ""} onChange={(e) => updateSvcField("package_name", e.target.value)} placeholder="Ex: Growth" className="h-8 text-xs mt-1" />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Início</Label>
+            <Input type="date" value={services.start_date ?? ""} onChange={(e) => updateSvcField("start_date", e.target.value)} className="h-8 text-xs mt-1" />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Renovação</Label>
+            <Input type="date" value={services.renewal_date ?? ""} onChange={(e) => updateSvcField("renewal_date", e.target.value)} className="h-8 text-xs mt-1" />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Fee Mensal (R$)</Label>
+            <Input type="number" value={services.monthly_fee ?? ""} onChange={(e) => updateSvcField("monthly_fee", e.target.value ? Number(e.target.value) : undefined)} placeholder="0" className="h-8 text-xs mt-1" />
+          </div>
+        </div>
+      </Card>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

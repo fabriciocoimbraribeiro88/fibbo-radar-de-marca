@@ -111,7 +111,7 @@ export default function ProjectDashboard() {
   };
 
   const filterEntities = useMemo(
-    () => allEntities.map((e) => ({ id: e.id, name: e.name, handle: e.handle, role: e.role })),
+    () => allEntities.map((e) => ({ id: e.id, name: e.name, handle: e.handle, role: e.role, type: e.type })),
     [allEntities]
   );
 

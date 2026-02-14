@@ -35,6 +35,7 @@ interface Step1Props {
   setLargeDatasetAck: (b: boolean) => void;
   hasAdsData: boolean;
   hasSeoData: boolean;
+  contractedChannels?: string[];
 }
 
 const CHANNELS = [
@@ -71,7 +72,11 @@ export default function AnalysisStep1(props: Step1Props) {
     comparePrevious, setComparePrevious,
     largeDatasetAck, setLargeDatasetAck,
     hasAdsData, hasSeoData,
+    contractedChannels,
   } = props;
+
+  const isChannelContracted = (ch: string) =>
+    !contractedChannels || contractedChannels.length === 0 || contractedChannels.includes(ch);
 
   const handlePreset = (preset: string) => {
     setPeriodPreset(preset);
@@ -130,23 +135,34 @@ export default function AnalysisStep1(props: Step1Props) {
           Qual canal você quer analisar?
         </h2>
         <div className="grid grid-cols-3 gap-3 mt-3">
-          {CHANNELS.map((c) => (
-            <Card
-              key={c.value}
-              className={`cursor-pointer transition-all ${
-                channel === c.value
-                  ? "ring-2 ring-primary bg-primary/5"
-                  : "hover:bg-accent/50"
-              }`}
-              onClick={() => setChannel(c.value)}
-            >
-              <CardContent className="p-4 text-center">
-                <c.icon className="h-6 w-6 mx-auto text-primary mb-2" />
-                <p className="text-sm font-medium text-foreground">{c.label}</p>
-                <p className="text-xs text-muted-foreground mt-1">{c.desc}</p>
-              </CardContent>
-            </Card>
-          ))}
+          {CHANNELS.map((c) => {
+            const contracted = isChannelContracted(c.value);
+            return (
+              <Card
+                key={c.value}
+                className={`transition-all ${
+                  !contracted
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer"
+                } ${
+                  channel === c.value && contracted
+                    ? "ring-2 ring-primary bg-primary/5"
+                    : contracted ? "hover:bg-accent/50" : ""
+                }`}
+                onClick={() => contracted && setChannel(c.value)}
+                title={!contracted ? "Serviço não contratado" : undefined}
+              >
+                <CardContent className="p-4 text-center">
+                  <c.icon className="h-6 w-6 mx-auto text-primary mb-2" />
+                  <p className="text-sm font-medium text-foreground">{c.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{c.desc}</p>
+                  {!contracted && (
+                    <Badge variant="secondary" className="mt-2 text-[9px]">Não contratado</Badge>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
         {channel === "ads" && !hasAdsData && (
           <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-700">

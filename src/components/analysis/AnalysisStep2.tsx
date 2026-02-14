@@ -120,29 +120,42 @@ export default function AnalysisStep2({
       {relevantRoles.map((role) => {
         const items = groupedByRole[role] ?? [];
         if (!items.length) return null;
+        const selectedInRole = items.filter((e) => selectedEntities.has(e.id)).length;
+        const maxReached = selectedInRole >= 3;
         return (
           <div key={role}>
-            <p className="text-xs font-medium text-muted-foreground mb-2">
-              {ROLE_LABELS[role] ?? role}
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {ROLE_LABELS[role] ?? role}
+              </p>
+              <Badge variant={maxReached ? "default" : "secondary"} className="text-[10px]">
+                {selectedInRole}/3 selecionados
+              </Badge>
+            </div>
             <div className="space-y-2">
               {items.map((e) => {
                 const checked = selectedEntities.has(e.id);
+                const disabled = !checked && maxReached;
                 const count = e[channelDataKey as keyof Entity] as number | undefined;
                 return (
                   <Card
                     key={e.id}
-                    className={`cursor-pointer transition-all ${
+                    className={`transition-all ${
+                      disabled
+                        ? "opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
+                    } ${
                       checked
                         ? "ring-1 ring-primary/50 bg-primary/5"
-                        : "hover:bg-accent/50"
+                        : disabled ? "" : "hover:bg-accent/50"
                     }`}
-                    onClick={() => toggle(e.id)}
+                    onClick={() => !disabled && toggle(e.id)}
                   >
                     <CardContent className="flex items-center gap-3 p-3">
                       <Checkbox
                         checked={checked}
-                        onCheckedChange={() => toggle(e.id)}
+                        disabled={disabled}
+                        onCheckedChange={() => !disabled && toggle(e.id)}
                       />
                       <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-xs font-medium">
                         {e.name.slice(0, 2).toUpperCase()}
