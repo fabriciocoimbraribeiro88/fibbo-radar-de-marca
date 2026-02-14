@@ -1,117 +1,102 @@
 
 
-## Reorganizar Sidebar + Criar modulo de Check-in
+# Separar Calendario em Duas Partes
 
-### 1. Reorganizar a navegacao lateral
+## Resumo
 
-Mover OKRs de "ACAO" para uma nova secao "RESULTADOS" e adicionar Check-in nessa mesma secao.
+O calendario sazonal atual no Contexto de Marca sera **simplificado** para conter apenas datas e nomes de eventos (como ja esta). Uma **nova pagina "Calendario Anual"** sera criada na secao ACAO com a estrutura completa do PPTX: tema do mes, foco estrategico, timeline de producao (KV), datas com tipos de acao, e notas adicionais.
 
-**Estrutura final da sidebar:**
+---
+
+## Etapa 1 — Manter Calendario Sazonal no Contexto de Marca (sem mudancas)
+
+O componente `SeasonalCalendar.tsx` atual ja esta no formato correto: lista minimalista com nome do evento e data, agrupada por mes, com botao "Sugerir com IA". **Nao precisa de alteracao.**
+
+---
+
+## Etapa 2 — Nova pagina "Calendario Anual" na secao ACAO
+
+### 2.1 Estrutura de dados
+
+Armazenada no campo JSONB `briefing.annual_calendar` do projeto:
 
 ```text
-CONFIGURACAO
-  Fontes de Dados
-  Contexto de Marca
-
-ANALISE
-  Dashboard
-  Metricas Avancadas
-
-ACAO
-  Planejamento
-  Briefings
-  Criativos
-
-RESULTADOS
-  OKRs
-  Check-in
+briefing.annual_calendar = {
+  year: 2026,
+  months: [
+    {
+      month: 0,           // Janeiro
+      theme: "Ano novo, obra nova!",
+      focus: "Atendimento consultivo e planejamento",
+      kv_planning: "novembro/2025",
+      kv_production: "dezembro/2025",
+      notes: "Lancamento do garoto propaganda...",
+      dates: [
+        {
+          id: "uuid",
+          name: "Dia Internacional do Lego",
+          date: "28/01",
+          action_types: ["acao em loja", "conteudo digital"]
+        }
+      ]
+    },
+    ...12 meses
+  ]
+}
 ```
 
-**Arquivo:** `src/components/ProjectLayout.tsx`
-- Adicionar nova secao "RESULTADOS" com OKRs e Check-in
-- Remover OKRs da secao "ACAO"
-- Importar icone `ClipboardCheck` para Check-in
-- Adicionar `checkin: "Check-in"` ao `PATH_LABELS`
+### 2.2 Tipos de acao (chips coloridos)
+
+Baseados no PPTX:
+- conteudo digital
+- acao em loja
+- PDV
+- relacionamento
+- endomarketing
+- acao social
+- evento
+- guerrilha
+
+### 2.3 Interface da pagina
+
+Cada mes sera um card colapsavel com:
+
+1. **Header**: Nome do mes + tema em destaque
+2. **Campos editaveis**: Tema, Foco, Timeline KV (planejamento e producao), Notas
+3. **Lista de datas**: Nome, data (dd/mm), chips de tipo de acao
+4. **Botao "+"** para adicionar datas manualmente
+5. **Botao "Gerar com IA"** no topo da pagina para preencher o calendario completo (12 meses com temas + datas)
+
+### 2.4 Novo arquivo
+
+`src/pages/ProjectAnnualCalendar.tsx` — Pagina completa com a interface descrita acima.
+
+### 2.5 Roteamento e navegacao
+
+- **App.tsx**: Adicionar rota `calendar` dentro de `/projects/:id`
+- **ProjectLayout.tsx**: Adicionar item "Calendario Anual" com icone `CalendarRange` no grupo ACAO (entre Planejamento e Briefings)
+- **PATH_LABELS**: Adicionar `calendar: "Calendario Anual"`
+
+### 2.6 Edge function
+
+Atualizar `generate-seasonal-calendar` para aceitar um parametro `mode`:
+- `mode: "dates_only"` (padrao atual) — retorna apenas datas para o Contexto de Marca
+- `mode: "full_calendar"` — retorna a estrutura completa com temas, focos, timelines e datas com tipos de acao por mes
+
+O prompt sera estendido para gerar a estrutura mensal completa quando em modo full.
 
 ---
 
-### 2. Criar tabela `checkins` no banco de dados
+## Detalhes tecnicos
 
-Nova tabela para armazenar check-ins com checklists editaveis:
+### Arquivos a criar
+- `src/pages/ProjectAnnualCalendar.tsx`
 
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| id | uuid PK | |
-| project_id | uuid FK | Projeto |
-| type | text | `weekly`, `monthly`, `quarterly`, `annual` |
-| title | text | Ex: "Report Semanal - S23" |
-| reference_date | date | Data de referencia do periodo |
-| status | text | `pending`, `in_progress`, `completed` |
-| checklist | jsonb | Array de itens `[{id, text, checked, notes}]` |
-| summary | text | Resumo/notas gerais |
-| nps_score | integer | Nota NPS (0-10), quando aplicavel |
-| nps_feedback | text | Feedback qualitativo do NPS |
-| participants | text[] | Nomes dos participantes |
-| created_by | uuid | Usuario que criou |
-| completed_at | timestamptz | Quando foi finalizado |
-| created_at | timestamptz | |
-| updated_at | timestamptz | |
+### Arquivos a modificar
+- `src/App.tsx` — nova rota
+- `src/components/ProjectLayout.tsx` — novo item no menu ACAO + PATH_LABELS
+- `supabase/functions/generate-seasonal-calendar/index.ts` — adicionar modo "full_calendar"
 
-RLS: mesma logica dos demais -- `is_project_member(auth.uid(), project_id)` para SELECT, INSERT, UPDATE, DELETE.
-
----
-
-### 3. Criar pagina `ProjectCheckins.tsx`
-
-Interface dividida em duas areas:
-
-**Lado esquerdo: Check-in atual / Novo check-in**
-- Seletor de tipo (Semanal, Mensal, Trimestral, Anual)
-- Ao selecionar, carrega template editavel com os itens do checklist
-- Cada item pode ser marcado como feito, editado, ou removido
-- Botao para adicionar novos itens ao checklist
-- Campo de resumo/notas gerais
-- Campos de NPS (score + feedback) para tipos mensal/trimestral/anual
-- Campo de participantes
-- Botoes: Salvar rascunho / Marcar como concluido
-
-**Templates padrao por tipo:**
-
-- **Semanal**: KPIs semana, Comparativo anterior, Destaques, Otimizacoes, Plano proxima semana
-- **Mensal**: Resumo executivo, Performance geral, Analise por canal, Analise de publico, Criativos, Otimizacoes, Insights, Conteudo organico, Proximo mes, NPS
-- **Trimestral**: Tudo do mensal + Analise OKRs, ROI, Historico testes, Analise competitiva, Estrategia proximo tri, NPS completo
-- **Anual**: Versao expandida do trimestral com retrospectiva 12 meses
-
-**Lado direito / abaixo: Historico**
-- Lista de check-ins anteriores filtrados por tipo e periodo
-- Cada card mostra: tipo, data, status, % itens completos
-- Ao clicar, abre o check-in para visualizar ou continuar editando
-- Indicador visual de NPS (quando disponivel)
-
----
-
-### 4. Registrar rota no App.tsx
-
-**Arquivo:** `src/App.tsx`
-- Importar `ProjectCheckins`
-- Adicionar rota `<Route path="checkin" element={<ProjectCheckins />} />`
-
----
-
-### Detalhes tecnicos
-
-**Arquivos modificados:**
-- `src/components/ProjectLayout.tsx` -- reorganizar sidebar
-- `src/App.tsx` -- adicionar rota
-
-**Arquivos criados:**
-- `src/pages/ProjectCheckins.tsx` -- pagina principal com checklist interativo + historico
-
-**Migration SQL:**
-- Criar tabela `checkins` com RLS policies
-- Trigger `update_updated_at` para manter `updated_at` atualizado
-
-**Componentes reutilizados:**
-- Card, Badge, Button, Select, Tabs, Checkbox do shadcn/ui
-- Mesmo padrao visual das demais paginas (max-w-5xl, animate-fade-in, headers consistentes)
+### Persistencia
+Usa merge no campo `briefing` (padrao existente): `briefing.annual_calendar` para a estrutura completa, `briefing.seasonal_calendar` continua independente para as datas simples.
 
