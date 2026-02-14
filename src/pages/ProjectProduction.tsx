@@ -18,7 +18,7 @@ import TitlesReview from "@/components/planning/TitlesReview";
 import BriefingsReview from "@/components/planning/BriefingsReview";
 
 import CreativesPanel from "@/components/production/CreativesPanel";
-
+import EditorialDetail from "@/components/production/EditorialDetail";
 import type { WizardData, Channel, Colab } from "@/pages/ProjectPlanning";
 
 type Phase =
@@ -26,6 +26,7 @@ type Phase =
   | "wizard_step1"
   | "wizard_step2"
   | "wizard_step3"
+  | "editorial"
   | "titles_review"
   | "briefings_review"
   | "creatives";
@@ -98,6 +99,11 @@ export default function ProjectProduction() {
     setPhase("wizard_step1");
   };
 
+  const openEditorial = (calendarId: string) => {
+    setActiveCalendarId(calendarId);
+    setPhase("editorial");
+  };
+
   const openTitlesReview = (calendarId: string) => {
     setActiveCalendarId(calendarId);
     setPhase("titles_review");
@@ -124,8 +130,7 @@ export default function ProjectProduction() {
     if (!activeCalendarId) return;
     switch (step) {
       case "editorial":
-        setPhase("list");
-        setActiveCalendarId(null);
+        setPhase("editorial");
         break;
       case "titles":
         setPhase("titles_review");
@@ -144,7 +149,8 @@ export default function ProjectProduction() {
   const isWizardView = phase.startsWith("wizard");
 
   const pipelinePhaseStep: ProductionStep =
-    phase === "titles_review" ? "titles"
+    phase === "editorial" ? "editorial"
+    : phase === "titles_review" ? "titles"
     : phase === "briefings_review" ? "briefings"
     : phase === "creatives" ? "creatives"
     : currentStep;
@@ -156,6 +162,7 @@ export default function ProjectProduction() {
         <ProductionKanban
           projectId={projectId}
           onNewPlanning={startWizard}
+          onOpenEditorial={openEditorial}
           onOpenTitlesReview={openTitlesReview}
           onOpenBriefingsReview={openBriefingsReview}
           onOpenCreatives={openCreatives}
@@ -218,6 +225,13 @@ export default function ProjectProduction() {
           </div>
 
           {/* Phase content */}
+          {phase === "editorial" && (
+            <EditorialDetail
+              projectId={projectId}
+              calendarId={activeCalendarId}
+            />
+          )}
+
           {phase === "titles_review" && (
             <TitlesReview
               projectId={projectId}
