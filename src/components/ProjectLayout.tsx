@@ -85,23 +85,6 @@ export default function ProjectLayout() {
     <div className="flex gap-0 -m-6 min-h-[calc(100vh-3.5rem)]">
       {/* Sub-sidebar */}
       <aside className="w-56 shrink-0 border-r border-border/20 bg-card/50 backdrop-blur-sm p-4 custom-scrollbar overflow-auto">
-        {/* Project name — clickable to go to overview */}
-        <Link to={basePath} className="block mb-5 px-2 group">
-          {isLoading ? (
-            <Skeleton className="h-5 w-32" />
-          ) : (
-            <>
-              <h2 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                {project?.name}
-              </h2>
-              {project?.instagram_handle && (
-                <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
-                  @{project.instagram_handle.replace("@", "")}
-                </p>
-              )}
-            </>
-          )}
-        </Link>
 
         {/* Navigation */}
         <nav className="space-y-4">
