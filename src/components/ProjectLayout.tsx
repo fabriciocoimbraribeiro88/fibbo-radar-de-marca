@@ -12,6 +12,7 @@ import {
   Target,
   ChevronRight,
   FileText,
+  Paintbrush,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -35,6 +36,7 @@ const NAV_GROUPS = [
     items: [
       { title: "Planejamento", path: "/planning", icon: CalendarDays },
       { title: "Briefings", path: "/briefings", icon: FileText },
+      { title: "Criativos", path: "/creatives", icon: Paintbrush },
       { title: "OKRs", path: "/okrs", icon: Target },
     ],
   },
@@ -49,6 +51,7 @@ const PATH_LABELS: Record<string, string> = {
   analyses: "Métricas Avançadas",
   planning: "Planejamento",
   briefings: "Briefings",
+  creatives: "Criativos",
   okrs: "OKRs",
   new: "Nova",
 };

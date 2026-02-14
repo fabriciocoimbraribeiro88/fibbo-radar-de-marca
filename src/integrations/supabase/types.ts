@@ -390,6 +390,60 @@ export type Database = {
           },
         ]
       }
+      creative_outputs: {
+        Row: {
+          created_at: string | null
+          id: string
+          option_a_url: string | null
+          option_b_url: string | null
+          planning_item_id: string
+          project_id: string
+          prompt_used: string | null
+          selected_option: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          option_a_url?: string | null
+          option_b_url?: string | null
+          planning_item_id: string
+          project_id: string
+          prompt_used?: string | null
+          selected_option?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          option_a_url?: string | null
+          option_b_url?: string | null
+          planning_item_id?: string
+          project_id?: string
+          prompt_used?: string | null
+          selected_option?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_outputs_planning_item_id_fkey"
+            columns: ["planning_item_id"]
+            isOneToOne: false
+            referencedRelation: "planning_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_outputs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_fetch_configs: {
         Row: {
           apify_actor_id: string | null
