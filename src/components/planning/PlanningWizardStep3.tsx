@@ -67,9 +67,9 @@ export default function PlanningWizardStep3({ projectId, project, wizardData, se
         : startYear === endYear
           ? `${startMonth}/${endMonth} ${startYear}`
           : `${startMonth} ${startYear}/${endMonth} ${endYear}`;
-      return `${brandName} - ${channelLabel} - ${months}`;
+      return `${months} - ${channelLabel} - ${brandName}`;
     }
-    return `${brandName} - ${channelLabel}`;
+    return `${channelLabel} - ${brandName}`;
   }, [wizardData.channel, period.start, period.end, brandName]);
 
   const title = wizardData.title || defaultTitle;
