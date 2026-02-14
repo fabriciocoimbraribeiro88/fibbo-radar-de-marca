@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Target, Package, LayoutGrid, AlertTriangle, ShieldAlert, ArrowRight, Database, Crosshair } from "lucide-react";
+import { Target, Package, LayoutGrid, AlertTriangle, ShieldAlert, ArrowRight, Database, Crosshair, ImageIcon } from "lucide-react";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
 import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
 import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
@@ -17,6 +17,7 @@ import CTABank from "@/components/brand-context/CTABank";
 import HookBank from "@/components/brand-context/HookBank";
 import SocialProofBank from "@/components/brand-context/SocialProofBank";
 import ObjectionBank from "@/components/brand-context/ObjectionBank";
+import BrandReferences from "@/components/brand-context/BrandReferences";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -90,6 +91,7 @@ export default function ProjectBrand() {
     { value: "identity", label: "Identidade", icon: Target },
     { value: "strategy", label: "Estratégia", icon: Crosshair },
     { value: "products", label: "Produtos", icon: Package },
+    { value: "references", label: "Referências", icon: ImageIcon },
   ];
 
   return (
@@ -181,6 +183,10 @@ export default function ProjectBrand() {
 
           <TabsContent value="products">
             <ProductsCatalog projectId={id!} briefing={project?.briefing} />
+          </TabsContent>
+
+          <TabsContent value="references">
+            <BrandReferences projectId={id!} briefing={project?.briefing} />
           </TabsContent>
         </Tabs>
       </div>
