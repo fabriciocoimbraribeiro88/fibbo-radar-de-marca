@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-  Plus, X, Loader2, CheckCircle2, Sparkles, ChevronDown, ChevronRight, CalendarRange,
+  Plus, X, Loader2, CheckCircle2, Sparkles, ChevronDown, ChevronRight, CalendarRange, LayoutGrid, List,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -88,6 +88,7 @@ export default function ProjectAnnualCalendar() {
   const { id: projectId } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [quarterFilter, setQuarterFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"full" | "list">("full");
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -301,180 +302,240 @@ export default function ProjectAnnualCalendar() {
           {filledMonths}/12 meses preenchidos • {totalDates} datas cadastradas
         </div>
 
-        <div className="flex items-center gap-1">
-          <Button
-            variant={quarterFilter === "all" ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs px-3"
-            onClick={() => setQuarterFilter("all")}
-          >
-            Ano todo
-          </Button>
-          {QUARTERS.map((q) => (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <Button
-              key={q.label}
-              variant={quarterFilter === q.label ? "default" : "outline"}
+              variant={quarterFilter === "all" ? "default" : "outline"}
               size="sm"
               className="h-7 text-xs px-3"
-              onClick={() => setQuarterFilter(q.label)}
+              onClick={() => setQuarterFilter("all")}
             >
-              {q.label}
+              Ano todo
             </Button>
-          ))}
+            {QUARTERS.map((q) => (
+              <Button
+                key={q.label}
+                variant={quarterFilter === q.label ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs px-3"
+                onClick={() => setQuarterFilter(q.label)}
+              >
+                {q.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode("full")}
+              className={`p-1.5 transition-colors ${viewMode === "full" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+              title="Visão completa"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 transition-colors ${viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+              title="Visão lista"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Month Cards */}
-      <div className="space-y-2">
-        {visibleMonths.map((month) => {
-          const isOpen = openMonths.has(month.month);
-          const hasContent = !!(month.theme || month.dates.length);
-          const examples = MONTH_EXAMPLES[month.month];
+      {viewMode === "full" ? (
+        <div className="space-y-2">
+          {visibleMonths.map((month) => {
+            const isOpen = openMonths.has(month.month);
+            const hasContent = !!(month.theme || month.dates.length);
+            const examples = MONTH_EXAMPLES[month.month];
 
-          return (
-            <Collapsible key={month.month} open={isOpen} onOpenChange={() => toggleMonth(month.month)}>
-              <Card className={hasContent ? "border-primary/20" : ""}>
-                <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      <span className="font-semibold text-sm">{MONTHS[month.month]}</span>
-                      {month.theme && (
-                        <span className="text-xs text-primary italic truncate max-w-[300px]">— {month.theme}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {month.dates.length > 0 && (
-                        <Badge variant="secondary" className="text-[10px]">{month.dates.length} datas</Badge>
-                      )}
-                    </div>
-                  </div>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent>
-                  <CardContent className="pt-0 space-y-4">
-                    {/* Editable fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tema do Mês</label>
-                        <Input
-                          value={month.theme}
-                          onChange={(e) => updateMonth(month.month, "theme", e.target.value)}
-                          placeholder={examples.theme}
-                          className="h-8 text-sm mt-1"
-                        />
+            return (
+              <Collapsible key={month.month} open={isOpen} onOpenChange={() => toggleMonth(month.month)}>
+                <Card className={hasContent ? "border-primary/20" : ""}>
+                  <CollapsibleTrigger className="w-full">
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <span className="font-semibold text-sm">{MONTHS[month.month]}</span>
+                        {month.theme && (
+                          <span className="text-xs text-primary italic truncate max-w-[300px]">— {month.theme}</span>
+                        )}
                       </div>
-                      <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Foco Estratégico</label>
-                        <Input
-                          value={month.focus}
-                          onChange={(e) => updateMonth(month.month, "focus", e.target.value)}
-                          placeholder={examples.focus}
-                          className="h-8 text-sm mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Notas</label>
-                      <Textarea
-                        value={month.notes}
-                        onChange={(e) => updateMonth(month.month, "notes", e.target.value)}
-                        placeholder="Observações, lembretes, ideias extras..."
-                        className="text-sm mt-1 min-h-[60px]"
-                      />
-                    </div>
-
-                    {/* Dates */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Datas Relevantes</label>
-                        <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => addDate(month.month)}>
-                          <Plus className="h-3 w-3 mr-1" /> Adicionar
-                        </Button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {month.dates.map((d) => (
-                          <div key={d.id} className="border rounded-lg p-3 space-y-2 group relative">
-                            <div className="flex items-center gap-2">
-                              <Input
-                                value={d.date}
-                                onChange={(e) => updateDateField(month.month, d.id, "date", e.target.value)}
-                                placeholder="dd/mm"
-                                className="h-7 text-xs w-20 shrink-0"
-                              />
-                              <Input
-                                value={d.name}
-                                onChange={(e) => updateDateField(month.month, d.id, "name", e.target.value)}
-                                placeholder={examples.date.split(" - ")[1] || "Nome do evento..."}
-                                className="h-7 text-sm flex-1"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 shrink-0"
-                                onClick={() => removeDate(month.month, d.id)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-
-                            {/* Objective */}
-                            <div>
-                              <Input
-                                value={d.objective ?? ""}
-                                onChange={(e) => updateDateField(month.month, d.id, "objective", e.target.value)}
-                                placeholder="Objetivo da campanha..."
-                                className="h-7 text-xs"
-                              />
-                            </div>
-
-                            {/* Extra budget toggle + action types */}
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <div className="flex flex-wrap gap-1">
-                                {ACTION_TYPES.map((at) => {
-                                  const active = d.action_types.includes(at.value);
-                                  return (
-                                    <button
-                                      key={at.value}
-                                      onClick={() => toggleActionType(month.month, d.id, at.value)}
-                                      className={`text-[10px] rounded-full px-2 py-0.5 border transition-all ${
-                                        active ? at.color + " border-transparent font-medium" : "bg-transparent text-muted-foreground border-border hover:bg-accent"
-                                      }`}
-                                    >
-                                      {at.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-
-                              <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer shrink-0">
-                                <Switch
-                                  checked={d.extra_budget ?? false}
-                                  onCheckedChange={(checked) => updateDateField(month.month, d.id, "extra_budget", checked)}
-                                  className="scale-75"
-                                />
-                                Verba extra
-                              </label>
-                            </div>
-                          </div>
-                        ))}
-
-                        {month.dates.length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-3">
-                            Nenhuma data neste mês. Clique em "Adicionar" ou use "Gerar com IA".
-                          </p>
+                      <div className="flex items-center gap-2">
+                        {month.dates.length > 0 && (
+                          <Badge variant="secondary" className="text-[10px]">{month.dates.length} datas</Badge>
                         )}
                       </div>
                     </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          );
-        })}
-      </div>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tema do Mês</label>
+                          <Input
+                            value={month.theme}
+                            onChange={(e) => updateMonth(month.month, "theme", e.target.value)}
+                            placeholder={examples.theme}
+                            className="h-8 text-sm mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Foco Estratégico</label>
+                          <Input
+                            value={month.focus}
+                            onChange={(e) => updateMonth(month.month, "focus", e.target.value)}
+                            placeholder={examples.focus}
+                            className="h-8 text-sm mt-1"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Notas</label>
+                        <Textarea
+                          value={month.notes}
+                          onChange={(e) => updateMonth(month.month, "notes", e.target.value)}
+                          placeholder="Observações, lembretes, ideias extras..."
+                          className="text-sm mt-1 min-h-[60px]"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Datas Relevantes</label>
+                          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => addDate(month.month)}>
+                            <Plus className="h-3 w-3 mr-1" /> Adicionar
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          {month.dates.map((d) => (
+                            <div key={d.id} className="border rounded-lg p-3 space-y-2 group relative">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={d.date}
+                                  onChange={(e) => updateDateField(month.month, d.id, "date", e.target.value)}
+                                  placeholder="dd/mm"
+                                  className="h-7 text-xs w-20 shrink-0"
+                                />
+                                <Input
+                                  value={d.name}
+                                  onChange={(e) => updateDateField(month.month, d.id, "name", e.target.value)}
+                                  placeholder={examples.date.split(" - ")[1] || "Nome do evento..."}
+                                  className="h-7 text-sm flex-1"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 shrink-0"
+                                  onClick={() => removeDate(month.month, d.id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+
+                              <div>
+                                <Input
+                                  value={d.objective ?? ""}
+                                  onChange={(e) => updateDateField(month.month, d.id, "objective", e.target.value)}
+                                  placeholder="Objetivo da campanha..."
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="flex flex-wrap gap-1">
+                                  {ACTION_TYPES.map((at) => {
+                                    const active = d.action_types.includes(at.value);
+                                    return (
+                                      <button
+                                        key={at.value}
+                                        onClick={() => toggleActionType(month.month, d.id, at.value)}
+                                        className={`text-[10px] rounded-full px-2 py-0.5 border transition-all ${
+                                          active ? at.color + " border-transparent font-medium" : "bg-transparent text-muted-foreground border-border hover:bg-accent"
+                                        }`}
+                                      >
+                                        {at.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer shrink-0">
+                                  <Switch
+                                    checked={d.extra_budget ?? false}
+                                    onCheckedChange={(checked) => updateDateField(month.month, d.id, "extra_budget", checked)}
+                                    className="scale-75"
+                                  />
+                                  Verba extra
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+
+                          {month.dates.length === 0 && (
+                            <p className="text-xs text-muted-foreground text-center py-3">
+                              Nenhuma data neste mês. Clique em "Adicionar" ou use "Gerar com IA".
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            );
+          })}
+        </div>
+      ) : (
+        /* List view - compact */
+        <Card>
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-24">Mês</th>
+                  <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tema</th>
+                  <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Foco</th>
+                  <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground text-center w-16">Datas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleMonths.map((month) => (
+                  <tr
+                    key={month.month}
+                    className="border-b last:border-0 hover:bg-accent/50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      setViewMode("full");
+                      setOpenMonths(new Set([month.month]));
+                    }}
+                  >
+                    <td className="px-4 py-2.5 font-medium">{MONTHS[month.month]}</td>
+                    <td className="px-4 py-2.5 text-muted-foreground truncate max-w-[200px]">
+                      {month.theme || <span className="italic text-muted-foreground/50">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-muted-foreground truncate max-w-[200px]">
+                      {month.focus || <span className="italic text-muted-foreground/50">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      {month.dates.length > 0 ? (
+                        <Badge variant="secondary" className="text-[10px]">{month.dates.length}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground/50">0</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
