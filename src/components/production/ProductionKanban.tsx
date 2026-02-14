@@ -23,7 +23,6 @@ const PIPELINE_COLUMNS = [
 interface Props {
   projectId: string;
   onNewPlanning: () => void;
-  onOpenCalendar: (id: string) => void;
   onOpenTitlesReview: (id: string) => void;
   onOpenBriefingsReview: (id: string) => void;
   onOpenCreatives: (id: string) => void;
@@ -32,7 +31,6 @@ interface Props {
 export default function ProductionKanban({
   projectId,
   onNewPlanning,
-  onOpenCalendar,
   onOpenTitlesReview,
   onOpenBriefingsReview,
   onOpenCreatives,
@@ -75,7 +73,6 @@ export default function ProductionKanban({
     if (status === "titles_review") onOpenTitlesReview(cal.id);
     else if (status === "briefings_review") onOpenBriefingsReview(cal.id);
     else if (status === "approved" || status === "active") onOpenCreatives(cal.id);
-    else onOpenCalendar(cal.id);
   };
 
   if (isLoading) {

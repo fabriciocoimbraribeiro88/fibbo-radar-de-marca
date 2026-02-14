@@ -16,7 +16,7 @@ import PlanningWizardStep2 from "@/components/planning/PlanningWizardStep2";
 import PlanningWizardStep3 from "@/components/planning/PlanningWizardStep3";
 import TitlesReview from "@/components/planning/TitlesReview";
 import BriefingsReview from "@/components/planning/BriefingsReview";
-import CalendarFinalView from "@/components/planning/CalendarFinalView";
+
 import CreativesPanel from "@/components/production/CreativesPanel";
 
 import type { WizardData, Channel, Colab } from "@/pages/ProjectPlanning";
@@ -28,8 +28,7 @@ type Phase =
   | "wizard_step3"
   | "titles_review"
   | "briefings_review"
-  | "creatives"
-  | "calendar_final";
+  | "creatives";
 
 const defaultWizardData: WizardData = {
   analysisId: "",
@@ -99,11 +98,6 @@ export default function ProjectProduction() {
     setPhase("wizard_step1");
   };
 
-  const openCalendar = (calendarId: string) => {
-    setActiveCalendarId(calendarId);
-    setPhase("calendar_final");
-  };
-
   const openTitlesReview = (calendarId: string) => {
     setActiveCalendarId(calendarId);
     setPhase("titles_review");
@@ -130,7 +124,8 @@ export default function ProjectProduction() {
     if (!activeCalendarId) return;
     switch (step) {
       case "editorial":
-        setPhase("calendar_final");
+        setPhase("list");
+        setActiveCalendarId(null);
         break;
       case "titles":
         setPhase("titles_review");
@@ -152,7 +147,6 @@ export default function ProjectProduction() {
     phase === "titles_review" ? "titles"
     : phase === "briefings_review" ? "briefings"
     : phase === "creatives" ? "creatives"
-    : phase === "calendar_final" ? "editorial"
     : currentStep;
 
   return (
@@ -162,7 +156,6 @@ export default function ProjectProduction() {
         <ProductionKanban
           projectId={projectId}
           onNewPlanning={startWizard}
-          onOpenCalendar={openCalendar}
           onOpenTitlesReview={openTitlesReview}
           onOpenBriefingsReview={openBriefingsReview}
           onOpenCreatives={openCreatives}
@@ -248,14 +241,6 @@ export default function ProjectProduction() {
             <CreativesPanel
               projectId={projectId}
               calendarId={activeCalendarId}
-            />
-          )}
-
-          {phase === "calendar_final" && (
-            <CalendarFinalView
-              projectId={projectId}
-              calendarId={activeCalendarId}
-              onBack={() => { setPhase("list"); setActiveCalendarId(null); }}
             />
           )}
         </>
