@@ -210,6 +210,99 @@ export type Database = {
           },
         ]
       }
+      automated_reports: {
+        Row: {
+          ai_analysis: string | null
+          ai_recommendations: string | null
+          approved_at: string | null
+          approved_by: string | null
+          big_numbers: Json | null
+          created_at: string | null
+          exported_pdf_url: string | null
+          id: string
+          model_used: string | null
+          period_end: string
+          period_start: string
+          project_id: string
+          quarter: string | null
+          raw_data_snapshot: Json | null
+          report_type: string
+          schedule_id: string | null
+          sections: Json
+          sent_at: string | null
+          status: string | null
+          status_color: string | null
+          summary: string | null
+          title: string
+          year: number | null
+        }
+        Insert: {
+          ai_analysis?: string | null
+          ai_recommendations?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          big_numbers?: Json | null
+          created_at?: string | null
+          exported_pdf_url?: string | null
+          id?: string
+          model_used?: string | null
+          period_end: string
+          period_start: string
+          project_id: string
+          quarter?: string | null
+          raw_data_snapshot?: Json | null
+          report_type: string
+          schedule_id?: string | null
+          sections?: Json
+          sent_at?: string | null
+          status?: string | null
+          status_color?: string | null
+          summary?: string | null
+          title: string
+          year?: number | null
+        }
+        Update: {
+          ai_analysis?: string | null
+          ai_recommendations?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          big_numbers?: Json | null
+          created_at?: string | null
+          exported_pdf_url?: string | null
+          id?: string
+          model_used?: string | null
+          period_end?: string
+          period_start?: string
+          project_id?: string
+          quarter?: string | null
+          raw_data_snapshot?: Json | null
+          report_type?: string
+          schedule_id?: string | null
+          sections?: Json
+          sent_at?: string | null
+          status?: string | null
+          status_color?: string | null
+          summary?: string | null
+          title?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automated_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automated_reports_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "report_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_context_sources: {
         Row: {
           content: string | null
@@ -971,6 +1064,96 @@ export type Database = {
           },
         ]
       }
+      nps_surveys: {
+        Row: {
+          action_items: Json | null
+          answered_at: string | null
+          aspect_scores: Json | null
+          authorized_testimonial: boolean | null
+          automated_report_id: string | null
+          classification: string | null
+          created_at: string | null
+          created_by: string | null
+          feedback: string | null
+          follow_up_at: string | null
+          follow_up_notes: string | null
+          id: string
+          improvement: string | null
+          interested_case_study: boolean | null
+          liked_most: string | null
+          period: string
+          project_id: string
+          score: number | null
+          sent_at: string | null
+          status: string | null
+          survey_type: string
+          willing_to_refer: boolean | null
+        }
+        Insert: {
+          action_items?: Json | null
+          answered_at?: string | null
+          aspect_scores?: Json | null
+          authorized_testimonial?: boolean | null
+          automated_report_id?: string | null
+          classification?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          feedback?: string | null
+          follow_up_at?: string | null
+          follow_up_notes?: string | null
+          id?: string
+          improvement?: string | null
+          interested_case_study?: boolean | null
+          liked_most?: string | null
+          period: string
+          project_id: string
+          score?: number | null
+          sent_at?: string | null
+          status?: string | null
+          survey_type: string
+          willing_to_refer?: boolean | null
+        }
+        Update: {
+          action_items?: Json | null
+          answered_at?: string | null
+          aspect_scores?: Json | null
+          authorized_testimonial?: boolean | null
+          automated_report_id?: string | null
+          classification?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          feedback?: string | null
+          follow_up_at?: string | null
+          follow_up_notes?: string | null
+          id?: string
+          improvement?: string | null
+          interested_case_study?: boolean | null
+          liked_most?: string | null
+          period?: string
+          project_id?: string
+          score?: number | null
+          sent_at?: string | null
+          status?: string | null
+          survey_type?: string
+          willing_to_refer?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nps_surveys_automated_report_id_fkey"
+            columns: ["automated_report_id"]
+            isOneToOne: false
+            referencedRelation: "automated_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nps_surveys_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       okr_key_results: {
         Row: {
           baseline_value: number | null
@@ -1337,6 +1520,7 @@ export type Database = {
           brand_description: string | null
           brand_name: string
           briefing: Json | null
+          contracted_services: Json | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -1356,6 +1540,7 @@ export type Database = {
           brand_description?: string | null
           brand_name: string
           briefing?: Json | null
+          contracted_services?: Json | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -1375,6 +1560,7 @@ export type Database = {
           brand_description?: string | null
           brand_name?: string
           briefing?: Json | null
+          contracted_services?: Json | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -1391,6 +1577,59 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: []
+      }
+      report_schedules: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          created_by: string | null
+          cron_expression: string | null
+          day_of_month: number | null
+          day_of_week: number | null
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          project_id: string
+          report_type: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          cron_expression?: string | null
+          day_of_month?: number | null
+          day_of_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          project_id: string
+          report_type: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          cron_expression?: string | null
+          day_of_month?: number | null
+          day_of_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          project_id?: string
+          report_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_schedules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reports: {
         Row: {
