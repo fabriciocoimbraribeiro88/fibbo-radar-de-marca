@@ -254,7 +254,12 @@ item_index deve usar os números dos posts acima (${batchStart} a ${batchStart +
         continue;
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      // Remove control characters that break JSON.parse
+      const cleanedJson = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, (ch) => {
+        if (ch === '\n' || ch === '\r' || ch === '\t') return ch;
+        return '';
+      });
+      const parsed = JSON.parse(cleanedJson);
       const briefings = parsed.briefings ?? [];
 
       for (const b of briefings) {
