@@ -107,28 +107,26 @@ export default function HashtagStrategy({ projectId, briefing }: Props) {
     toast.success("Estratégia de hashtags aplicada!");
   };
 
+  const totalTags = data.proprietary.length + data.community.length + data.reach.length + data.forbidden.length;
+
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-base">14. Estratégia de Hashtags</CardTitle>
-              <CardDescription>Hashtags organizadas por função estratégica.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-              {!saving && (data.proprietary.length > 0 || data.community.length > 0) && (
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-              )}
-              <Button size="sm" onClick={handleGenerate} disabled={generating}>
-                {generating ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
-                Gerar com IA
-              </Button>
-            </div>
+      <div className="card-flat p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Estratégia de Hashtags</h3>
+            <Badge variant="secondary" className="text-xs">{totalTags}</Badge>
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+            {!saving && totalTags > 0 && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
+          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={handleGenerate} disabled={generating}>
+            {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            Gerar com IA
+          </Button>
+        </div>
+
+        <div className="space-y-5">
           {CATEGORIES.map(({ key, label, icon: Icon, description }) => (
             <div key={key} className="space-y-2">
               <div className="flex items-center gap-2">
@@ -163,8 +161,8 @@ export default function HashtagStrategy({ projectId, briefing }: Props) {
               )}
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">

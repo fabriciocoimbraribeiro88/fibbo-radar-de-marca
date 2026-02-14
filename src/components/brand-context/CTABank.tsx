@@ -105,6 +105,7 @@ export default function CTABank({ projectId, briefing }: CTABankProps) {
               <AccordionTrigger className="text-sm py-2 hover:no-underline">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{obj.label}</span>
+                  <span className="text-[10px] text-muted-foreground hidden sm:inline">{obj.description}</span>
                   <Badge variant="outline" className="text-[10px]">{objEntries.length}/3</Badge>
                 </div>
               </AccordionTrigger>
