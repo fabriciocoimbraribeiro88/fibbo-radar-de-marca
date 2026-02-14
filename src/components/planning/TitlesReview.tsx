@@ -431,13 +431,8 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
         })}
       </div>
 
-      {/* Distribution tables */}
-      {items && items.length > 0 && (
-        <DistributionTables items={items.filter((i) => (i.metadata as any)?.title_status !== "rejected")} />
-      )}
-
-      {/* Bottom action bar */}
-      <div className="mt-8 flex items-center justify-between">
+      {/* Bottom action bar — right after post cards */}
+      <div className="mt-6 flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Voltar
         </Button>
@@ -449,6 +444,11 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
           Gerar Briefings
         </Button>
       </div>
+
+      {/* Distribution tables */}
+      {items && items.length > 0 && (
+        <DistributionTables items={items.filter((i) => (i.metadata as any)?.title_status !== "rejected")} />
+      )}
 
       {/* Footer */}
       <div className="mt-4 pt-4 border-t border-border text-center">
