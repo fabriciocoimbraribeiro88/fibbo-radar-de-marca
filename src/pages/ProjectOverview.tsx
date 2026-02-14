@@ -3,14 +3,18 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Users,
   Instagram,
   BarChart3,
-  Gauge,
   ArrowRight,
+  CalendarDays,
+  FileText,
+  AlertTriangle,
+  CheckCircle2,
+  Database,
 } from "lucide-react";
-import { useLatestFibboScores } from "@/hooks/useFibboScores";
 
 export default function ProjectOverview() {
   const { id } = useParams<{ id: string }>();
@@ -39,29 +43,44 @@ export default function ProjectOverview() {
         .eq("project_id", id!);
       const entityIds = peData?.map((e) => e.entity_id) ?? [];
 
-      const [analysesRes, postsRes, profilesRes] = await Promise.all([
+      const [analysesRes, postsRes, calendarsRes, sourcesRes] = await Promise.all([
         supabase.from("analyses").select("id", { count: "exact", head: true }).eq("project_id", id!),
-        supabase.from("instagram_posts").select("id", { count: "exact", head: true }).in("entity_id", entityIds),
-        supabase.from("instagram_profiles").select("id", { count: "exact", head: true }).in("entity_id", entityIds),
+        supabase.from("instagram_posts").select("id", { count: "exact", head: true }).in("entity_id", entityIds.length ? entityIds : ["__none__"]),
+        supabase.from("planning_calendars").select("id", { count: "exact", head: true }).eq("project_id", id!).eq("status", "draft"),
+        supabase.from("brand_context_sources").select("id, status").eq("project_id", id!),
       ]);
       return {
         entities: peData?.length ?? 0,
         analyses: analysesRes.count ?? 0,
         posts: postsRes.count ?? 0,
-        profiles: profilesRes.count ?? 0,
+        calendars: calendarsRes.count ?? 0,
+        sources: sourcesRes.data ?? [],
       };
     },
     enabled: !!id,
   });
 
-  const { data: fibboScores } = useLatestFibboScores(id);
-  const brandFibbo = fibboScores?.find((s) => s.entity_role === "brand");
+  // Context strength calculation
+  const contextStrength = (() => {
+    if (!stats || !project) return { score: 0, label: "Não configurado", items: [] as { label: string; done: boolean }[] };
+    const items = [
+      { label: "Fontes de dados adicionadas", done: stats.entities > 0 },
+      { label: "Posts coletados", done: stats.posts > 0 },
+      { label: "Fontes de contexto (briefings/docs)", done: stats.sources.length > 0 },
+      { label: "Fontes processadas", done: stats.sources.filter((s) => s.status === "processed").length > 0 },
+      { label: "Briefing preenchido", done: !!project.briefing },
+    ];
+    const done = items.filter((i) => i.done).length;
+    const score = Math.round((done / items.length) * 100);
+    const label = score === 100 ? "Completo" : score >= 60 ? "Bom" : score >= 20 ? "Parcial" : "Não configurado";
+    return { score, label, items };
+  })();
 
   const statCards = [
-    { label: "Entidades", value: stats?.entities ?? 0, icon: Users, path: "sources", color: "text-blue-500 bg-blue-500/10" },
+    { label: "Marcas / Fontes", value: stats?.entities ?? 0, icon: Users, path: "sources", color: "text-blue-500 bg-blue-500/10" },
     { label: "Posts Coletados", value: stats?.posts ?? 0, icon: Instagram, path: "dashboard", color: "text-emerald-500 bg-emerald-500/10" },
     { label: "Análises", value: stats?.analyses ?? 0, icon: BarChart3, path: "analyses", color: "text-amber-500 bg-amber-500/10" },
-    { label: "Fibbo Score", value: brandFibbo ? brandFibbo.total_score.toFixed(1) : "—", icon: Gauge, path: "fibbo-score", color: "text-violet-500 bg-violet-500/10" },
+    { label: "Planejamentos", value: stats?.calendars ?? 0, icon: CalendarDays, path: "planning", color: "text-violet-500 bg-violet-500/10" },
   ];
 
   if (isLoading) {
@@ -105,6 +124,43 @@ export default function ProjectOverview() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Context Strength Bar */}
+      <div className="card-flat p-6 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="section-label flex items-center gap-2">
+            <Database className="h-3.5 w-3.5" />
+            FORÇA DO CONTEXTO
+          </h3>
+          <Badge
+            variant="secondary"
+            className={`text-xs border-0 rounded-full ${
+              contextStrength.score >= 80
+                ? "bg-emerald-500/10 text-emerald-600"
+                : contextStrength.score >= 40
+                ? "bg-amber-500/10 text-amber-600"
+                : "bg-destructive/10 text-destructive"
+            }`}
+          >
+            {contextStrength.label} — {contextStrength.score}%
+          </Badge>
+        </div>
+        <Progress value={contextStrength.score} className="h-2 mb-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {contextStrength.items.map((item) => (
+            <div key={item.label} className="flex items-center gap-2 text-sm">
+              {item.done ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+              ) : (
+                <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+              )}
+              <span className={item.done ? "text-foreground" : "text-muted-foreground"}>
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Brand summary */}

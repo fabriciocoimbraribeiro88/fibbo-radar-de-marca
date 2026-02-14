@@ -64,6 +64,7 @@ import { FetchProgressBar } from "@/components/FetchProgressBar";
 import type { Database } from "@/integrations/supabase/types";
 import { useEntityDataSummary } from "@/hooks/useEntityDataSummary";
 import { EntityDataSummary } from "@/components/sources/EntityDataSummary";
+import BrandContextSources from "@/components/brand-context/BrandContextSources";
 
 type EntityType = Database["public"]["Enums"]["entity_type"];
 
@@ -1277,6 +1278,10 @@ export default function ProjectSources() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Brand Context Sources section */}
+      <Separator className="my-8" />
+      <BrandContextSources projectId={projectId!} />
 
       {/* Remove confirmation */}
       <AlertDialog open={!!removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)}>
