@@ -20,8 +20,8 @@ const NAV_GROUPS = [
   {
     label: "CONFIGURAÇÃO",
     items: [
-      { title: "Fontes de Dados", path: "/sources", icon: Database },
-      { title: "Contexto de Marca", path: "/brand", icon: Palette },
+      { title: "Fontes", path: "/sources", icon: Database },
+      { title: "Contexto", path: "/brand", icon: Palette },
     ],
   },
   {
@@ -51,8 +51,8 @@ const NAV_GROUPS = [
 // Map path segments to readable names
 const PATH_LABELS: Record<string, string> = {
   "": "Visão Geral",
-  brand: "Contexto de Marca",
-  sources: "Fontes de Dados",
+  brand: "Contexto",
+  sources: "Fontes",
   dashboard: "Dashboard",
   analyses: "Métricas Avançadas",
   planning: "Editorial",
