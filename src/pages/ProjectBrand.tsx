@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Target, Package, LayoutGrid, AlertTriangle, ShieldAlert, ArrowRight, Database, Crosshair, ImageIcon, Settings2 } from "lucide-react";
+import { Target, Package, LayoutGrid, AlertTriangle, ShieldAlert, ArrowRight, Database, Crosshair, ImageIcon } from "lucide-react";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
 import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
 
@@ -18,7 +18,7 @@ import HookBank from "@/components/brand-context/HookBank";
 import SocialProofBank from "@/components/brand-context/SocialProofBank";
 import ObjectionBank from "@/components/brand-context/ObjectionBank";
 import BrandReferences from "@/components/brand-context/BrandReferences";
-import { ResultsSettings } from "@/components/results/ResultsSettings";
+
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -93,7 +93,7 @@ export default function ProjectBrand() {
     { value: "strategy", label: "Estratégia", icon: Crosshair },
     { value: "products", label: "Produtos", icon: Package },
     { value: "references", label: "Referências", icon: ImageIcon },
-    { value: "config", label: "Configuração", icon: Settings2 },
+    
   ];
 
   return (
@@ -191,9 +191,6 @@ export default function ProjectBrand() {
             <BrandReferences projectId={id!} briefing={project?.briefing} />
           </TabsContent>
 
-          <TabsContent value="config">
-            <ResultsSettings projectId={id!} />
-          </TabsContent>
         </Tabs>
       </div>
     </div>
