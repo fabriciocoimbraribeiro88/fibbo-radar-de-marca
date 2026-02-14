@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
@@ -561,10 +562,39 @@ export default function ProjectSources() {
     })),
   ];
 
+  // ── Contracted Services ──
+  const contractedRaw = project?.contracted_services as any;
+  const [svcChannels, setSvcChannels] = useState<string[]>([]);
+  const [svcSaveTimer, setSvcSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (contractedRaw && typeof contractedRaw === "object") {
+      setSvcChannels(contractedRaw.channels ?? []);
+    }
+  }, [contractedRaw]);
+
+  useEffect(() => {
+    return () => { if (svcSaveTimer) clearTimeout(svcSaveTimer); };
+  }, [svcSaveTimer]);
+
+  const toggleSvcChannel = useCallback((ch: string) => {
+    setSvcChannels((prev) => {
+      const next = prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch];
+      if (svcSaveTimer) clearTimeout(svcSaveTimer);
+      const timer = setTimeout(async () => {
+        const updated = { ...(contractedRaw ?? {}), channels: next };
+        await supabase.from("projects").update({ contracted_services: updated }).eq("id", projectId!);
+        queryClient.invalidateQueries({ queryKey: ["project-contracted-services", projectId] });
+      }, 1500);
+      setSvcSaveTimer(timer);
+      return next;
+    });
+  }, [projectId, contractedRaw, svcSaveTimer, queryClient]);
+
   return (
     <div className="max-w-3xl animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">Fontes de Dados</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -706,6 +736,44 @@ export default function ProjectSources() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Contracted Services */}
+      <Card className="p-5 mb-8">
+        <h3 className="text-sm font-semibold mb-1">Serviços Contratados</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Selecione os serviços incluídos no contrato deste cliente. Análises, dashboard e relatórios se adaptam automaticamente.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {([
+            { ch: "social", icon: Instagram, title: "Social", desc: "Gestão de redes sociais, conteúdo orgânico, engajamento", kpis: ["Seguidores", "Engajamento", "Alcance", "Salvamentos"] },
+            { ch: "ads", icon: Megaphone, title: "Ads", desc: "Tráfego pago, campanhas Meta/Google, conversões", kpis: ["Investimento", "CPL", "CPA", "ROAS", "CTR"] },
+            { ch: "seo", icon: Globe, title: "SEO", desc: "Otimização orgânica, palavras-chave, tráfego orgânico", kpis: ["Tráfego Orgânico", "Posição Média", "Keywords Top 10"] },
+          ] as const).map(({ ch, icon: Icon, title, desc, kpis }) => {
+            const active = svcChannels.includes(ch);
+            return (
+              <Card
+                key={ch}
+                className={`p-4 cursor-pointer transition-all ${active ? "border-primary/50 bg-primary/5" : "opacity-60"}`}
+                onClick={() => toggleSvcChannel(ch)}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">{title}</span>
+                  </div>
+                  <Switch checked={active} onCheckedChange={() => toggleSvcChannel(ch)} onClick={(e) => e.stopPropagation()} />
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-2">{desc}</p>
+                <div className="flex flex-wrap gap-1">
+                  {kpis.map(k => (
+                    <Badge key={k} variant="secondary" className="text-[9px]">{k}</Badge>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* Grouped entities (including brand section) */}
       <div className="space-y-8">

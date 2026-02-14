@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, Instagram, Megaphone, Search, FileText } from "lucide-react";
 import type { WizardData, Channel } from "@/pages/ProjectPlanning";
+import { useContractedServices } from "@/hooks/useContractedServices";
 
 const CHANNELS: { value: Channel; label: string; icon: typeof Instagram; emoji: string }[] = [
   { value: "social", label: "Social", icon: Instagram, emoji: "📱" },
@@ -30,6 +32,10 @@ interface Props {
 }
 
 export default function PlanningWizardStep1({ projectId, wizardData, setWizardData, onNext, onBack }: Props) {
+  const { channels: contractedChannels } = useContractedServices(projectId);
+  const isChannelDisabled = (ch: string) =>
+    contractedChannels.length > 0 && !contractedChannels.includes(ch);
+
   const { data: analyses } = useQuery({
     queryKey: ["analyses-for-planning", projectId],
     queryFn: async () => {
@@ -99,20 +105,31 @@ export default function PlanningWizardStep1({ projectId, wizardData, setWizardDa
       <div className="mb-6">
         <Label className="text-sm font-medium text-foreground mb-3 block">Canal</Label>
         <div className="grid grid-cols-3 gap-3">
-          {CHANNELS.map((ch) => (
-            <Card
-              key={ch.value}
-              className={`cursor-pointer transition-colors text-center ${
-                wizardData.channel === ch.value ? "ring-2 ring-primary bg-primary/5" : "hover:bg-accent/30"
-              }`}
-              onClick={() => setWizardData((d) => ({ ...d, channel: ch.value }))}
-            >
-              <CardContent className="p-4 flex flex-col items-center gap-2">
-                <span className="text-2xl">{ch.emoji}</span>
-                <span className="text-sm font-medium text-foreground">{ch.label}</span>
-              </CardContent>
-            </Card>
-          ))}
+          {CHANNELS.map((ch) => {
+            const disabled = isChannelDisabled(ch.value);
+            return (
+              <Card
+                key={ch.value}
+                className={`transition-colors text-center ${
+                  disabled
+                    ? "opacity-40 cursor-not-allowed"
+                    : `cursor-pointer ${
+                        wizardData.channel === ch.value ? "ring-2 ring-primary bg-primary/5" : "hover:bg-accent/30"
+                      }`
+                }`}
+                onClick={() => !disabled && setWizardData((d) => ({ ...d, channel: ch.value }))}
+                title={disabled ? "Serviço não contratado" : undefined}
+              >
+                <CardContent className="p-4 flex flex-col items-center gap-2">
+                  <span className="text-2xl">{ch.emoji}</span>
+                  <span className="text-sm font-medium text-foreground">{ch.label}</span>
+                  {disabled && (
+                    <Badge variant="secondary" className="text-[9px]">Não contratado</Badge>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import {
   calculatePeriodFromPreset,
   calculatePreviousPeriod,
 } from "@/lib/analysisSections";
+import { useContractedServices } from "@/hooks/useContractedServices";
 
 const STEPS = [
   { label: "Configurar", icon: Settings },
@@ -40,6 +41,7 @@ export default function NewAnalysis() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const { channels: contractedChannels } = useContractedServices(projectId);
   const [step, setStep] = useState(0);
   const [creating, setCreating] = useState(false);
 
@@ -297,6 +299,7 @@ export default function NewAnalysis() {
           setLargeDatasetAck={setLargeDatasetAck}
           hasAdsData={hasAdsData ?? false}
           hasSeoData={hasSeoData ?? false}
+          contractedChannels={contractedChannels}
         />
       )}
 

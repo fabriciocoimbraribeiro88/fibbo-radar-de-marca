@@ -105,13 +105,25 @@ export default function ProjectDashboard() {
   const handleToggleEntity = (id: string) => {
     setSelectedEntityIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        // Check per-type limit (max 3 per type, brand excluded)
+        const entity = allEntities.find((e) => e.id === id);
+        if (entity && entity.role !== "brand") {
+          const sameTypeSelected = allEntities.filter(
+            (e) => e.type === entity.type && prev.has(e.id)
+          ).length;
+          if (sameTypeSelected >= 3) return prev;
+        }
+        next.add(id);
+      }
       return next;
     });
   };
 
   const filterEntities = useMemo(
-    () => allEntities.map((e) => ({ id: e.id, name: e.name, handle: e.handle, role: e.role })),
+    () => allEntities.map((e) => ({ id: e.id, name: e.name, handle: e.handle, role: e.role, type: e.type })),
     [allEntities]
   );
 

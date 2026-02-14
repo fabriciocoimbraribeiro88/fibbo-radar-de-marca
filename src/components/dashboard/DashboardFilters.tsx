@@ -76,7 +76,10 @@ export interface EntityOption {
   name: string;
   handle: string | null;
   role: string;
+  type: string;
 }
+
+const MAX_PER_TYPE = 3;
 
 interface Props {
   period: PeriodRange;
@@ -206,27 +209,56 @@ export default function DashboardFilters({
       </div>
 
       {/* Row 4: Individual entity pills — only visible in brand_only mode */}
-      {sourceMode === "brand_only" && entities.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Marca</span>
-          {entities.map((e) => {
-            const selected = selectedEntityIds.has(e.id);
-            return (
-              <button
-                key={e.id}
-                onClick={() => onToggleEntity(e.id)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                  selected
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {e.handle ? e.handle.replace("@", "") : e.name}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {sourceMode === "brand_only" && entities.length > 0 && (() => {
+        const ROLE_LABELS: Record<string, string> = {
+          brand: "Marca",
+          competitor: "Concorrentes",
+          influencer: "Influencers",
+          inspiration: "Inspirações",
+        };
+        const roles = ["brand", "competitor", "influencer", "inspiration"];
+        const grouped = roles
+          .map((r) => ({ role: r, items: entities.filter((e) => e.type === r || (r === "brand" && e.role === "brand")) }))
+          .filter((g) => g.items.length > 0);
+
+        return grouped.map((g) => {
+          const selectedCount = g.items.filter((e) => selectedEntityIds.has(e.id)).length;
+          const limitReached = g.role !== "brand" && selectedCount >= MAX_PER_TYPE;
+          return (
+            <div key={g.role} className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+                {ROLE_LABELS[g.role] ?? g.role}
+              </span>
+              {g.role !== "brand" && g.items.length > MAX_PER_TYPE && (
+                <span className={`text-[10px] font-medium ${limitReached ? "text-primary" : "text-muted-foreground"}`}>
+                  ({selectedCount}/{MAX_PER_TYPE})
+                </span>
+              )}
+              {g.items.map((e) => {
+                const selected = selectedEntityIds.has(e.id);
+                const disabled = !selected && limitReached;
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => !disabled && onToggleEntity(e.id)}
+                    disabled={disabled}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                      disabled
+                        ? "bg-muted text-muted-foreground/40 cursor-not-allowed"
+                        : selected
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-muted text-muted-foreground hover:bg-accent"
+                    }`}
+                    title={disabled ? `Limite de ${MAX_PER_TYPE} por categoria atingido` : undefined}
+                  >
+                    {e.handle ? e.handle.replace("@", "") : e.name}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        });
+      })()}
     </div>
   );
 }
