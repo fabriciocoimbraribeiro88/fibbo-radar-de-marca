@@ -7,12 +7,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Target, Package, LayoutGrid, AlertTriangle, ShieldAlert, ArrowRight, Database } from "lucide-react";
+import { Target, Package, LayoutGrid, AlertTriangle, ShieldAlert, ArrowRight, Database, Crosshair } from "lucide-react";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
 import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
 import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
 import ProductsCatalog from "@/components/brand-context/ProductsCatalog";
 import ContextStrengthBar from "@/components/brand-context/ContextStrengthBar";
+import CTABank from "@/components/brand-context/CTABank";
+import HookBank from "@/components/brand-context/HookBank";
+import SocialProofBank from "@/components/brand-context/SocialProofBank";
+import ObjectionBank from "@/components/brand-context/ObjectionBank";
 
 export default function ProjectBrand() {
   const { id } = useParams<{ id: string }>();
@@ -84,7 +88,7 @@ export default function ProjectBrand() {
 
   const tabs = [
     { value: "identity", label: "Identidade", icon: Target },
-    { value: "content", label: "Conteúdo", icon: LayoutGrid },
+    { value: "strategy", label: "Estratégia", icon: Crosshair },
     { value: "products", label: "Produtos", icon: Package },
   ];
 
@@ -162,7 +166,15 @@ export default function ProjectBrand() {
             />
           </TabsContent>
 
-          <TabsContent value="content" className="space-y-6">
+          <TabsContent value="strategy" className="space-y-6">
+            <div className="my-2">
+              <h3 className="text-sm font-semibold text-foreground mb-1">Bancos Táticos</h3>
+              <p className="text-xs text-muted-foreground">Material que a IA usa para gerar conteúdo mais específico e variado.</p>
+            </div>
+            <CTABank projectId={id!} briefing={project?.briefing} />
+            <HookBank projectId={id!} briefing={project?.briefing} />
+            <SocialProofBank projectId={id!} briefing={project?.briefing} />
+            <ObjectionBank projectId={id!} briefing={project?.briefing} />
             <HashtagStrategy projectId={id!} briefing={project?.briefing} />
             <SeasonalCalendar projectId={id!} briefing={project?.briefing} segment={project?.segment} />
           </TabsContent>

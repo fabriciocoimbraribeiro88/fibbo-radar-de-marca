@@ -120,6 +120,39 @@ export async function buildFullBrandContext(projectId: string): Promise<string> 
     if (Array.isArray(b.products) && b.products.length > 0) {
       parts.push(`\n--- Produtos/Serviços ---\n${b.products.map((p: any) => `• ${p.name} (${p.category}, Curva ${p.curve}, Margem ${p.margin}) — ${p.description}`).join("\n")}`);
     }
+
+    // CTA Bank
+    if (Array.isArray(b.cta_bank) && b.cta_bank.length > 0) {
+      const ctasByObj: Record<string, string[]> = {};
+      for (const cta of b.cta_bank) {
+        if (!ctasByObj[cta.objective]) ctasByObj[cta.objective] = [];
+        ctasByObj[cta.objective].push(`[${cta.intensity}] ${cta.text}`);
+      }
+      parts.push(`\n--- Banco de CTAs da Marca ---\n${Object.entries(ctasByObj)
+        .map(([obj, ctas]) => `${obj}: ${ctas.join(" | ")}`)
+        .join("\n")}`);
+    }
+
+    // Hook Bank
+    if (Array.isArray(b.hook_bank) && b.hook_bank.length > 0) {
+      parts.push(`\n--- Banco de Hooks da Marca ---\n${b.hook_bank
+        .map((h: any) => `[${h.frame}/${h.style}] ${h.text}`)
+        .join("\n")}`);
+    }
+
+    // Social Proof Bank
+    if (Array.isArray(b.social_proof_bank) && b.social_proof_bank.length > 0) {
+      parts.push(`\n--- Provas Sociais Disponíveis ---\n${b.social_proof_bank
+        .map((p: any) => `[${p.type}${p.is_verified ? " ✓" : ""}] ${p.text} (fonte: ${p.source})`)
+        .join("\n")}`);
+    }
+
+    // Objection Bank
+    if (Array.isArray(b.objection_bank) && b.objection_bank.length > 0) {
+      parts.push(`\n--- Objeções do Público ---\n${b.objection_bank
+        .map((o: any) => `[${o.severity}] "${o.objection}" → Resposta: ${o.response} → Ângulo de conteúdo: ${o.content_angle}`)
+        .join("\n")}`);
+    }
   }
 
   // Document sources
