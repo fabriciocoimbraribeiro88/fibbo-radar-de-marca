@@ -28,7 +28,7 @@ const NAV_GROUPS = [
     label: "ANÁLISE",
     items: [
       { title: "Dashboard", path: "/dashboard", icon: BarChart3 },
-      { title: "Métricas Avançadas", path: "/analyses", icon: Search },
+      { title: "Relatório", path: "/analyses", icon: Search },
     ],
   },
   {
@@ -54,7 +54,7 @@ const PATH_LABELS: Record<string, string> = {
   brand: "Contexto",
   sources: "Fontes",
   dashboard: "Dashboard",
-  analyses: "Métricas Avançadas",
+  analyses: "Relatório",
   planning: "Editorial",
   calendar: "Calendário",
   briefings: "Briefings",
