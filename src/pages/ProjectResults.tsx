@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResultsOverview } from "@/components/results/ResultsOverview";
-import { OKRsPanel } from "@/components/results/OKRsPanel";
 import { ReportsPanel } from "@/components/results/ReportsPanel";
-import { NPSPanel } from "@/components/results/NPSPanel";
 
 
 export default function ProjectResults() {
@@ -35,25 +33,16 @@ export default function ProjectResults() {
       <Tabs defaultValue="overview">
         <TabsList className="mb-6">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="okrs">OKRs</TabsTrigger>
           <TabsTrigger value="reports">Relatórios</TabsTrigger>
-        
         </TabsList>
 
         <TabsContent value="overview">
           <ResultsOverview projectId={projectId} contractedChannels={contractedChannels} />
         </TabsContent>
 
-        <TabsContent value="okrs">
-          <OKRsPanel projectId={projectId} />
-        </TabsContent>
-
         <TabsContent value="reports">
           <ReportsPanel projectId={projectId} contractedChannels={contractedChannels} />
         </TabsContent>
-
-
-
       </Tabs>
     </div>
   );

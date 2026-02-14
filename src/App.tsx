@@ -20,6 +20,7 @@ import ProjectPlanning from "@/pages/ProjectPlanning";
 import ProjectBriefings from "@/pages/ProjectBriefings";
 import ProjectCreatives from "@/pages/ProjectCreatives";
 import ProjectOKRs from "@/pages/ProjectOKRs";
+import ProjectCheckin from "@/pages/ProjectCheckin";
 import ProjectAnnualCalendar from "@/pages/ProjectAnnualCalendar";
 
 import ProjectDashboard from "@/pages/ProjectDashboard";
@@ -71,6 +72,7 @@ const App = () => (
                 <Route path="briefings" element={<ProjectBriefings />} />
                 <Route path="creatives" element={<ProjectCreatives />} />
                 <Route path="okrs" element={<ProjectOKRs />} />
+                <Route path="checkin" element={<ProjectCheckin />} />
                 
                 <Route path="results" element={<ProjectResults />} />
               </Route>
