@@ -4,14 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useContractedServices } from "@/hooks/useContractedServices";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange, Layers, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import ProductionStepper, {
   statusToStep,
   getCompletedSteps,
   type ProductionStep,
 } from "@/components/production/ProductionStepper";
-import PlanningList from "@/components/planning/PlanningList";
+import ProductionKanban from "@/components/production/ProductionKanban";
 import PlanningWizardStep1 from "@/components/planning/PlanningWizardStep1";
 import PlanningWizardStep2 from "@/components/planning/PlanningWizardStep2";
 import PlanningWizardStep3 from "@/components/planning/PlanningWizardStep3";
@@ -19,7 +18,6 @@ import TitlesReview from "@/components/planning/TitlesReview";
 import BriefingsReview from "@/components/planning/BriefingsReview";
 import CalendarFinalView from "@/components/planning/CalendarFinalView";
 import CreativesPanel from "@/components/production/CreativesPanel";
-import ProjectAnnualCalendar from "@/pages/ProjectAnnualCalendar";
 
 import type { WizardData, Channel, Colab } from "@/pages/ProjectPlanning";
 
@@ -64,7 +62,6 @@ const defaultWizardData: WizardData = {
 
 export default function ProjectProduction() {
   const { id: projectId } = useParams<{ id: string }>();
-  const [tab, setTab] = useState("content");
   const [phase, setPhase] = useState<Phase>("list");
   const [wizardData, setWizardData] = useState<WizardData>(defaultWizardData);
   const { channels: contractedChannels } = useContractedServices(projectId);
@@ -100,7 +97,6 @@ export default function ProjectProduction() {
   const startWizard = () => {
     setWizardData(defaultWizardData);
     setPhase("wizard_step1");
-    setTab("content");
   };
 
   const openCalendar = (calendarId: string) => {
@@ -161,40 +157,16 @@ export default function ProjectProduction() {
 
   return (
     <div className="max-w-5xl animate-fade-in">
-      {/* Top-level: show tabs only when on list */}
+      {/* Pipeline kanban view */}
       {phase === "list" && (
-        <>
-          <div className="mb-6">
-            <h1 className="text-xl font-semibold text-foreground">Produção</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Planejamento estratégico e pipeline de conteúdo unificados.
-            </p>
-          </div>
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="content" className="gap-2">
-                <Layers className="h-3.5 w-3.5" /> Conteúdo
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="gap-2">
-                <CalendarRange className="h-3.5 w-3.5" /> Calendário Estratégico
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="content">
-              <PlanningList
-                projectId={projectId}
-                onNewPlanning={startWizard}
-                onOpenCalendar={openCalendar}
-                onOpenTitlesReview={openTitlesReview}
-                onOpenBriefingsReview={openBriefingsReview}
-              />
-            </TabsContent>
-
-            <TabsContent value="calendar">
-              <ProjectAnnualCalendar />
-            </TabsContent>
-          </Tabs>
-        </>
+        <ProductionKanban
+          projectId={projectId}
+          onNewPlanning={startWizard}
+          onOpenCalendar={openCalendar}
+          onOpenTitlesReview={openTitlesReview}
+          onOpenBriefingsReview={openBriefingsReview}
+          onOpenCreatives={openCreatives}
+        />
       )}
 
       {/* Wizard steps */}
