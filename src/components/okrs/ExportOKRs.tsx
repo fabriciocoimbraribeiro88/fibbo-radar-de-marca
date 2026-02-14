@@ -38,7 +38,7 @@ export function ExportOKRs({ objectives, keyResultsByObj, quarter, year }: Expor
       md += "\n---\n\n";
     });
 
-    md += "*OKRs geradas por Fibbo Radar — Inteligência Competitiva com IA*\n";
+    md += "*OKRs geradas por FibboMetrics — Inteligência Competitiva com IA*\n";
     return md;
   };
 

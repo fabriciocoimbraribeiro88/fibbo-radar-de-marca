@@ -398,7 +398,7 @@ export default function AnalysisStep4(props: Step4Props) {
       <div className="text-xs text-muted-foreground text-center pt-2">
         <p>A análise levará aproximadamente 5 minutos.</p>
         <p>Os agentes de IA processarão cada seção selecionada.</p>
-        <p className="mt-1 text-[10px]">O relatório incluirá assinatura Fibbo Radar.</p>
+        <p className="mt-1 text-[10px]">O relatório incluirá assinatura FibboMetrics.</p>
       </div>
     </div>
   );

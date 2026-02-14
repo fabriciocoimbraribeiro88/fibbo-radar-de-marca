@@ -339,7 +339,7 @@ export default function BriefingsReview({ projectId, calendarId, onFinalized, on
 
       <div className="mt-4 pt-4 border-t border-border text-center">
         <p className="text-xs text-muted-foreground">
-          Planejamento gerado por <span className="font-semibold text-foreground">Fibbo Radar</span> — Inteligência Competitiva com IA
+          Planejamento gerado por <span className="font-semibold text-foreground">FibboMetrics</span> — Inteligência Competitiva com IA
         </p>
       </div>
     </>
