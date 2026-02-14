@@ -66,6 +66,21 @@ serve(async (req) => {
 
     const variantLabel = variant === "b" ? "Opção B (ângulo alternativo, composição diferente)" : "Opção A (conceito principal)";
 
+    // Map format to aspect ratio and dimensions
+    const formatLower = (item.format ?? "").toLowerCase();
+    let aspectInfo = "Formato quadrado 1:1 (1080x1080px) para feed do Instagram";
+    if (formatLower.includes("stories") || formatLower.includes("story")) {
+      aspectInfo = "Formato vertical 9:16 (1080x1920px) para Stories do Instagram. A imagem DEVE ser vertical/retrato";
+    } else if (formatLower.includes("reel") || formatLower.includes("reels")) {
+      aspectInfo = "Formato vertical 9:16 (1080x1920px) para Reels do Instagram. A imagem DEVE ser vertical/retrato";
+    } else if (formatLower.includes("carrossel") || formatLower.includes("carousel")) {
+      aspectInfo = "Formato quadrado 1:1 (1080x1080px) para carrossel do Instagram";
+    } else if (formatLower.includes("estático") || formatLower.includes("static") || formatLower.includes("feed")) {
+      aspectInfo = "Formato quadrado 1:1 (1080x1080px) para feed do Instagram";
+    } else if (formatLower.includes("landscape") || formatLower.includes("horizontal")) {
+      aspectInfo = "Formato horizontal 16:9 (1920x1080px)";
+    }
+
     const prompt = `Crie uma imagem para um post de redes sociais com as seguintes especificações:
 
 MARCA: ${project?.brand_name ?? "N/A"}
@@ -78,6 +93,7 @@ DESCRIÇÃO: ${item.description ?? ""}
 COPY/TEXTO: ${item.copy_text ?? ""}
 BRIEFING VISUAL: ${item.visual_brief ?? ""}
 FORMATO: ${item.format ?? "feed quadrado"}
+DIMENSÕES: ${aspectInfo}
 CANAL: ${item.channel ?? "instagram"}
 TEMA: ${item.theme ?? ""}
 
@@ -87,7 +103,7 @@ ${project?.logo_url ? `A logo da marca deve ser incorporada sutilmente na compos
 
 VARIANTE: ${variantLabel}
 
-Gere uma imagem profissional, moderna e visualmente impactante para este post. A imagem deve ser adequada para ${item.format ?? "feed"} do ${item.channel ?? "Instagram"}. Use cores, tipografia e composição que reflitam a identidade da marca. Ultra high resolution.`;
+IMPORTANTE: A imagem DEVE respeitar as dimensões especificadas (${aspectInfo}). Gere uma imagem profissional, moderna e visualmente impactante. Use cores, tipografia e composição que reflitam a identidade da marca. Ultra high resolution.`;
 
     // Build messages - include logo as image if available
     const messages: any[] = [];

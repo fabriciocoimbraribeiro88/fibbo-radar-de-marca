@@ -3,7 +3,7 @@
  * the unified Production page. This is a self-contained component that
  * renders the creative generation UI for a single calendar.
  */
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
-  Paintbrush, Loader2, Check, RefreshCw, Bookmark, ImageIcon, Type, Copy,
+  Paintbrush, Loader2, Check, RefreshCw, Bookmark, ImageIcon, Type, Copy, Sparkles,
 } from "lucide-react";
 
 interface Props {
@@ -19,10 +19,19 @@ interface Props {
   calendarId: string;
 }
 
+function getFormatAspect(format: string | null): string {
+  const f = (format ?? "").toLowerCase();
+  if (f.includes("stories") || f.includes("story") || f.includes("reel") || f.includes("reels")) {
+    return "aspect-[9/16]";
+  }
+  return "aspect-square";
+}
+
 export default function CreativesPanel({ projectId, calendarId }: Props) {
   const queryClient = useQueryClient();
   const [generatingItems, setGeneratingItems] = useState<Record<string, string>>({});
   const [generatingCaptions, setGeneratingCaptions] = useState<Record<string, boolean>>({});
+  const [generatingAll, setGeneratingAll] = useState(false);
 
   const { data: items } = useQuery({
     queryKey: ["creative-items", calendarId],
@@ -156,6 +165,32 @@ export default function CreativesPanel({ projectId, calendarId }: Props) {
     toast({ title: "Legenda salva como referência!" });
   };
 
+  const generateAll = useCallback(async () => {
+    if (!items?.length) return;
+    const pending = items.filter((item) => {
+      const c = creativesMap.get(item.id);
+      return !c?.option_a_url;
+    });
+    if (pending.length === 0) {
+      toast({ title: "Todos os criativos já foram gerados." });
+      return;
+    }
+    setGeneratingAll(true);
+    let success = 0;
+    for (const item of pending) {
+      try {
+        await generateCreative(item.id);
+        success++;
+      } catch {
+        // individual errors already toasted
+      }
+    }
+    setGeneratingAll(false);
+    if (success > 0) {
+      toast({ title: `${success} criativo(s) gerado(s)!` });
+    }
+  }, [items, creativesMap, generateCreative]);
+
   if (!items || items.length === 0) {
     return (
       <Card className="card-flat border-dashed">
@@ -168,10 +203,25 @@ export default function CreativesPanel({ projectId, calendarId }: Props) {
     );
   }
 
+  const pendingCount = items.filter((item) => !creativesMap.get(item.id)?.option_a_url).length;
+
   return (
     <div className="space-y-6">
-      <div className="mb-2">
+      <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-muted-foreground">Gere e selecione criativos para cada briefing aprovado.</p>
+        {pendingCount > 0 && (
+          <Button
+            onClick={generateAll}
+            disabled={generatingAll || Object.keys(generatingItems).length > 0}
+            className="gradient-coral text-white"
+          >
+            {generatingAll ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando {items.length - pendingCount + 1}/{items.length}…</>
+            ) : (
+              <><Sparkles className="mr-2 h-4 w-4" /> Gerar Todos ({pendingCount})</>
+            )}
+          </Button>
+        )}
       </div>
       {items.map((item) => {
         const creative = creativesMap.get(item.id);
@@ -225,7 +275,7 @@ export default function CreativesPanel({ projectId, calendarId }: Props) {
                             Opção {opt.toUpperCase()}
                           </Badge>
                         </div>
-                        <img src={url!} alt={`Opção ${opt.toUpperCase()}`} className="w-full aspect-square object-cover" />
+                        <img src={url!} alt={`Opção ${opt.toUpperCase()}`} className={`w-full object-cover ${getFormatAspect(item.format)}`} />
                         <div className="p-3 flex items-center gap-2">
                           <Button size="sm" variant={isSelected ? "default" : "outline"} className={isSelected ? "gradient-coral text-white" : ""} onClick={() => selectOption(creative.id, opt)} disabled={isSelected}>
                             {isSelected ? <><Check className="mr-1.5 h-3.5 w-3.5" /> Selecionado</> : "Selecionar"}
