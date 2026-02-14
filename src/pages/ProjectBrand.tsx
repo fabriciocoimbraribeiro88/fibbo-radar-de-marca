@@ -99,7 +99,7 @@ export default function ProjectBrand() {
   return (
     <div className="max-w-3xl animate-fade-in">
       <div className="mb-6">
-        <h1 className="page-title">Contexto de Marca</h1>
+        <h1 className="page-title">Contexto</h1>
         <p className="page-subtitle">
           Briefing completo da marca para contextualizar as análises. Preencha manualmente ou use IA.
         </p>
@@ -116,14 +116,14 @@ export default function ProjectBrand() {
           <ShieldAlert className="h-10 w-10 mx-auto text-muted-foreground/40 mb-4" />
           <h3 className="text-base font-semibold text-foreground mb-2">Fontes necessárias</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            Adicione pelo menos uma fonte de dados e um documento/briefing na seção Fontes de Dados antes de gerar o contexto de marca.
+            Adicione pelo menos uma fonte de dados e um documento/briefing na seção Fontes antes de gerar o contexto.
           </p>
           <Button
             className="gradient-coral text-white rounded-lg shadow-sm"
             onClick={() => navigate(`/projects/${id}/sources`)}
           >
             <Database className="mr-2 h-4 w-4" />
-            Ir para Fontes de Dados
+            Ir para Fontes
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -136,7 +136,7 @@ export default function ProjectBrand() {
           <AlertDescription className="text-sm">
             <strong>Contexto fraco</strong> — suas fontes são limitadas. Adicione mais documentos, URLs ou texto na seção{" "}
             <button onClick={() => navigate(`/projects/${id}/sources`)} className="text-primary underline underline-offset-2">
-              Fontes de Dados
+              Fontes
             </button>{" "}
             para gerar um contexto mais completo e preciso.
           </AlertDescription>

@@ -86,7 +86,7 @@ export default function PlanningList({ projectId, onNewPlanning, onOpenCalendar,
     <>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Planejamento</h1>
+          <h1 className="text-xl font-semibold text-foreground">Editorial</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Gere calendários, planos de mídia e estratégias de conteúdo baseados nas análises.
           </p>
@@ -101,7 +101,7 @@ export default function PlanningList({ projectId, onNewPlanning, onOpenCalendar,
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center py-16">
             <CalendarDays className="mb-3 h-10 w-10 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">Nenhum planejamento criado</p>
+            <p className="text-sm font-medium text-foreground">Nenhum editorial criado</p>
             <p className="mt-1 text-xs text-muted-foreground text-center max-w-sm">
               Crie um calendário de conteúdo baseado nas análises aprovadas.
             </p>
