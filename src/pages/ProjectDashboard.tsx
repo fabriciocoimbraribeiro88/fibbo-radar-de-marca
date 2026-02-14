@@ -28,7 +28,8 @@ import ContentMixChart from "@/components/dashboard/ContentMixChart";
 import RadarComparisonChart from "@/components/dashboard/RadarComparisonChart";
 import VolumeEngagementScatter from "@/components/dashboard/VolumeEngagementScatter";
 import SentimentComparisonChart from "@/components/dashboard/SentimentComparisonChart";
-import HitViralChart from "@/components/dashboard/HitViralChart";
+import HitRateChart from "@/components/dashboard/HitRateChart";
+import ViralStatsChart from "@/components/dashboard/ViralStatsChart";
 
 import PerformanceByTypeChart from "@/components/dashboard/PerformanceByTypeChart";
 import PostsVolumeChart from "@/components/dashboard/PostsVolumeChart";
@@ -255,8 +256,9 @@ export default function ProjectDashboard() {
             <RadarComparisonChart metrics={entityMetrics} />
             <VolumeEngagementScatter metrics={entityMetrics} />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <HitViralChart metrics={entityMetrics} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <HitRateChart metrics={entityMetrics} />
+            <ViralStatsChart metrics={entityMetrics} />
             <SentimentComparisonChart metrics={entityMetrics} />
           </div>
         </div>
