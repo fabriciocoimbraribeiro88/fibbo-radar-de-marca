@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Plus, X, Loader2, CheckCircle2, Sparkles, ChevronDown, ChevronRight, CalendarRange,
 } from "lucide-react";
@@ -18,6 +19,28 @@ import { toast } from "sonner";
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+const MONTH_EXAMPLES: Record<number, { theme: string; focus: string; date: string }> = {
+  0: { theme: "Ex: Ano novo, obra nova!", focus: "Ex: Planejamento e metas do ano", date: "01/01 - Ano Novo" },
+  1: { theme: "Ex: Carnaval e volta às aulas", focus: "Ex: Engajamento e brand awareness", date: "14/02 - Valentine's Day" },
+  2: { theme: "Ex: Dia da Mulher", focus: "Ex: Campanhas institucionais", date: "08/03 - Dia da Mulher" },
+  3: { theme: "Ex: Páscoa e outono", focus: "Ex: Lançamento de produtos sazonais", date: "21/04 - Tiradentes" },
+  4: { theme: "Ex: Dia das Mães", focus: "Ex: Campanha emocional e vendas", date: "11/05 - Dia das Mães" },
+  5: { theme: "Ex: Dia dos Namorados", focus: "Ex: Promoções e kits especiais", date: "12/06 - Dia dos Namorados" },
+  6: { theme: "Ex: Férias de inverno", focus: "Ex: Conteúdo educativo e autoridade", date: "20/07 - Dia do Amigo" },
+  7: { theme: "Ex: Dia dos Pais", focus: "Ex: Campanha emocional e vendas", date: "10/08 - Dia dos Pais" },
+  8: { theme: "Ex: Primavera e independência", focus: "Ex: Renovação e lançamentos", date: "07/09 - Independência" },
+  9: { theme: "Ex: Dia das Crianças", focus: "Ex: Campanhas familiares", date: "12/10 - Dia das Crianças" },
+  10: { theme: "Ex: Black Friday", focus: "Ex: Máxima conversão e vendas", date: "28/11 - Black Friday" },
+  11: { theme: "Ex: Natal e retrospectiva", focus: "Ex: Fechamento e fidelização", date: "25/12 - Natal" },
+};
+
+const QUARTERS = [
+  { label: "Q1", months: [0, 1, 2] },
+  { label: "Q2", months: [3, 4, 5] },
+  { label: "Q3", months: [6, 7, 8] },
+  { label: "Q4", months: [9, 10, 11] },
 ];
 
 const ACTION_TYPES = [
@@ -31,22 +54,19 @@ const ACTION_TYPES = [
   { value: "guerrilha", label: "Guerrilha", color: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400" },
 ];
 
-const ACTION_COLOR_MAP: Record<string, string> = {};
-ACTION_TYPES.forEach((a) => { ACTION_COLOR_MAP[a.value] = a.color; });
-
 interface CalendarDate {
   id: string;
   name: string;
-  date: string; // dd/mm
+  date: string;
   action_types: string[];
+  objective?: string;
+  extra_budget?: boolean;
 }
 
 interface MonthPlan {
   month: number;
   theme: string;
   focus: string;
-  kv_planning: string;
-  kv_production: string;
   notes: string;
   dates: CalendarDate[];
 }
@@ -57,7 +77,7 @@ interface AnnualCalendar {
 }
 
 function emptyMonth(month: number): MonthPlan {
-  return { month, theme: "", focus: "", kv_planning: "", kv_production: "", notes: "", dates: [] };
+  return { month, theme: "", focus: "", notes: "", dates: [] };
 }
 
 function emptyCalendar(year: number): AnnualCalendar {
@@ -67,6 +87,7 @@ function emptyCalendar(year: number): AnnualCalendar {
 export default function ProjectAnnualCalendar() {
   const { id: projectId } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const [quarterFilter, setQuarterFilter] = useState<string>("all");
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -119,7 +140,7 @@ export default function ProjectAnnualCalendar() {
   };
 
   const addDate = (monthIdx: number) => {
-    const newD: CalendarDate = { id: crypto.randomUUID(), name: "", date: "", action_types: [] };
+    const newD: CalendarDate = { id: crypto.randomUUID(), name: "", date: "", action_types: [], objective: "", extra_budget: false };
     setCalendar((prev) => {
       const next = {
         ...prev,
@@ -206,7 +227,7 @@ export default function ProjectAnnualCalendar() {
       setCalendar(generated);
       await save(generated);
       setOpenMonths(new Set(Array.from({ length: 12 }, (_, i) => i)));
-      toast.success("Calendário anual gerado com sucesso!");
+      toast.success("Calendário gerado com sucesso!");
     } catch (e) {
       toast.error("Erro ao gerar: " + (e instanceof Error ? e.message : "Erro desconhecido"));
     } finally {
@@ -228,6 +249,15 @@ export default function ProjectAnnualCalendar() {
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-40 w-full" /></div>;
 
   const filledMonths = calendar.months.filter((m) => m.theme || m.dates.length > 0).length;
+  const totalDates = calendar.months.reduce((sum, m) => sum + m.dates.length, 0);
+
+  // Filter months by quarter
+  const visibleMonths = quarterFilter === "all"
+    ? calendar.months
+    : calendar.months.filter((m) => {
+        const q = QUARTERS.find((q) => q.label === quarterFilter);
+        return q?.months.includes(m.month);
+      });
 
   return (
     <div className="space-y-6">
@@ -236,9 +266,9 @@ export default function ProjectAnnualCalendar() {
         <div className="flex items-center gap-3">
           <CalendarRange className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-xl font-semibold">Calendário Anual</h1>
+            <h1 className="text-xl font-semibold">Calendário</h1>
             <p className="text-sm text-muted-foreground">
-              Planejamento estratégico completo com temas, focos e datas de ação.
+              Planejamento estratégico com temas, focos e datas de ação.
             </p>
           </div>
         </div>
@@ -265,16 +295,41 @@ export default function ProjectAnnualCalendar() {
         </div>
       </div>
 
-      {/* Progress */}
-      <div className="text-xs text-muted-foreground">
-        {filledMonths}/12 meses preenchidos • {calendar.months.reduce((sum, m) => sum + m.dates.length, 0)} datas cadastradas
+      {/* Progress + Quarter Filter */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="text-xs text-muted-foreground">
+          {filledMonths}/12 meses preenchidos • {totalDates} datas cadastradas
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant={quarterFilter === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-3"
+            onClick={() => setQuarterFilter("all")}
+          >
+            Ano todo
+          </Button>
+          {QUARTERS.map((q) => (
+            <Button
+              key={q.label}
+              variant={quarterFilter === q.label ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs px-3"
+              onClick={() => setQuarterFilter(q.label)}
+            >
+              {q.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Month Cards */}
       <div className="space-y-2">
-        {calendar.months.map((month) => {
+        {visibleMonths.map((month) => {
           const isOpen = openMonths.has(month.month);
           const hasContent = !!(month.theme || month.dates.length);
+          const examples = MONTH_EXAMPLES[month.month];
 
           return (
             <Collapsible key={month.month} open={isOpen} onOpenChange={() => toggleMonth(month.month)}>
@@ -305,7 +360,7 @@ export default function ProjectAnnualCalendar() {
                         <Input
                           value={month.theme}
                           onChange={(e) => updateMonth(month.month, "theme", e.target.value)}
-                          placeholder="Ex: Ano novo, obra nova!"
+                          placeholder={examples.theme}
                           className="h-8 text-sm mt-1"
                         />
                       </div>
@@ -314,25 +369,7 @@ export default function ProjectAnnualCalendar() {
                         <Input
                           value={month.focus}
                           onChange={(e) => updateMonth(month.month, "focus", e.target.value)}
-                          placeholder="Ex: Atendimento consultivo e planejamento"
-                          className="h-8 text-sm mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Planejamento KV</label>
-                        <Input
-                          value={month.kv_planning}
-                          onChange={(e) => updateMonth(month.month, "kv_planning", e.target.value)}
-                          placeholder="Ex: novembro/2025"
-                          className="h-8 text-sm mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Produção KV</label>
-                        <Input
-                          value={month.kv_production}
-                          onChange={(e) => updateMonth(month.month, "kv_production", e.target.value)}
-                          placeholder="Ex: dezembro/2025"
+                          placeholder={examples.focus}
                           className="h-8 text-sm mt-1"
                         />
                       </div>
@@ -370,7 +407,7 @@ export default function ProjectAnnualCalendar() {
                               <Input
                                 value={d.name}
                                 onChange={(e) => updateDateField(month.month, d.id, "name", e.target.value)}
-                                placeholder="Nome do evento..."
+                                placeholder={examples.date.split(" - ")[1] || "Nome do evento..."}
                                 className="h-7 text-sm flex-1"
                               />
                               <Button
@@ -383,21 +420,43 @@ export default function ProjectAnnualCalendar() {
                               </Button>
                             </div>
 
-                            <div className="flex flex-wrap gap-1">
-                              {ACTION_TYPES.map((at) => {
-                                const active = d.action_types.includes(at.value);
-                                return (
-                                  <button
-                                    key={at.value}
-                                    onClick={() => toggleActionType(month.month, d.id, at.value)}
-                                    className={`text-[10px] rounded-full px-2 py-0.5 border transition-all ${
-                                      active ? at.color + " border-transparent font-medium" : "bg-transparent text-muted-foreground border-border hover:bg-accent"
-                                    }`}
-                                  >
-                                    {at.label}
-                                  </button>
-                                );
-                              })}
+                            {/* Objective */}
+                            <div>
+                              <Input
+                                value={d.objective ?? ""}
+                                onChange={(e) => updateDateField(month.month, d.id, "objective", e.target.value)}
+                                placeholder="Objetivo da campanha..."
+                                className="h-7 text-xs"
+                              />
+                            </div>
+
+                            {/* Extra budget toggle + action types */}
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex flex-wrap gap-1">
+                                {ACTION_TYPES.map((at) => {
+                                  const active = d.action_types.includes(at.value);
+                                  return (
+                                    <button
+                                      key={at.value}
+                                      onClick={() => toggleActionType(month.month, d.id, at.value)}
+                                      className={`text-[10px] rounded-full px-2 py-0.5 border transition-all ${
+                                        active ? at.color + " border-transparent font-medium" : "bg-transparent text-muted-foreground border-border hover:bg-accent"
+                                      }`}
+                                    >
+                                      {at.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer shrink-0">
+                                <Switch
+                                  checked={d.extra_budget ?? false}
+                                  onCheckedChange={(checked) => updateDateField(month.month, d.id, "extra_budget", checked)}
+                                  className="scale-75"
+                                />
+                                Verba extra
+                              </label>
                             </div>
                           </div>
                         ))}

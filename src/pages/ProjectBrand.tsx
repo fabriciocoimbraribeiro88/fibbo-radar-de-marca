@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Target, Package, LayoutGrid, AlertTriangle, ShieldAlert, ArrowRight, Database, Crosshair, ImageIcon, Settings2 } from "lucide-react";
 import BrandContextForm from "@/components/brand-context/BrandContextForm";
 import HashtagStrategy from "@/components/brand-context/HashtagStrategy";
-import SeasonalCalendar from "@/components/brand-context/SeasonalCalendar";
+
 import ProductsCatalog from "@/components/brand-context/ProductsCatalog";
 import ContextStrengthBar from "@/components/brand-context/ContextStrengthBar";
 import CTABank from "@/components/brand-context/CTABank";
@@ -180,7 +180,7 @@ export default function ProjectBrand() {
             <SocialProofBank projectId={id!} briefing={project?.briefing} />
             <ObjectionBank projectId={id!} briefing={project?.briefing} />
             <HashtagStrategy projectId={id!} briefing={project?.briefing} />
-            <SeasonalCalendar projectId={id!} briefing={project?.briefing} segment={project?.segment} />
+            
           </TabsContent>
 
           <TabsContent value="products">
