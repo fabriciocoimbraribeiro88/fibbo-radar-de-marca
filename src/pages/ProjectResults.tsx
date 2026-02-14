@@ -37,8 +37,7 @@ export default function ProjectResults() {
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="okrs">OKRs</TabsTrigger>
           <TabsTrigger value="reports">Relatórios</TabsTrigger>
-          <TabsTrigger value="nps">NPS</TabsTrigger>
-          
+        
         </TabsList>
 
         <TabsContent value="overview">
@@ -53,9 +52,7 @@ export default function ProjectResults() {
           <ReportsPanel projectId={projectId} contractedChannels={contractedChannels} />
         </TabsContent>
 
-        <TabsContent value="nps">
-          <NPSPanel projectId={projectId} />
-        </TabsContent>
+
 
       </Tabs>
     </div>
