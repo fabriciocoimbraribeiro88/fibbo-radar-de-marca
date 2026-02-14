@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Radar, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock, User } from "lucide-react";
 import fibboLogo from "@/assets/fibbo-logo.png";
 
 export default function Login() {
@@ -53,11 +53,8 @@ export default function Login() {
         <div className="mb-10 flex flex-col items-center gap-3">
           <div className="relative">
             <div className="absolute inset-0 glow-coral rounded-full blur-xl opacity-30" />
-            <img src={fibboLogo} alt="Fibbo" className="h-12 relative" />
+            <img src={fibboLogo} alt="FibboMetrics" className="h-12 relative" />
           </div>
-          <span className="bg-primary/10 text-primary rounded-full px-3 py-0.5 text-xs font-medium">
-            Radar
-          </span>
         </div>
 
         <div className="glass-card p-8">
