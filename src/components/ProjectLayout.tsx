@@ -20,8 +20,8 @@ const NAV_GROUPS = [
     label: "CONFIGURAÇÃO",
     items: [
       { title: "Visão Geral", path: "", icon: LayoutDashboard, end: true },
-      { title: "Contexto de Marca", path: "/brand", icon: Palette },
       { title: "Fontes de Dados", path: "/sources", icon: Database },
+      { title: "Contexto de Marca", path: "/brand", icon: Palette },
     ],
   },
   {
@@ -51,7 +51,7 @@ const PATH_LABELS: Record<string, string> = {
   planning: "Planejamento",
   okrs: "OKRs",
   reports: "Relatórios",
-  "fibbo-score": "Fibbo Score",
+  
   new: "Nova",
 };
 
