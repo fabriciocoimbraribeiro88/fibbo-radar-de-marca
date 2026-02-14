@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.calculate-fibbo-score]
 verify_jwt = false
+
+[functions.generate-creative]
+verify_jwt = false

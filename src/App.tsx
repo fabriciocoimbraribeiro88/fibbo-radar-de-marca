@@ -18,6 +18,7 @@ import NewAnalysis from "@/pages/NewAnalysis";
 import AnalysisView from "@/pages/AnalysisView";
 import ProjectPlanning from "@/pages/ProjectPlanning";
 import ProjectBriefings from "@/pages/ProjectBriefings";
+import ProjectCreatives from "@/pages/ProjectCreatives";
 import ProjectOKRs from "@/pages/ProjectOKRs";
 import ProjectDashboard from "@/pages/ProjectDashboard";
 import SettingsPage from "@/pages/Settings";
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="analyses/:analysisId" element={<AnalysisView />} />
                 <Route path="planning" element={<ProjectPlanning />} />
                 <Route path="briefings" element={<ProjectBriefings />} />
+                <Route path="creatives" element={<ProjectCreatives />} />
                 <Route path="okrs" element={<ProjectOKRs />} />
               </Route>
 

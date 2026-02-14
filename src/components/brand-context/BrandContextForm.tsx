@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, Loader2, Sparkles, Upload, X } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 type SaveStatus = "idle" | "saving" | "saved";
 
@@ -57,15 +58,23 @@ function deepMerge(target: any, source: any): any {
 interface Props {
   projectId: string;
   briefing: any;
+  logoUrl?: string | null;
   onFillWithAI?: () => void;
   isFillingAI?: boolean;
 }
 
-export default function BrandContextForm({ projectId, briefing, onFillWithAI, isFillingAI }: Props) {
+export default function BrandContextForm({ projectId, briefing, logoUrl, onFillWithAI, isFillingAI }: Props) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<BriefingData>(deepMerge(emptyBriefing, briefing));
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [currentLogo, setCurrentLogo] = useState<string | null>(logoUrl ?? null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setCurrentLogo(logoUrl ?? null);
+  }, [logoUrl]);
   // Single effect: sync form whenever briefing prop changes (including AI fill)
   useEffect(() => {
     setForm(deepMerge(emptyBriefing, briefing));
@@ -118,6 +127,45 @@ export default function BrandContextForm({ projectId, briefing, onFillWithAI, is
     return obj ?? "";
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast({ title: "Formato inválido", description: "Use PNG, JPG, SVG ou WEBP.", variant: "destructive" });
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${projectId}/brand/logo/logo_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("brand-documents").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: signedData, error: signedErr } = await supabase.storage.from("brand-documents").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signedErr) throw signedErr;
+      const url = signedData.signedUrl;
+      const { error: updateErr } = await supabase.from("projects").update({ logo_url: url }).eq("id", projectId);
+      if (updateErr) throw updateErr;
+      setCurrentLogo(url);
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast({ title: "Logo atualizada!" });
+    } catch (err) {
+      toast({ title: "Erro no upload", description: err instanceof Error ? err.message : "Erro", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
+  const removeLogo = async () => {
+    const { error } = await supabase.from("projects").update({ logo_url: null }).eq("id", projectId);
+    if (!error) {
+      setCurrentLogo(null);
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast({ title: "Logo removida" });
+    }
+  };
+
   const Field = ({ label, path, rows }: { label: string; path: string; rows?: number }) => (
     <div className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -162,6 +210,41 @@ export default function BrandContextForm({ projectId, briefing, onFillWithAI, is
               Preencher com IA
             </Button>
           )}
+        </div>
+      </div>
+
+      {/* Logo upload */}
+      <div className="card-flat p-4">
+        <Label className="text-xs text-muted-foreground mb-2 block">Logo da Marca</Label>
+        <div className="flex items-center gap-4">
+          {currentLogo ? (
+            <div className="relative group">
+              <img src={currentLogo} alt="Logo" className="h-16 w-16 object-contain rounded-lg border border-border/30 bg-accent/30 p-1" />
+              <button
+                onClick={removeLogo}
+                className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="h-16 w-16 rounded-lg border-2 border-dashed border-border/40 flex items-center justify-center bg-accent/20">
+              <Upload className="h-5 w-5 text-muted-foreground/40" />
+            </div>
+          )}
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logoInputRef.current?.click()}
+              disabled={uploadingLogo}
+            >
+              {uploadingLogo ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-2 h-3.5 w-3.5" />}
+              {currentLogo ? "Trocar logo" : "Enviar logo"}
+            </Button>
+            <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, SVG ou WEBP</p>
+            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={handleLogoUpload} />
+          </div>
         </div>
       </div>
 

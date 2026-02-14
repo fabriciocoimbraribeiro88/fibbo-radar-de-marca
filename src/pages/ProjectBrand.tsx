@@ -156,6 +156,7 @@ export default function ProjectBrand() {
             <BrandContextForm
               projectId={id!}
               briefing={project?.briefing}
+              logoUrl={project?.logo_url}
               onFillWithAI={handleFillWithAI}
               isFillingAI={isFillingAI}
             />
