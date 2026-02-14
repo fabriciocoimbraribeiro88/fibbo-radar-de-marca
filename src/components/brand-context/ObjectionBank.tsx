@@ -1,12 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FORMULA_OBJECTIVES } from "@/lib/formulaConstants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { Plus, X, Sparkles, ShieldQuestion, ChevronDown } from "lucide-react";
@@ -26,12 +24,6 @@ interface ObjectionBankProps {
   briefing: any;
 }
 
-const SEVERITY_BADGES: Record<string, { label: string; className: string }> = {
-  common: { label: "Frequente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-  critical: { label: "Crítica", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
-  occasional: { label: "Ocasional", className: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300" },
-};
-
 export default function ObjectionBank({ projectId, briefing }: ObjectionBankProps) {
   const [entries, setEntries] = useState<ObjectionEntry[]>(() => {
     const b = briefing as any;
@@ -41,8 +33,6 @@ export default function ObjectionBank({ projectId, briefing }: ObjectionBankProp
   const [newObjection, setNewObjection] = useState("");
   const [newResponse, setNewResponse] = useState("");
   const [newAngle, setNewAngle] = useState("");
-  const [newObjective, setNewObjective] = useState("conversion");
-  const [newSeverity, setNewSeverity] = useState<ObjectionEntry["severity"]>("common");
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const save = useCallback((data: ObjectionEntry[]) => {
@@ -66,8 +56,8 @@ export default function ObjectionBank({ projectId, briefing }: ObjectionBankProp
       objection: newObjection.trim(),
       response: newResponse.trim(),
       content_angle: newAngle.trim(),
-      objective: newObjective,
-      severity: newSeverity,
+      objective: "conversion",
+      severity: "common",
       is_ai_generated: false,
     };
     const updated = [...entries, entry];
@@ -110,14 +100,12 @@ export default function ObjectionBank({ projectId, briefing }: ObjectionBankProp
                   <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform [[data-state=open]_&]:rotate-180" />
                   <span className="text-sm font-medium flex-1">"{e.objection}"</span>
                 </CollapsibleTrigger>
-                <Badge className={`text-[10px] shrink-0 ${SEVERITY_BADGES[e.severity]?.className}`}>{SEVERITY_BADGES[e.severity]?.label}</Badge>
                 <button onClick={() => removeEntry(e.id)} className="text-muted-foreground hover:text-destructive shrink-0"><X className="h-3 w-3" /></button>
               </div>
               <CollapsibleContent className="px-3 pb-3 space-y-1.5">
                 <div className="text-xs space-y-1 pl-5">
                   <p><span className="text-muted-foreground">Resposta:</span> {e.response}</p>
-                  <p><span className="text-muted-foreground">Ângulo de conteúdo:</span> {e.content_angle}</p>
-                  <p><span className="text-muted-foreground">Objetivo:</span> {FORMULA_OBJECTIVES.find(o => o.key === e.objective)?.label ?? e.objective}</p>
+                  {e.content_angle && <p><span className="text-muted-foreground">Ângulo de conteúdo:</span> {e.content_angle}</p>}
                 </div>
               </CollapsibleContent>
             </div>
@@ -130,18 +118,6 @@ export default function ObjectionBank({ projectId, briefing }: ObjectionBankProp
           <Input className="h-8 text-xs" placeholder='Objeção (ex: "É muito caro")' value={newObjection} onChange={(e) => setNewObjection(e.target.value)} />
           <Textarea className="text-xs min-h-[60px]" placeholder="Resposta (ex: Custo por resultado é 3x menor)" value={newResponse} onChange={(e) => setNewResponse(e.target.value)} />
           <Input className="h-8 text-xs" placeholder="Ângulo de conteúdo (ex: Post comparativo de custo-benefício)" value={newAngle} onChange={(e) => setNewAngle(e.target.value)} />
-          <div className="flex gap-2">
-            <Select value={newObjective} onValueChange={setNewObjective}>
-              <SelectTrigger className="flex-1 h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>{FORMULA_OBJECTIVES.map(o => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={newSeverity} onValueChange={(v) => setNewSeverity(v as any)}>
-              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(SEVERITY_BADGES).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="flex gap-2">
             <Button size="sm" className="h-8 text-xs" onClick={addEntry}>Adicionar</Button>
             <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setAdding(false)}>Cancelar</Button>
