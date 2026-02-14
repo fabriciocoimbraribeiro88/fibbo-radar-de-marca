@@ -36,9 +36,9 @@ const FILTER_OPTIONS: { value: FilterKey; label: string }[] = [
 function matchesFilter(status: string | null, filter: FilterKey): boolean {
   if (filter === "all") {
     // Hide completed by default
-    return status !== "done";
+    return status !== "done" && status !== "completed";
   }
-  if (filter === "done") return status === "done";
+  if (filter === "done") return status === "done" || status === "completed";
   const step = STEPS.find((s) => s.key === filter);
   if (!step) return true;
   return (step.statuses as readonly string[]).includes(status ?? "draft");
@@ -122,7 +122,7 @@ export default function ProductionKanban({
   const counts = useMemo(() => {
     const c: Record<FilterKey, number> = { all: 0, titles: 0, briefings: 0, creatives: 0, done: 0 };
     for (const cal of calendars ?? []) {
-      if (cal.status !== "done") c.all++;
+      if (cal.status !== "done" && cal.status !== "completed") c.all++;
       for (const opt of FILTER_OPTIONS) {
         if (opt.value !== "all" && matchesFilter(cal.status, opt.value)) c[opt.value]++;
       }
