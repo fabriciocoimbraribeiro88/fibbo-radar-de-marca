@@ -12,9 +12,7 @@ import {
   ChevronRight,
   FileText,
   Paintbrush,
-  Trophy,
   Target,
-  ClipboardCheck,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -45,9 +43,7 @@ const NAV_GROUPS = [
   {
     label: "RESULTADOS",
     items: [
-      { title: "Resultados", path: "/results", icon: Trophy },
       { title: "OKRs", path: "/okrs", icon: Target },
-      { title: "Check-in", path: "/checkin", icon: ClipboardCheck },
     ],
   },
 ];
@@ -63,9 +59,7 @@ const PATH_LABELS: Record<string, string> = {
   calendar: "Calendário",
   briefings: "Briefings",
   creatives: "Criativos",
-  results: "Resultados",
   okrs: "OKRs",
-  checkin: "Check-in",
   
   new: "Nova",
 };

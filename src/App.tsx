@@ -20,11 +20,11 @@ import ProjectPlanning from "@/pages/ProjectPlanning";
 import ProjectBriefings from "@/pages/ProjectBriefings";
 import ProjectCreatives from "@/pages/ProjectCreatives";
 import ProjectOKRs from "@/pages/ProjectOKRs";
-import ProjectCheckin from "@/pages/ProjectCheckin";
+
 import ProjectAnnualCalendar from "@/pages/ProjectAnnualCalendar";
 
 import ProjectDashboard from "@/pages/ProjectDashboard";
-import ProjectResults from "@/pages/ProjectResults";
+
 import SettingsPage from "@/pages/Settings";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
@@ -72,9 +72,6 @@ const App = () => (
                 <Route path="briefings" element={<ProjectBriefings />} />
                 <Route path="creatives" element={<ProjectCreatives />} />
                 <Route path="okrs" element={<ProjectOKRs />} />
-                <Route path="checkin" element={<ProjectCheckin />} />
-                
-                <Route path="results" element={<ProjectResults />} />
               </Route>
 
               <Route path="/settings" element={<SettingsPage />} />
