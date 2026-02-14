@@ -102,6 +102,25 @@ Deno.serve(async (req) => {
     // 4. Build brand identity context
     let brandContext = `Marca: ${brandName}\nSegmento: ${project?.segment ?? "—"}\nTom de voz: ${project?.tone_of_voice ?? "—"}\nPúblico-alvo: ${project?.target_audience ?? "—"}\nDescrição: ${project?.brand_description ?? "—"}\n`;
 
+    // Build tactical banks context
+    let tacticalBanksContext = "";
+    if (briefing) {
+      if (Array.isArray(briefing.hook_bank) && briefing.hook_bank.length > 0) {
+        tacticalBanksContext += `\nBanco de Hooks da Marca:\n${briefing.hook_bank.map((h: any) => `[${h.frame}/${h.style}] ${h.text}`).join("\n")}`;
+      }
+      if (Array.isArray(briefing.cta_bank) && briefing.cta_bank.length > 0) {
+        const ctasByObj: Record<string, string[]> = {};
+        for (const cta of briefing.cta_bank) {
+          if (!ctasByObj[cta.objective]) ctasByObj[cta.objective] = [];
+          ctasByObj[cta.objective].push(`[${cta.intensity}] ${cta.text}`);
+        }
+        tacticalBanksContext += `\nBanco de CTAs da Marca:\n${Object.entries(ctasByObj).map(([obj, ctas]) => `${obj}: ${ctas.join(" | ")}`).join("\n")}`;
+      }
+      if (Array.isArray(briefing.objection_bank) && briefing.objection_bank.length > 0) {
+        tacticalBanksContext += `\nObjeções do Público:\n${briefing.objection_bank.map((o: any) => `[${o.severity}] "${o.objection}"`).join("\n")}`;
+      }
+    }
+
     // 5. Fetch analysis sections
     const { data: sections } = await supabase
       .from("analysis_sections")
@@ -311,6 +330,9 @@ ${ctasByObjective || "   (não definidos — gere CTAs específicos por objetivo
 ❌ NÃO criar posts tipo "O que é X?", "Entenda Y", "Conheça Z", "A importância de W", "Como fazer K" (sem especificidade)
 ✅ CRIAR posts com tese única, ângulo diferenciado, evidência concreta
 ${varietyRulesText}
+
+HOOKS: Se o contexto incluir "Banco de Hooks da Marca", use como INSPIRAÇÃO para as headlines. Adapte cada hook ao tema específico do post — não copie literalmente. Varie os frames ao longo do calendário.
+
 Responda em JSON.`;
 
       userPrompt = `Gere um calendário de ${totalBase} posts usando a Metodologia F.O.R.M.U.L.A.™ para Instagram.
@@ -340,6 +362,7 @@ ${memoryContext}
 ${hashtagContext}
 ${seasonalContext}
 ${productsContext}
+${tacticalBanksContext}
 
 ─── ANÁLISE DA MARCA ───
 ${brandAnalysis.slice(0, 4000)}
@@ -496,6 +519,7 @@ ${memoryContext}
 ${hashtagContext}
 ${seasonalContext}
 ${productsContext}
+${tacticalBanksContext}
 
 ─── ANÁLISE DA MARCA ───
 ${brandAnalysis.slice(0, 4000)}
@@ -578,6 +602,7 @@ ${memoryContext}
 ${hashtagContext}
 ${seasonalContext}
 ${productsContext}
+${tacticalBanksContext}
 
 ─── ANÁLISE DA MARCA ───
 ${brandAnalysis.slice(0, 4000)}

@@ -68,7 +68,29 @@ Deno.serve(async (req) => {
       memoryContext = `\nMEMÓRIA: ${memories[0].summary ?? ""}`;
     }
 
-    const fullContext = brandContext + referencesContext + memoryContext;
+    // Tactical banks context
+    let tacticalBanksContext = "";
+    if (briefing) {
+      if (Array.isArray(briefing.cta_bank) && briefing.cta_bank.length > 0) {
+        const ctasByObj: Record<string, string[]> = {};
+        for (const cta of briefing.cta_bank) {
+          if (!ctasByObj[cta.objective]) ctasByObj[cta.objective] = [];
+          ctasByObj[cta.objective].push(`[${cta.intensity}] ${cta.text}`);
+        }
+        tacticalBanksContext += `\nBanco de CTAs da Marca:\n${Object.entries(ctasByObj).map(([obj, ctas]) => `${obj}: ${ctas.join(" | ")}`).join("\n")}`;
+      }
+      if (Array.isArray(briefing.hook_bank) && briefing.hook_bank.length > 0) {
+        tacticalBanksContext += `\nBanco de Hooks da Marca:\n${briefing.hook_bank.map((h: any) => `[${h.frame}/${h.style}] ${h.text}`).join("\n")}`;
+      }
+      if (Array.isArray(briefing.social_proof_bank) && briefing.social_proof_bank.length > 0) {
+        tacticalBanksContext += `\nProvas Sociais Disponíveis:\n${briefing.social_proof_bank.map((p: any) => `[${p.type}${p.is_verified ? " ✓" : ""}] ${p.text} (fonte: ${p.source})`).join("\n")}`;
+      }
+      if (Array.isArray(briefing.objection_bank) && briefing.objection_bank.length > 0) {
+        tacticalBanksContext += `\nObjeções do Público:\n${briefing.objection_bank.map((o: any) => `[${o.severity}] "${o.objection}" → ${o.response}`).join("\n")}`;
+      }
+    }
+
+    const fullContext = brandContext + referencesContext + memoryContext + tacticalBanksContext;
 
     // Build F.O.R.M.U.L.A.™ language context (used when items have formula metadata)
     let formulaLanguageContext = "";
@@ -135,6 +157,12 @@ Ao gerar cada briefing:
 - Siga a estrutura narrativa do método escolhido
 - Destaque o elemento proprietário da marca (uniqueness)
 - Use as palavras de força e respeite os proibidos
+
+INSTRUÇÕES PARA USO DOS BANCOS:
+- Se o contexto incluir "Banco de CTAs da Marca", use ESSES CTAs no campo "theme" (CTA) de cada briefing. Varie entre intensidades (soft/medium/strong) conforme o objetivo do post. NUNCA repita o mesmo CTA em posts consecutivos.
+- Se o contexto incluir "Banco de Hooks da Marca", use como inspiração para a PRIMEIRA LINHA do copy_text. Adapte ao tema específico — não copie literalmente. Varie os styles (question, command, statistic, story).
+- Se o contexto incluir "Provas Sociais Disponíveis", injete dados reais no copy quando o objetivo for authority, conversion ou social_proof. Priorize provas marcadas como verificadas (✓).
+- Se o contexto incluir "Objeções do Público", e o post aborda uma objeção listada, use a resposta preparada como base do argumento central.
 
 Após gerar cada briefing, avalie com formula_score (0-100) e formula_analysis.
 
