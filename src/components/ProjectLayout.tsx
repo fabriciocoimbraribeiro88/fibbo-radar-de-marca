@@ -34,8 +34,8 @@ const NAV_GROUPS = [
   {
     label: "AÇÃO",
     items: [
-      { title: "Planejamento", path: "/planning", icon: CalendarDays },
-      { title: "Calendário Anual", path: "/calendar", icon: CalendarRange },
+      { title: "Calendário", path: "/calendar", icon: CalendarRange },
+      { title: "Editorial", path: "/planning", icon: CalendarDays },
       { title: "Briefings", path: "/briefings", icon: FileText },
       { title: "Criativos", path: "/creatives", icon: Paintbrush },
     ],
@@ -55,8 +55,8 @@ const PATH_LABELS: Record<string, string> = {
   sources: "Fontes de Dados",
   dashboard: "Dashboard",
   analyses: "Métricas Avançadas",
-  planning: "Planejamento",
-  calendar: "Calendário Anual",
+  planning: "Editorial",
+  calendar: "Calendário",
   briefings: "Briefings",
   creatives: "Criativos",
   results: "Resultados",
