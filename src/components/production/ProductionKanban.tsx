@@ -18,17 +18,15 @@ const CHANNEL_ICONS: Record<string, typeof Instagram> = {
 };
 
 const STEPS = [
-  { key: "editorial", label: "Editorial", statuses: ["draft"] },
-  { key: "titles", label: "Títulos", statuses: ["titles_review"] },
+  { key: "titles", label: "Títulos", statuses: ["draft", "titles_review"] },
   { key: "briefings", label: "Briefings", statuses: ["briefings_review"] },
   { key: "creatives", label: "Criativos", statuses: ["approved", "active"] },
 ] as const;
 
-type FilterKey = "all" | "editorial" | "titles" | "briefings" | "creatives" | "done";
+type FilterKey = "all" | "titles" | "briefings" | "creatives" | "done";
 
 const FILTER_OPTIONS: { value: FilterKey; label: string }[] = [
   { value: "all", label: "Todos" },
-  { value: "editorial", label: "Editorial" },
   { value: "titles", label: "Títulos" },
   { value: "briefings", label: "Briefings" },
   { value: "creatives", label: "Criativos" },
@@ -54,7 +52,6 @@ function getStepIndex(status: string | null): number {
 interface Props {
   projectId: string;
   onNewPlanning: () => void;
-  onOpenEditorial: (id: string) => void;
   onOpenTitlesReview: (id: string) => void;
   onOpenBriefingsReview: (id: string) => void;
   onOpenCreatives: (id: string) => void;
@@ -63,7 +60,6 @@ interface Props {
 export default function ProductionKanban({
   projectId,
   onNewPlanning,
-  onOpenEditorial,
   onOpenTitlesReview,
   onOpenBriefingsReview,
   onOpenCreatives,
@@ -111,8 +107,7 @@ export default function ProductionKanban({
 
   const handleClick = (cal: any) => {
     const status = cal.status ?? "draft";
-    if (status === "draft") onOpenEditorial(cal.id);
-    else if (status === "titles_review") onOpenTitlesReview(cal.id);
+    if (status === "draft" || status === "titles_review") onOpenTitlesReview(cal.id);
     else if (status === "briefings_review") onOpenBriefingsReview(cal.id);
     else if (status === "approved" || status === "active") onOpenCreatives(cal.id);
   };
@@ -125,7 +120,7 @@ export default function ProductionKanban({
   );
 
   const counts = useMemo(() => {
-    const c: Record<FilterKey, number> = { all: 0, editorial: 0, titles: 0, briefings: 0, creatives: 0, done: 0 };
+    const c: Record<FilterKey, number> = { all: 0, titles: 0, briefings: 0, creatives: 0, done: 0 };
     for (const cal of calendars ?? []) {
       if (cal.status !== "done") c.all++;
       for (const opt of FILTER_OPTIONS) {
