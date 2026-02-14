@@ -6,9 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Loader2, CalendarDays, Instagram, Megaphone, Search } from "lucide-react";
+import {
+  Save,
+  Loader2,
+  ArrowRight,
+  FileText,
+  CalendarDays,
+  Users,
+  LayoutGrid,
+  Clock,
+} from "lucide-react";
 
 const CHANNEL_LABELS: Record<string, string> = {
   social: "📱 Social",
@@ -17,12 +25,20 @@ const CHANNEL_LABELS: Record<string, string> = {
   seo: "🔍 SEO",
 };
 
+const FORMAT_COLORS: Record<string, string> = {
+  Reels: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  Carrossel: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  "Estático": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  Stories: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+};
+
 interface Props {
   projectId: string;
   calendarId: string;
+  onAdvance: () => void;
 }
 
-export default function EditorialDetail({ projectId, calendarId }: Props) {
+export default function EditorialDetail({ projectId, calendarId, onAdvance }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -43,12 +59,27 @@ export default function EditorialDetail({ projectId, calendarId }: Props) {
     },
   });
 
+  // Fetch analysis base
+  const { data: analysis } = useQuery({
+    queryKey: ["analysis-base", calendar?.generated_from_analysis],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("analyses")
+        .select("id, title, type, status, period_start, period_end")
+        .eq("id", calendar!.generated_from_analysis!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!calendar?.generated_from_analysis,
+  });
+
   const { data: items } = useQuery({
     queryKey: ["planning-items-summary", calendarId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("planning_items")
-        .select("id, title, format, scheduled_date, scheduled_time, status")
+        .select("id, title, format, scheduled_date, scheduled_time, status, metadata, channel")
         .eq("calendar_id", calendarId)
         .neq("status", "cancelled")
         .order("scheduled_date", { ascending: true });
@@ -101,19 +132,40 @@ export default function EditorialDetail({ projectId, calendarId }: Props) {
     }
   };
 
+  // Compute format mix
   const formatCounts: Record<string, number> = {};
   for (const item of items ?? []) {
     const fmt = item.format ?? "Outro";
     formatCounts[fmt] = (formatCounts[fmt] ?? 0) + 1;
   }
+  const totalItems = items?.length ?? 0;
+
+  // Compute colabs from items metadata
+  const colabSet = new Set<string>();
+  for (const item of items ?? []) {
+    const md = item.metadata as any;
+    if (md?.responsible) colabSet.add(md.responsible);
+    if (md?.colab_handle) colabSet.add(md.colab_handle);
+  }
+
+  // Compute weeks
+  const weeks =
+    periodStart && periodEnd
+      ? Math.max(1, Math.round((new Date(periodEnd).getTime() - new Date(periodStart).getTime()) / (7 * 24 * 60 * 60 * 1000)))
+      : null;
+
+  const postsPerWeek = weeks && totalItems > 0 ? Math.round(totalItems / weeks) : null;
+
+  // Unique scheduled dates
+  const uniqueDates = new Set((items ?? []).map((i) => i.scheduled_date).filter(Boolean));
 
   return (
-    <div className="space-y-6">
-      {/* Editable fields */}
+    <div className="space-y-5">
+      {/* Title & Period - Editable */}
       <Card>
         <CardContent className="p-5 space-y-4">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground">Título</Label>
+            <Label className="text-xs font-medium text-muted-foreground">Título do Planejamento</Label>
             <Input
               value={title}
               onChange={(e) => setEditTitle(e.target.value)}
@@ -143,7 +195,7 @@ export default function EditorialDetail({ projectId, calendarId }: Props) {
           </div>
 
           {hasChanges && (
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-1">
               <Button size="sm" onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Salvando...</>
@@ -156,68 +208,147 @@ export default function EditorialDetail({ projectId, calendarId }: Props) {
         </CardContent>
       </Card>
 
-      {/* Summary */}
-      <Card>
-        <CardContent className="p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">Resumo</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Canal</span>
-              <span className="font-medium">{CHANNEL_LABELS[calendar.type ?? "social"] ?? calendar.type}</span>
+      {/* Info cards grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Analysis base */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Análise Base</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Status</span>
-              <Badge variant="outline" className="text-[10px]">
-                {calendar.status === "draft" ? "Rascunho" : calendar.status}
+            <p className="text-xs font-medium text-foreground line-clamp-2">
+              {analysis?.title ?? "Não vinculada"}
+            </p>
+            {analysis?.status && (
+              <Badge variant="outline" className="mt-1.5 text-[9px]">
+                {analysis.status === "approved" ? "Aprovada" : analysis.status}
               </Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total de Posts</span>
-              <span className="font-medium">{items?.length ?? 0}</span>
-            </div>
-            {Object.keys(formatCounts).length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Mix de Formatos</span>
-                <span className="font-medium text-right">
-                  {Object.entries(formatCounts).map(([k, v]) => `${k} (${v})`).join(" · ")}
-                </span>
-              </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Criado em</span>
-              <span className="font-medium">
-                {calendar.created_at
-                  ? new Date(calendar.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
-                  : "—"}
-              </span>
+          </CardContent>
+        </Card>
+
+        {/* Channel */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Canal</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            <p className="text-sm font-medium text-foreground">
+              {CHANNEL_LABELS[calendar.type ?? "social"] ?? calendar.type}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Volume */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Volume</span>
+            </div>
+            <p className="text-sm font-semibold text-foreground">{totalItems} posts</p>
+            {postsPerWeek !== null && weeks !== null && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                ~{postsPerWeek}/semana · {weeks} semanas
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Colabs */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Colabs</span>
+            </div>
+            {colabSet.size > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {Array.from(colabSet).map((c) => (
+                  <Badge key={c} variant="secondary" className="text-[9px]">{c}</Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhum colab</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Format mix */}
+      {Object.keys(formatCounts).length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Mix de Formatos</h3>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(formatCounts).map(([fmt, count]) => {
+                const pct = totalItems > 0 ? Math.round((count / totalItems) * 100) : 0;
+                const colorClass = FORMAT_COLORS[fmt] ?? "bg-muted text-muted-foreground";
+                return (
+                  <div
+                    key={fmt}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${colorClass}`}
+                  >
+                    <span>{fmt}</span>
+                    <span className="opacity-70">{count} ({pct}%)</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Posts list */}
       {items && items.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Posts ({items.length})</h3>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 py-1.5 border-b border-border last:border-0">
-                  <Badge variant="secondary" className="text-[9px] shrink-0">
-                    {item.format ?? "—"}
-                  </Badge>
-                  <span className="text-xs text-foreground line-clamp-1 flex-1">{item.title}</span>
-                  {item.scheduled_date && (
-                    <span className="text-[10px] text-muted-foreground shrink-0">
-                      {new Date(item.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
-                    </span>
-                  )}
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Posts ({items.length})</h3>
+              <span className="text-[10px] text-muted-foreground">{uniqueDates.size} dias com publicação</span>
+            </div>
+            <div className="space-y-1 max-h-96 overflow-y-auto">
+              {items.map((item) => {
+                const colorClass = FORMAT_COLORS[item.format ?? ""] ?? "";
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-muted/50 border-b border-border last:border-0"
+                  >
+                    <Badge className={`text-[9px] shrink-0 border-0 ${colorClass || "bg-secondary text-secondary-foreground"}`}>
+                      {item.format ?? "—"}
+                    </Badge>
+                    <span className="text-xs text-foreground line-clamp-1 flex-1">{item.title}</span>
+                    {item.scheduled_date && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(item.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                        </span>
+                        {item.scheduled_time && (
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Clock className="h-2.5 w-2.5" />
+                            {String(item.scheduled_time).slice(0, 5)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Advance button */}
+      <div className="flex justify-end pt-2">
+        <Button size="lg" onClick={onAdvance} disabled={totalItems === 0}>
+          <ArrowRight className="mr-2 h-4 w-4" />
+          Avançar para Títulos
+        </Button>
+      </div>
     </div>
   );
 }

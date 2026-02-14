@@ -229,6 +229,7 @@ export default function ProjectProduction() {
             <EditorialDetail
               projectId={projectId}
               calendarId={activeCalendarId}
+              onAdvance={() => setPhase("titles_review")}
             />
           )}
 
