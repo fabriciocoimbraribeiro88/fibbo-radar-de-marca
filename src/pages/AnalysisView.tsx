@@ -257,7 +257,7 @@ export default function AnalysisView() {
                   </p>
                 )}
                 <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">
-                  <span className="text-xs font-semibold text-primary">Fibbo Radar</span>
+                  <span className="text-xs font-semibold text-primary">FibboMetrics</span>
                 </div>
               </div>
             </div>
@@ -309,7 +309,7 @@ export default function AnalysisView() {
       {(isReview || analysis?.status === "published") && (
         <div className="pt-6 text-center">
           <p className="text-xs text-muted-foreground">
-            Relatório gerado por <span className="font-semibold text-foreground">Fibbo Radar</span> — Inteligência Competitiva com IA
+            Relatório gerado por <span className="font-semibold text-foreground">FibboMetrics</span> — Inteligência Competitiva com IA
           </p>
           <p className="text-[10px] text-muted-foreground mt-1">
             Data de geração: {analysis?.updated_at

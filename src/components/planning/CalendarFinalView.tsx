@@ -93,7 +93,7 @@ export default function CalendarFinalView({ projectId, calendarId, onBack }: Pro
       ].join(","));
     }
     rows.push("");
-    rows.push(`"Calendário gerado por Fibbo Radar — Inteligência Competitiva com IA"`);
+    rows.push(`"Calendário gerado por FibboMetrics — Inteligência Competitiva com IA"`);
     rows.push(`"Data de geração: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}"`);
     const blob = new Blob(["\uFEFF" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -126,7 +126,7 @@ export default function CalendarFinalView({ projectId, calendarId, onBack }: Pro
       if (item.visual_brief) md += `**Brief Visual:** ${item.visual_brief}\n\n`;
       md += `---\n\n`;
     });
-    md += `*Briefings gerados por Fibbo Radar — Inteligência Competitiva com IA*\n`;
+    md += `*Briefings gerados por FibboMetrics — Inteligência Competitiva com IA*\n`;
     md += `*Data: ${new Date().toLocaleDateString("pt-BR")}*\n`;
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -302,7 +302,7 @@ export default function CalendarFinalView({ projectId, calendarId, onBack }: Pro
 
       <div className="mt-8 pt-4 border-t border-border text-center">
         <p className="text-xs text-muted-foreground">
-          Planejamento gerado por <span className="font-semibold text-foreground">Fibbo Radar</span> — Inteligência Competitiva com IA
+          Planejamento gerado por <span className="font-semibold text-foreground">FibboMetrics</span> — Inteligência Competitiva com IA
           {` · ${new Date().toLocaleDateString("pt-BR")}`}
         </p>
       </div>

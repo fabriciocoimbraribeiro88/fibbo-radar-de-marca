@@ -98,7 +98,7 @@ export default function AnalysisStep3({
       </div>
 
       <p className="text-[10px] text-muted-foreground">
-        📌 Todo relatório inclui automaticamente a assinatura: "Relatório gerado por Fibbo Radar — Inteligência Competitiva com IA"
+        📌 Todo relatório inclui automaticamente a assinatura: "Relatório gerado por FibboMetrics — Inteligência Competitiva com IA"
       </p>
     </div>
   );
