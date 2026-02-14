@@ -237,6 +237,7 @@ export default function ProjectProduction() {
             <CreativesPanel
               projectId={projectId}
               calendarId={activeCalendarId}
+              onCompleted={() => { setPhase("list"); setActiveCalendarId(null); }}
             />
           )}
         </>

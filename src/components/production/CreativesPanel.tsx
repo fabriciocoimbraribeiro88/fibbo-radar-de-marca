@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
   Paintbrush, Loader2, Check, RefreshCw, Bookmark, ImageIcon, Type, Copy, Sparkles,
+  Download, CheckCircle2,
 } from "lucide-react";
 
 interface Props {
   projectId: string;
   calendarId: string;
+  onCompleted?: () => void;
 }
 
 interface SlideData {
@@ -41,7 +43,7 @@ function getCarouselSlideCount(item: any): number {
   return md.carousel_slides ?? md.slide_count ?? 5;
 }
 
-export default function CreativesPanel({ projectId, calendarId }: Props) {
+export default function CreativesPanel({ projectId, calendarId, onCompleted }: Props) {
   const queryClient = useQueryClient();
   const [generatingItems, setGeneratingItems] = useState<Record<string, string>>({});
   const [generatingSlides, setGeneratingSlides] = useState<Record<string, number>>({});
@@ -337,23 +339,148 @@ export default function CreativesPanel({ projectId, calendarId }: Props) {
     return !c?.option_a_url;
   }).length;
 
+  // Check if all items are fully approved (image selected + caption selected)
+  const allApproved = items.every((item) => {
+    const c = creativesMap.get(item.id);
+    if (!c) return false;
+    const hasImage = c.selected_option || (isCarouselFormat(item.format) && c.status === "selected");
+    const hasCaption = !!c.selected_caption;
+    return hasImage && hasCaption;
+  });
+
+  const exportAll = async () => {
+    if (!items?.length) return;
+
+    // Build text content
+    let textContent = "";
+    const imageUrls: { name: string; url: string }[] = [];
+
+    for (const item of items) {
+      const c = creativesMap.get(item.id);
+      if (!c) continue;
+
+      const caption = c.selected_caption === "a" ? c.caption_a : c.caption_b;
+      const isCarousel = isCarouselFormat(item.format);
+      const slides: SlideData[] = Array.isArray((c as any)?.slides) ? (c as any).slides : [];
+
+      textContent += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+      textContent += `📌 ${item.title}\n`;
+      textContent += `📅 ${item.scheduled_date ? new Date(item.scheduled_date).toLocaleDateString("pt-BR") : "Sem data"}\n`;
+      textContent += `📐 ${item.format ?? "Feed"} | 📢 ${item.channel ?? "Instagram"}\n`;
+      if (item.scheduled_time) textContent += `🕐 ${item.scheduled_time}\n`;
+      textContent += `\n`;
+      if (caption) {
+        textContent += `📝 LEGENDA:\n${caption}\n\n`;
+      }
+      if (item.hashtags?.length) {
+        textContent += `# HASHTAGS:\n${item.hashtags.join(" ")}\n\n`;
+      }
+
+      if (isCarousel && slides.length > 0) {
+        slides.sort((a, b) => a.index - b.index).forEach((slide) => {
+          imageUrls.push({
+            name: `${item.title.replace(/[^a-zA-Z0-9]/g, "_")}_slide${slide.index + 1}`,
+            url: slide.url,
+          });
+        });
+      } else {
+        const imgUrl = c.selected_option === "a" ? c.option_a_url : c.option_b_url;
+        if (imgUrl) {
+          imageUrls.push({
+            name: item.title.replace(/[^a-zA-Z0-9]/g, "_"),
+            url: imgUrl,
+          });
+        }
+      }
+    }
+
+    // Download text file
+    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
+    const textUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = textUrl;
+    a.download = "conteudos_aprovados.txt";
+    a.click();
+    URL.revokeObjectURL(textUrl);
+
+    // Download images sequentially
+    let downloaded = 0;
+    for (const img of imageUrls) {
+      try {
+        const resp = await fetch(img.url);
+        const imgBlob = await resp.blob();
+        const ext = imgBlob.type.includes("png") ? "png" : "jpg";
+        const imgA = document.createElement("a");
+        imgA.href = URL.createObjectURL(imgBlob);
+        imgA.download = `${img.name}.${ext}`;
+        imgA.click();
+        URL.revokeObjectURL(imgA.href);
+        downloaded++;
+        // Small delay to avoid browser blocking multiple downloads
+        await new Promise((r) => setTimeout(r, 300));
+      } catch {
+        console.error("Failed to download:", img.name);
+      }
+    }
+
+    toast({
+      title: "Exportação concluída!",
+      description: `${downloaded} imagem(ns) e 1 arquivo de texto baixados.`,
+    });
+  };
+
+  const markAsCompleted = async () => {
+    const { error } = await supabase
+      .from("planning_calendars")
+      .update({ status: "done" })
+      .eq("id", calendarId);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Also update all planning items to "published"
+    if (items?.length) {
+      await supabase
+        .from("planning_items")
+        .update({ status: "published" })
+        .in("id", items.map((i) => i.id));
+    }
+
+    toast({ title: "Planejamento concluído!", description: "O calendário foi marcado como finalizado." });
+    onCompleted?.();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-muted-foreground">Gere e selecione criativos para cada briefing aprovado.</p>
-        {pendingCount > 0 && (
-          <Button
-            onClick={generateAll}
-            disabled={generatingAll || Object.keys(generatingItems).length > 0}
-            className="gradient-coral text-white"
-          >
-            {generatingAll ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando {items.length - pendingCount + 1}/{items.length}…</>
-            ) : (
-              <><Sparkles className="mr-2 h-4 w-4" /> Gerar Todos ({pendingCount})</>
-            )}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {allApproved && (
+            <>
+              <Button onClick={exportAll} variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" /> Exportar Tudo
+              </Button>
+              <Button onClick={markAsCompleted} className="gradient-coral text-white" size="sm">
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Concluir
+              </Button>
+            </>
+          )}
+          {pendingCount > 0 && (
+            <Button
+              onClick={generateAll}
+              disabled={generatingAll || Object.keys(generatingItems).length > 0}
+              className="gradient-coral text-white"
+            >
+              {generatingAll ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando {items.length - pendingCount + 1}/{items.length}…</>
+              ) : (
+                <><Sparkles className="mr-2 h-4 w-4" /> Gerar Todos ({pendingCount})</>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
       {items.map((item) => {
         const creative = creativesMap.get(item.id);
