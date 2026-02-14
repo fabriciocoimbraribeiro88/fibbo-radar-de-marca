@@ -436,8 +436,22 @@ export default function TitlesReview({ projectId, calendarId, wizardData, onBrie
         <DistributionTables items={items.filter((i) => (i.metadata as any)?.title_status !== "rejected")} />
       )}
 
+      {/* Bottom action bar */}
+      <div className="mt-8 flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Voltar
+        </Button>
+        <Button
+          disabled={!canGenerateBriefings || generatingBriefings}
+          onClick={handleGenerateBriefings}
+        >
+          {generatingBriefings ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="mr-1 h-3.5 w-3.5" />}
+          Gerar Briefings
+        </Button>
+      </div>
+
       {/* Footer */}
-      <div className="mt-8 pt-4 border-t border-border text-center">
+      <div className="mt-4 pt-4 border-t border-border text-center">
         <p className="text-xs text-muted-foreground">
           Planejamento gerado por <span className="font-semibold text-foreground">Fibbo Radar</span> — Inteligência Competitiva com IA
         </p>
