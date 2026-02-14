@@ -1,104 +1,91 @@
 
 
-# Plano: Serviços Contratados + Limite de 3 Fontes por Tipo
+# Fluxo Unificado de Producao
 
-## Resumo
+## Problema Atual
 
-Duas mudanças estruturantes no sistema:
+Hoje existem 4 seções separadas na navegação (Calendário, Editorial, Briefings, Criativos) que na verdade representam etapas de um mesmo processo de produção de conteúdo. Isso obriga o usuário a navegar entre páginas diferentes para acompanhar o progresso, sem ter visibilidade clara do pipeline completo.
 
-1. **Serviços Contratados como filtro global**: Os canais ativados (Social, Ads, SEO) passam a controlar o que aparece em todo o sistema -- wizards de planejamento, wizard de analise, dashboard e resultados so mostram opcoes dos canais contratados.
+## Proposta
 
-2. **Limite de 3 fontes por tipo no Dashboard e Analise**: O usuario pode cadastrar quantas fontes quiser na pagina de Fontes, mas no Dashboard e no wizard de Analise, ele seleciona no maximo 3 por tipo (concorrente, influencer, inspiracao).
+Unificar tudo em uma única seção chamada **"Produção"** com duas áreas:
 
----
+### Area 1: Calendário Estratégico
+O planejamento anual (temas, datas, foco por mês) fica acessível via uma aba ou botão no topo da página. Funciona exatamente como hoje, sem alterações funcionais.
 
-## Parte 1: Serviços Contratados como filtro global
+### Area 2: Pipeline de Conteúdo
+Cada calendário editorial aparece como um card com um **stepper visual** mostrando em qual fase está:
 
-### 1.1 Hook centralizado: `useContractedServices`
-
-Criar um hook reutilizavel que carrega os canais contratados do projeto:
-
-**Arquivo:** `src/hooks/useContractedServices.ts`
-
-```typescript
-// Retorna { channels: string[], isLoading }
-// Ex: channels = ["social"] significa que Ads e SEO estao desativados
+```text
+[1. Editorial] → [2. Títulos] → [3. Briefings] → [4. Criativos]
 ```
 
-### 1.2 Onde aplicar o filtro
+Ao clicar em um calendário, o usuário entra em uma **visão de detalhe com stepper horizontal fixo no topo**, podendo navegar entre as fases concluídas sem sair da página.
 
-| Local | Arquivo | O que muda |
-|---|---|---|
-| Wizard de Analise - Step 1 | `AnalysisStep1.tsx` | Os cards de canal (Social/Ads/SEO) ficam desabilitados se o canal nao esta contratado |
-| Wizard de Planejamento - Step 1 | `PlanningWizardStep1.tsx` | Idem: canais nao contratados ficam desabilitados com badge "Nao contratado" |
-| Resultados - Overview | `ResultsOverview.tsx` | Ja usa `contractedChannels` -- sem mudanca |
-| Sidebar / Navegacao | `ProjectLayout.tsx` | Nao oculta paginas, mas pode exibir badge no futuro |
+### Navegação Atualizada
 
-A logica e simples: os canais nao contratados aparecem visualmente mas ficam **desabilitados** (opacity + tooltip "Servico nao contratado"), impedindo selecao.
+**Antes (4 itens):**
+- Calendário
+- Editorial
+- Briefings
+- Criativos
 
-### 1.3 Mover "Servicos Contratados" para a pagina de Fontes
+**Depois (1 item):**
+- Produção
 
-Atualmente a configuracao de servicos contratados fica na aba "Configuracao" dentro de Contexto (via `ResultsSettings`). A proposta e **mover esse bloco para a pagina de Fontes** (`ProjectSources.tsx`), ja que e uma configuracao inicial do projeto. O `ResultsSettings` continua existindo mas sem a secao de servicos (apenas agenda de relatorios).
+## Experiência do Usuário
 
----
+1. O usuário acessa "Produção"
+2. Vê duas abas: **Calendário Estratégico** e **Conteúdo**
+3. Na aba "Conteúdo", vê a lista de calendários com status visual (stepper em miniatura)
+4. Clica em "Novo Planejamento" → entra no wizard (steps 1-3, como hoje)
+5. Ao finalizar o wizard, vai direto para a fase de Títulos, com o stepper mostrando o progresso
+6. Avança para Briefings → Criativos, tudo dentro da mesma tela
+7. Pode voltar a qualquer fase anterior clicando no stepper
 
-## Parte 2: Limite de 3 fontes por tipo
+## Detalhes Técnicos
 
-### 2.1 Conceito
+### 1. Nova página unificada: `ProjectProduction.tsx`
+- Substitui `ProjectPlanning.tsx`, `ProjectBriefings.tsx`, `ProjectCreatives.tsx` e `ProjectAnnualCalendar.tsx`
+- Gerencia o estado interno com abas (Calendário Estratégico | Conteúdo) e fases do pipeline
+- O componente `PlanningList` é adaptado para mostrar o stepper em miniatura em cada card
+- As fases internas reutilizam os componentes existentes: `TitlesReview`, `BriefingsReview`, e a lógica de criativos
 
-- **Fontes (ProjectSources.tsx)**: sem limite. O usuario cadastra quantas quiser.
-- **Dashboard (ProjectDashboard.tsx)**: ao carregar, mostra no maximo 3 por tipo. Se houver mais de 3, exibe um seletor para o usuario escolher quais 3 quer ver.
-- **Analise (AnalysisStep2.tsx)**: na selecao de entidades, limita a 3 por tipo (concorrente, influencer, inspiracao). A marca sempre e incluida separadamente.
+### 2. Componente `ProductionStepper.tsx`
+- Stepper horizontal com 4 passos: Editorial → Títulos → Briefings → Criativos
+- Indica visualmente qual passo está ativo, completo ou pendente
+- Clicável para navegar entre fases já concluídas
 
-### 2.2 Dashboard - Seletor de entidades
+### 3. Atualização de rotas (`App.tsx`)
+- Remover rotas separadas: `/calendar`, `/planning`, `/briefings`, `/creatives`
+- Adicionar rota única: `/production`
 
-No `DashboardFilters.tsx`, adicionar um filtro que agrupa entidades por tipo e limita a selecao a 3 por grupo:
+### 4. Atualização da navegação (`ProjectLayout.tsx`)
+- Grupo AÇÃO passa de 4 itens para 1:
+  ```
+  AÇÃO
+    └─ Produção
+  ```
 
-- Se o projeto tem 2 concorrentes: mostra todos, sem restricao
-- Se tem 5 concorrentes: mostra checkboxes mas trava apos 3 selecionados por tipo
-- A marca e sempre incluida (nao conta no limite)
+### 5. Lógica de estado do pipeline
+- O status do `planning_calendar` já indica a fase (`draft`, `titles_review`, `briefings_review`, `approved`)
+- Adicionar lógica para detectar fase de criativos (quando há `creative_outputs` para os itens)
+- Mapeamento de status para step do stepper:
+  - `draft` / wizard → Step 1 (Editorial)
+  - `titles_review` → Step 2 (Títulos)
+  - `briefings_review` → Step 3 (Briefings)
+  - `approved` / `active` → Step 4 (Criativos)
 
-O estado `selectedEntityIds` ja existe. A mudanca e adicionar validacao no `handleToggleEntity` para impedir mais de 3 por tipo.
+### 6. Componentes reutilizados sem alteração
+- `PlanningWizardStep1`, `Step2`, `Step3` (wizard de configuração)
+- `TitlesReview` (revisão A/B)
+- `BriefingsReview` (aprovação de briefings)
+- Lógica de geração de criativos e legendas (extraída para componente dedicado)
+- `ProjectAnnualCalendar` (conteúdo do calendário estratégico, embutido na aba)
 
-### 2.3 Wizard de Analise - Step 2
-
-No `AnalysisStep2.tsx`, adicionar a mesma logica:
-
-- Exibir contador "(2/3 selecionados)" por grupo
-- Desabilitar checkboxes do grupo quando ja tem 3 selecionados
-- Mensagem clara: "Selecione ate 3 por categoria"
-
-### 2.4 Nenhuma mudanca no banco
-
-Nao e necessario alterar schema. O limite e apenas no frontend (selecao).
-
----
-
-## Detalhes Tecnicos
-
-### Arquivos a criar
-
-| Arquivo | Descricao |
-|---|---|
-| `src/hooks/useContractedServices.ts` | Hook centralizado para buscar canais contratados |
-
-### Arquivos a modificar
-
-| Arquivo | Mudanca |
-|---|---|
-| `src/pages/ProjectSources.tsx` | Adicionar secao "Servicos Contratados" no topo da pagina |
-| `src/components/results/ResultsSettings.tsx` | Remover bloco de servicos contratados (manter apenas agenda de relatorios) |
-| `src/components/analysis/AnalysisStep1.tsx` | Desabilitar canais nao contratados |
-| `src/components/analysis/AnalysisStep2.tsx` | Limitar selecao a 3 por tipo com contador visual |
-| `src/components/planning/PlanningWizardStep1.tsx` | Desabilitar canais nao contratados |
-| `src/components/dashboard/DashboardFilters.tsx` | Adicionar validacao de max 3 por tipo no seletor de entidades |
-| `src/pages/ProjectDashboard.tsx` | Passar info de tipo das entidades para o filtro |
-
-### Fluxo do usuario
-
-1. Vai em **Fontes** e ativa os servicos contratados (ex: apenas Social)
-2. Cadastra suas fontes (marca, concorrentes, influencers, etc.)
-3. No **Dashboard**, ve os dados filtrados com max 3 por tipo
-4. No **Wizard de Analise**, so consegue criar analises do tipo Social, e seleciona max 3 entidades por categoria
-5. No **Editorial**, so ve a opcao Social no wizard de planejamento
+### 7. Arquivos removidos/deprecados
+- `src/pages/ProjectBriefings.tsx` (lógica absorvida)
+- `src/pages/ProjectCreatives.tsx` (lógica absorvida)
+- `src/pages/ProjectAnnualCalendar.tsx` (embutido como aba)
+- `src/pages/ProjectPlanning.tsx` (substituído por `ProjectProduction.tsx`)
 
