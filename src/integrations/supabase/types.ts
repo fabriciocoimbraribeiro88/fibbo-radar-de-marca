@@ -558,6 +558,7 @@ export type Database = {
           prompt_used: string | null
           selected_caption: string | null
           selected_option: string | null
+          slides: Json | null
           status: string | null
           updated_at: string | null
         }
@@ -573,6 +574,7 @@ export type Database = {
           prompt_used?: string | null
           selected_caption?: string | null
           selected_option?: string | null
+          slides?: Json | null
           status?: string | null
           updated_at?: string | null
         }
@@ -588,6 +590,7 @@ export type Database = {
           prompt_used?: string | null
           selected_caption?: string | null
           selected_option?: string | null
+          slides?: Json | null
           status?: string | null
           updated_at?: string | null
         }

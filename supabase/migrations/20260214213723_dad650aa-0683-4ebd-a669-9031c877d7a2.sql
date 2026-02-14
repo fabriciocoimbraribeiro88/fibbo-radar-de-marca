@@ -1,0 +1,1 @@
+ALTER TABLE public.creative_outputs ADD COLUMN slides jsonb DEFAULT '[]'::jsonb;
