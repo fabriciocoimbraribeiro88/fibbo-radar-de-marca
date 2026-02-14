@@ -83,6 +83,18 @@ export default function ProjectDashboard() {
 
   const resolvedEntities = useMemo(() => {
     if (selectedEntityIds.size > 0) {
+      // In brand_vs_* modes, always include the brand even if not explicitly selected
+      if (sourceMode !== "brand_only" && sourceMode !== "brand_vs_all") {
+        const brand = allEntities.filter((e) => e.role === "brand");
+        const selected = allEntities.filter((e) => selectedEntityIds.has(e.id) && e.role !== "brand");
+        return [...brand, ...selected];
+      }
+      // In brand_vs_all, also always include brand
+      if (sourceMode === "brand_vs_all") {
+        const brand = allEntities.filter((e) => e.role === "brand");
+        const selected = allEntities.filter((e) => selectedEntityIds.has(e.id) && e.role !== "brand");
+        return [...brand, ...selected];
+      }
       return allEntities.filter((e) => selectedEntityIds.has(e.id));
     }
     return resolveEntitiesByMode(allEntities, sourceMode);
