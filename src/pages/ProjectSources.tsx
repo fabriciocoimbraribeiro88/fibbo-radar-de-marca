@@ -535,7 +535,7 @@ export default function ProjectSources() {
 
   const getTypeConfig = (type: EntityType) => TYPE_CONFIG.find((t) => t.value === type) ?? TYPE_CONFIG[1];
   // ─── Contracted services state (must be before early return) ───
-  const [services, setServicesState] = useState<{ channels: string[]; package_name?: string; start_date?: string; renewal_date?: string; monthly_fee?: number }>({ channels: [] });
+  const [services, setServicesState] = useState<{ channels: string[] }>({ channels: [] });
   const [svcSaveTimer, setSvcSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -543,10 +543,6 @@ export default function ProjectSources() {
       const cs = project.contracted_services as any;
       setServicesState({
         channels: cs.channels ?? [],
-        package_name: cs.package_name ?? "",
-        start_date: cs.start_date ?? "",
-        renewal_date: cs.renewal_date ?? "",
-        monthly_fee: cs.monthly_fee ?? undefined,
       });
     }
   }, [project]);
@@ -634,24 +630,6 @@ export default function ProjectSources() {
               <p className="text-[10px] text-muted-foreground">{desc}</p>
             </Card>
           ))}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t">
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Pacote</Label>
-            <Input value={services.package_name ?? ""} onChange={(e) => updateSvcField("package_name", e.target.value)} placeholder="Ex: Growth" className="h-8 text-xs mt-1" />
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Início</Label>
-            <Input type="date" value={services.start_date ?? ""} onChange={(e) => updateSvcField("start_date", e.target.value)} className="h-8 text-xs mt-1" />
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Renovação</Label>
-            <Input type="date" value={services.renewal_date ?? ""} onChange={(e) => updateSvcField("renewal_date", e.target.value)} className="h-8 text-xs mt-1" />
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Fee Mensal (R$)</Label>
-            <Input type="number" value={services.monthly_fee ?? ""} onChange={(e) => updateSvcField("monthly_fee", e.target.value ? Number(e.target.value) : undefined)} placeholder="0" className="h-8 text-xs mt-1" />
-          </div>
         </div>
       </Card>
 
