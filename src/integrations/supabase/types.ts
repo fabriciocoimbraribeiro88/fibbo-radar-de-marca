@@ -547,6 +547,8 @@ export type Database = {
       }
       creative_outputs: {
         Row: {
+          caption_a: string | null
+          caption_b: string | null
           created_at: string | null
           id: string
           option_a_url: string | null
@@ -554,11 +556,14 @@ export type Database = {
           planning_item_id: string
           project_id: string
           prompt_used: string | null
+          selected_caption: string | null
           selected_option: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          caption_a?: string | null
+          caption_b?: string | null
           created_at?: string | null
           id?: string
           option_a_url?: string | null
@@ -566,11 +571,14 @@ export type Database = {
           planning_item_id: string
           project_id: string
           prompt_used?: string | null
+          selected_caption?: string | null
           selected_option?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          caption_a?: string | null
+          caption_b?: string | null
           created_at?: string | null
           id?: string
           option_a_url?: string | null
@@ -578,6 +586,7 @@ export type Database = {
           planning_item_id?: string
           project_id?: string
           prompt_used?: string | null
+          selected_caption?: string | null
           selected_option?: string | null
           status?: string | null
           updated_at?: string | null

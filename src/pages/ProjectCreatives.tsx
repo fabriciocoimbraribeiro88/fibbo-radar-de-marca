@@ -19,6 +19,8 @@ import {
   Bookmark,
   ArrowLeft,
   ImageIcon,
+  Type,
+  Copy,
 } from "lucide-react";
 
 const CHANNEL_ICONS: Record<string, typeof Instagram> = {
@@ -33,6 +35,7 @@ export default function ProjectCreatives() {
   const queryClient = useQueryClient();
   const [activeCalendarId, setActiveCalendarId] = useState<string | null>(null);
   const [generatingItems, setGeneratingItems] = useState<Record<string, string>>({});
+  const [generatingCaptions, setGeneratingCaptions] = useState<Record<string, boolean>>({});
 
   // Calendars with approved briefings
   const { data: calendars, isLoading } = useQuery({
@@ -161,13 +164,49 @@ export default function ProjectCreatives() {
     queryClient.invalidateQueries({ queryKey: ["creative-outputs"] });
   };
 
+  const generateCaptions = async (creative: any, item: any) => {
+    if (!projectId) return;
+    setGeneratingCaptions((prev) => ({ ...prev, [item.id]: true }));
+    try {
+      const res = await supabase.functions.invoke("generate-creative-caption", {
+        body: { planning_item_id: item.id, project_id: projectId, creative_id: creative.id },
+      });
+      if (res.error) throw new Error(res.error.message || "Erro ao gerar legendas");
+      toast({ title: "Legendas geradas!", description: "2 opções de legenda prontas para revisão." });
+      queryClient.invalidateQueries({ queryKey: ["creative-outputs"] });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erro ao gerar legendas", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
+    } finally {
+      setGeneratingCaptions((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
+  };
+
+  const selectCaption = async (creativeId: string, option: "a" | "b") => {
+    const { error } = await supabase
+      .from("creative_outputs")
+      .update({ selected_caption: option } as any)
+      .eq("id", creativeId);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `Legenda ${option.toUpperCase()} selecionada!` });
+    queryClient.invalidateQueries({ queryKey: ["creative-outputs"] });
+  };
+
   const saveAsReference = async (creative: any, item: any) => {
     const imageUrl = creative.selected_option === "a" ? creative.option_a_url : creative.option_b_url;
+    const captionText = creative.selected_caption === "a" ? creative.caption_a : creative.caption_b;
     const { error } = await supabase.from("brand_references").insert({
       project_id: projectId!,
       type: "kv",
       title: item.title,
-      description: item.description ?? item.copy_text ?? "",
+      description: captionText ?? item.description ?? item.copy_text ?? "",
       image_url: imageUrl,
       tags: ["criativo-gerado"],
     });
@@ -176,6 +215,22 @@ export default function ProjectCreatives() {
       return;
     }
     toast({ title: "Salvo como referência!", description: "O criativo foi adicionado ao banco de referências da marca." });
+  };
+
+  const saveCaptionAsReference = async (creative: any, item: any, captionOption: "a" | "b") => {
+    const captionText = captionOption === "a" ? creative.caption_a : creative.caption_b;
+    const { error } = await supabase.from("brand_references").insert({
+      project_id: projectId!,
+      type: "post_success",
+      title: `Legenda: ${item.title}`,
+      description: captionText ?? "",
+      tags: ["legenda-gerada"],
+    });
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Legenda salva como referência!" });
   };
 
   if (!projectId) return null;
@@ -307,6 +362,99 @@ export default function ProjectCreatives() {
                             </div>
                           );
                         })}
+                      </div>
+                    )}
+
+                    {/* Caption generation section */}
+                    {creative?.selected_option && (
+                      <div className="mt-5 border-t pt-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <Type className="h-3.5 w-3.5" /> Legendas
+                          </h4>
+                          <Button
+                            size="sm"
+                            variant={creative.caption_a ? "outline" : "default"}
+                            className={creative.caption_a ? "border-border/40" : "gradient-coral text-white"}
+                            onClick={() => generateCaptions(creative, item)}
+                            disabled={!!generatingCaptions[item.id]}
+                          >
+                            {generatingCaptions[item.id] ? (
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando…</>
+                            ) : creative.caption_a ? (
+                              <><RefreshCw className="mr-2 h-4 w-4" /> Refazer</>
+                            ) : (
+                              <><Type className="mr-2 h-4 w-4" /> Gerar Legendas</>
+                            )}
+                          </Button>
+                        </div>
+
+                        {generatingCaptions[item.id] && !creative.caption_a && (
+                          <div className="flex items-center justify-center py-10 rounded-xl bg-accent/30">
+                            <div className="text-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+                              <p className="text-xs text-muted-foreground">Gerando legendas com base no contexto da marca…</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {creative.caption_a && creative.caption_b && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {(["a", "b"] as const).map((opt) => {
+                              const caption = opt === "a" ? creative.caption_a : creative.caption_b;
+                              const isCaptionSelected = creative.selected_caption === opt;
+                              return (
+                                <div
+                                  key={opt}
+                                  className={`relative rounded-xl border-2 p-4 transition-all ${
+                                    isCaptionSelected
+                                      ? "border-primary bg-primary/5"
+                                      : "border-border/30 hover:border-border/60"
+                                  }`}
+                                >
+                                  <Badge className={`mb-2 text-[10px] ${isCaptionSelected ? "bg-primary text-white" : "bg-muted"}`}>
+                                    Legenda {opt.toUpperCase()}
+                                  </Badge>
+                                  <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed mb-3">
+                                    {caption}
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant={isCaptionSelected ? "default" : "outline"}
+                                      className={isCaptionSelected ? "gradient-coral text-white" : ""}
+                                      onClick={() => selectCaption(creative.id, opt)}
+                                      disabled={isCaptionSelected}
+                                    >
+                                      {isCaptionSelected ? (
+                                        <><Check className="mr-1.5 h-3.5 w-3.5" /> Selecionada</>
+                                      ) : (
+                                        "Selecionar"
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => saveCaptionAsReference(creative, item, opt)}
+                                    >
+                                      <Bookmark className="mr-1.5 h-3.5 w-3.5" /> Referência
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(caption);
+                                        toast({ title: "Legenda copiada!" });
+                                      }}
+                                    >
+                                      <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
 
