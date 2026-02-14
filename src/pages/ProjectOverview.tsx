@@ -2,19 +2,19 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import {
   Users,
   Instagram,
   BarChart3,
   ArrowRight,
   CalendarDays,
-  FileText,
-  AlertTriangle,
-  CheckCircle2,
   Database,
+  Palette,
+  Lightbulb,
 } from "lucide-react";
+import ContextStrengthBar from "@/components/brand-context/ContextStrengthBar";
 
 export default function ProjectOverview() {
   const { id } = useParams<{ id: string }>();
@@ -47,34 +47,18 @@ export default function ProjectOverview() {
         supabase.from("analyses").select("id", { count: "exact", head: true }).eq("project_id", id!),
         supabase.from("instagram_posts").select("id", { count: "exact", head: true }).in("entity_id", entityIds.length ? entityIds : ["__none__"]),
         supabase.from("planning_calendars").select("id", { count: "exact", head: true }).eq("project_id", id!).eq("status", "draft"),
-        supabase.from("brand_context_sources").select("id, status").eq("project_id", id!),
+        supabase.from("brand_context_sources").select("id").eq("project_id", id!),
       ]);
       return {
         entities: peData?.length ?? 0,
         analyses: analysesRes.count ?? 0,
         posts: postsRes.count ?? 0,
         calendars: calendarsRes.count ?? 0,
-        sources: sourcesRes.data ?? [],
+        hasSources: (sourcesRes.data?.length ?? 0) > 0,
       };
     },
     enabled: !!id,
   });
-
-  // Context strength calculation
-  const contextStrength = (() => {
-    if (!stats || !project) return { score: 0, label: "Não configurado", items: [] as { label: string; done: boolean }[] };
-    const items = [
-      { label: "Fontes de dados adicionadas", done: stats.entities > 0 },
-      { label: "Posts coletados", done: stats.posts > 0 },
-      { label: "Fontes de contexto (briefings/docs)", done: stats.sources.length > 0 },
-      { label: "Fontes processadas", done: stats.sources.filter((s) => s.status === "processed").length > 0 },
-      { label: "Briefing preenchido", done: !!project.briefing },
-    ];
-    const done = items.filter((i) => i.done).length;
-    const score = Math.round((done / items.length) * 100);
-    const label = score === 100 ? "Completo" : score >= 60 ? "Bom" : score >= 20 ? "Parcial" : "Não configurado";
-    return { score, label, items };
-  })();
 
   const statCards = [
     { label: "Marcas / Fontes", value: stats?.entities ?? 0, icon: Users, path: "sources", color: "text-blue-500 bg-blue-500/10" },
@@ -82,6 +66,22 @@ export default function ProjectOverview() {
     { label: "Análises", value: stats?.analyses ?? 0, icon: BarChart3, path: "analyses", color: "text-amber-500 bg-amber-500/10" },
     { label: "Planejamentos", value: stats?.calendars ?? 0, icon: CalendarDays, path: "planning", color: "text-violet-500 bg-violet-500/10" },
   ];
+
+  // Next steps logic
+  const nextSteps = (() => {
+    if (!stats) return [];
+    const steps: { label: string; action: string; icon: typeof Database; path: string }[] = [];
+    if (stats.entities === 0) {
+      steps.push({ label: "Adicione fontes de dados para começar", icon: Database, action: "Ir para Fontes", path: "sources" });
+    }
+    if (stats.entities > 0 && !stats.hasSources) {
+      steps.push({ label: "Envie briefings e documentos para enriquecer o contexto", icon: Database, action: "Ir para Fontes", path: "sources" });
+    }
+    if (stats.hasSources && stats.analyses === 0) {
+      steps.push({ label: "Gere o contexto de marca e crie sua primeira análise", icon: Palette, action: "Contexto de Marca", path: "brand" });
+    }
+    return steps;
+  })();
 
   if (isLoading) {
     return (
@@ -127,41 +127,38 @@ export default function ProjectOverview() {
       </div>
 
       {/* Context Strength Bar */}
-      <div className="card-flat p-6 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="section-label flex items-center gap-2">
-            <Database className="h-3.5 w-3.5" />
-            FORÇA DO CONTEXTO
-          </h3>
-          <Badge
-            variant="secondary"
-            className={`text-xs border-0 rounded-full ${
-              contextStrength.score >= 80
-                ? "bg-emerald-500/10 text-emerald-600"
-                : contextStrength.score >= 40
-                ? "bg-amber-500/10 text-amber-600"
-                : "bg-destructive/10 text-destructive"
-            }`}
-          >
-            {contextStrength.label} — {contextStrength.score}%
-          </Badge>
-        </div>
-        <Progress value={contextStrength.score} className="h-2 mb-4" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {contextStrength.items.map((item) => (
-            <div key={item.label} className="flex items-center gap-2 text-sm">
-              {item.done ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-              ) : (
-                <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-              )}
-              <span className={item.done ? "text-foreground" : "text-muted-foreground"}>
-                {item.label}
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="mb-6">
+        <ContextStrengthBar projectId={id!} />
       </div>
+
+      {/* Next Steps */}
+      {nextSteps.length > 0 && (
+        <div className="card-flat p-5 mb-6">
+          <h3 className="section-label flex items-center gap-2 mb-3">
+            <Lightbulb className="h-3.5 w-3.5" />
+            PRÓXIMOS PASSOS
+          </h3>
+          <div className="space-y-2">
+            {nextSteps.map((step) => (
+              <div key={step.path} className="flex items-center justify-between bg-accent/30 rounded-lg px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <step.icon className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-foreground">{step.label}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => navigate(`/projects/${id}/${step.path}`)}
+                >
+                  {step.action}
+                  <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Brand summary */}
       {project && (
