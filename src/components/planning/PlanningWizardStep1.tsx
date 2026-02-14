@@ -27,9 +27,12 @@ interface Props {
   setWizardData: React.Dispatch<React.SetStateAction<WizardData>>;
   onNext: () => void;
   onBack: () => void;
+  contractedChannels?: string[];
 }
 
-export default function PlanningWizardStep1({ projectId, wizardData, setWizardData, onNext, onBack }: Props) {
+export default function PlanningWizardStep1({ projectId, wizardData, setWizardData, onNext, onBack, contractedChannels }: Props) {
+  const isChannelContracted = (ch: string) =>
+    !contractedChannels || contractedChannels.length === 0 || contractedChannels.includes(ch);
   const { data: analyses } = useQuery({
     queryKey: ["analyses-for-planning", projectId],
     queryFn: async () => {
@@ -99,20 +102,31 @@ export default function PlanningWizardStep1({ projectId, wizardData, setWizardDa
       <div className="mb-6">
         <Label className="text-sm font-medium text-foreground mb-3 block">Canal</Label>
         <div className="grid grid-cols-3 gap-3">
-          {CHANNELS.map((ch) => (
-            <Card
-              key={ch.value}
-              className={`cursor-pointer transition-colors text-center ${
-                wizardData.channel === ch.value ? "ring-2 ring-primary bg-primary/5" : "hover:bg-accent/30"
-              }`}
-              onClick={() => setWizardData((d) => ({ ...d, channel: ch.value }))}
-            >
-              <CardContent className="p-4 flex flex-col items-center gap-2">
-                <span className="text-2xl">{ch.emoji}</span>
-                <span className="text-sm font-medium text-foreground">{ch.label}</span>
-              </CardContent>
-            </Card>
-          ))}
+          {CHANNELS.map((ch) => {
+            const contracted = isChannelContracted(ch.value);
+            return (
+              <Card
+                key={ch.value}
+                className={`transition-colors text-center ${
+                  !contracted
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer"
+                } ${
+                  wizardData.channel === ch.value && contracted ? "ring-2 ring-primary bg-primary/5" : contracted ? "hover:bg-accent/30" : ""
+                }`}
+                onClick={() => contracted && setWizardData((d) => ({ ...d, channel: ch.value }))}
+                title={!contracted ? "Serviço não contratado" : undefined}
+              >
+                <CardContent className="p-4 flex flex-col items-center gap-2">
+                  <span className="text-2xl">{ch.emoji}</span>
+                  <span className="text-sm font-medium text-foreground">{ch.label}</span>
+                  {!contracted && (
+                    <span className="text-[9px] text-muted-foreground">Não contratado</span>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 

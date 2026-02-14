@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useContractedServices } from "@/hooks/useContractedServices";
 import PlanningList from "@/components/planning/PlanningList";
 import PlanningWizardStep1 from "@/components/planning/PlanningWizardStep1";
 import PlanningWizardStep2 from "@/components/planning/PlanningWizardStep2";
@@ -101,6 +102,7 @@ export default function ProjectPlanning() {
   const { id: projectId } = useParams<{ id: string }>();
   const [phase, setPhase] = useState<PlanningPhase>("list");
   const [wizardData, setWizardData] = useState<WizardData>(defaultWizardData);
+  const { channels: contractedChannels } = useContractedServices(projectId);
   const [activeCalendarId, setActiveCalendarId] = useState<string | null>(null);
 
   const { data: project } = useQuery({
@@ -158,6 +160,7 @@ export default function ProjectPlanning() {
           setWizardData={setWizardData}
           onNext={() => setPhase("wizard_step2")}
           onBack={() => setPhase("list")}
+          contractedChannels={contractedChannels}
         />
       )}
 

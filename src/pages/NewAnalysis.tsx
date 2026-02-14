@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useContractedServices } from "@/hooks/useContractedServices";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -39,6 +40,7 @@ export default function NewAnalysis() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { channels: contractedChannels } = useContractedServices(projectId);
 
   const [step, setStep] = useState(0);
   const [creating, setCreating] = useState(false);
@@ -297,6 +299,7 @@ export default function NewAnalysis() {
           setLargeDatasetAck={setLargeDatasetAck}
           hasAdsData={hasAdsData ?? false}
           hasSeoData={hasSeoData ?? false}
+          contractedChannels={contractedChannels}
         />
       )}
 

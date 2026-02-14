@@ -76,7 +76,10 @@ export interface EntityOption {
   name: string;
   handle: string | null;
   role: string;
+  type?: string;
 }
+
+const MAX_PER_TYPE = 3;
 
 interface Props {
   period: PeriodRange;
@@ -205,11 +208,68 @@ export default function DashboardFilters({
         ))}
       </div>
 
-      {/* Row 4: Individual entity pills — only visible in brand_only mode */}
+      {/* Row 4: Entity selection by type — with max 3 per type limit */}
+      {sourceMode !== "brand_only" && entities.length > 0 && (() => {
+        const nonBrand = entities.filter((e) => e.role !== "brand");
+        const types = [...new Set(nonBrand.map((e) => e.type ?? e.role))];
+        const typeLabels: Record<string, string> = {
+          competitor: "Concorrentes",
+          influencer: "Influencers",
+          inspiration: "Inspirações",
+        };
+        if (types.length === 0) return null;
+
+        // Count selected per type
+        const selectedByType: Record<string, number> = {};
+        nonBrand.forEach((e) => {
+          const t = e.type ?? e.role;
+          if (selectedEntityIds.has(e.id)) {
+            selectedByType[t] = (selectedByType[t] ?? 0) + 1;
+          }
+        });
+
+        return types.map((type) => {
+          const items = nonBrand.filter((e) => (e.type ?? e.role) === type);
+          if (items.length === 0) return null;
+          const count = selectedByType[type] ?? 0;
+          const maxReached = count >= MAX_PER_TYPE;
+          return (
+            <div key={type} className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+                {typeLabels[type] ?? type}
+              </span>
+              <span className="text-[10px] text-muted-foreground mr-1">({count}/{MAX_PER_TYPE})</span>
+              {items.map((e) => {
+                const selected = selectedEntityIds.has(e.id);
+                const disabled = !selected && maxReached;
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => !disabled && onToggleEntity(e.id)}
+                    disabled={disabled}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                      disabled
+                        ? "bg-muted text-muted-foreground/40 cursor-not-allowed"
+                        : selected
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-muted text-muted-foreground hover:bg-accent"
+                    }`}
+                    title={disabled ? "Máximo de 3 por tipo atingido" : undefined}
+                  >
+                    {e.handle ? e.handle.replace("@", "") : e.name}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        });
+      })()}
+
+      {/* Brand entities — visible in brand_only mode */}
       {sourceMode === "brand_only" && entities.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">Marca</span>
-          {entities.map((e) => {
+          {entities.filter((e) => e.role === "brand").map((e) => {
             const selected = selectedEntityIds.has(e.id);
             return (
               <button
