@@ -58,7 +58,7 @@ const PATH_LABELS: Record<string, string> = {
   creatives: "Criativos",
   results: "Resultados",
   okrs: "OKRs",
-  checkin: "Check-in",
+  
   new: "Nova",
 };
 
