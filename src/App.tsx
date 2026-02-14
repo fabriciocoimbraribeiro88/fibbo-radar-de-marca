@@ -20,6 +20,7 @@ import ProjectPlanning from "@/pages/ProjectPlanning";
 import ProjectBriefings from "@/pages/ProjectBriefings";
 import ProjectCreatives from "@/pages/ProjectCreatives";
 import ProjectOKRs from "@/pages/ProjectOKRs";
+import ProjectAnnualCalendar from "@/pages/ProjectAnnualCalendar";
 
 import ProjectDashboard from "@/pages/ProjectDashboard";
 import ProjectResults from "@/pages/ProjectResults";
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="analyses/new" element={<NewAnalysis />} />
                 <Route path="analyses/:analysisId" element={<AnalysisView />} />
                 <Route path="planning" element={<ProjectPlanning />} />
+                <Route path="calendar" element={<ProjectAnnualCalendar />} />
                 <Route path="briefings" element={<ProjectBriefings />} />
                 <Route path="creatives" element={<ProjectCreatives />} />
                 <Route path="okrs" element={<ProjectOKRs />} />

@@ -8,6 +8,7 @@ import {
   BarChart3,
   Search,
   CalendarDays,
+  CalendarRange,
   ChevronRight,
   FileText,
   Paintbrush,
@@ -34,6 +35,7 @@ const NAV_GROUPS = [
     label: "AÇÃO",
     items: [
       { title: "Planejamento", path: "/planning", icon: CalendarDays },
+      { title: "Calendário Anual", path: "/calendar", icon: CalendarRange },
       { title: "Briefings", path: "/briefings", icon: FileText },
       { title: "Criativos", path: "/creatives", icon: Paintbrush },
     ],
@@ -54,6 +56,7 @@ const PATH_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   analyses: "Métricas Avançadas",
   planning: "Planejamento",
+  calendar: "Calendário Anual",
   briefings: "Briefings",
   creatives: "Criativos",
   results: "Resultados",
