@@ -67,6 +67,7 @@ import { useEntityDataSummary } from "@/hooks/useEntityDataSummary";
 import { EntityDataSummary } from "@/components/sources/EntityDataSummary";
 import BrandContextSources from "@/components/brand-context/BrandContextSources";
 import ContextStrengthBar from "@/components/brand-context/ContextStrengthBar";
+import PlatformIntegrations from "@/components/sources/PlatformIntegrations";
 
 type EntityType = Database["public"]["Enums"]["entity_type"];
 
@@ -632,6 +633,9 @@ export default function ProjectSources() {
           ))}
         </div>
       </Card>
+
+      {/* Platform Integrations */}
+      {projectId && <PlatformIntegrations projectId={projectId} activeChannels={services.channels} />}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
