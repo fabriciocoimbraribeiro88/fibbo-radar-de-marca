@@ -59,3 +59,21 @@ verify_jwt = false
 
 [functions.generate-automated-report]
 verify_jwt = false
+
+[functions.sync-meta-ads]
+verify_jwt = false
+
+[functions.sync-google-ads]
+verify_jwt = false
+
+[functions.sync-ga4]
+verify_jwt = false
+
+[functions.sync-search-console]
+verify_jwt = false
+
+[functions.sync-semrush]
+verify_jwt = false
+
+[functions.sync-tiktok-ads]
+verify_jwt = false

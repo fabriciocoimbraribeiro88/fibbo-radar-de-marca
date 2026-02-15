@@ -14,6 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
+      ads_adsets: {
+        Row: {
+          adset_id: string | null
+          budget: number | null
+          campaign_id: string
+          clicks: number | null
+          conversions: number | null
+          fetched_at: string | null
+          id: string
+          impressions: number | null
+          metadata: Json | null
+          name: string | null
+          spend: number | null
+          targeting: Json | null
+        }
+        Insert: {
+          adset_id?: string | null
+          budget?: number | null
+          campaign_id: string
+          clicks?: number | null
+          conversions?: number | null
+          fetched_at?: string | null
+          id?: string
+          impressions?: number | null
+          metadata?: Json | null
+          name?: string | null
+          spend?: number | null
+          targeting?: Json | null
+        }
+        Update: {
+          adset_id?: string | null
+          budget?: number | null
+          campaign_id?: string
+          clicks?: number | null
+          conversions?: number | null
+          fetched_at?: string | null
+          id?: string
+          impressions?: number | null
+          metadata?: Json | null
+          name?: string | null
+          spend?: number | null
+          targeting?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_adsets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_campaigns: {
+        Row: {
+          budget_daily: number | null
+          budget_total: number | null
+          campaign_id: string | null
+          campaign_name: string | null
+          clicks: number | null
+          conversions: number | null
+          cost_per_conversion: number | null
+          cpc: number | null
+          cpm: number | null
+          ctr: number | null
+          fetched_at: string | null
+          frequency: number | null
+          id: string
+          impressions: number | null
+          metadata: Json | null
+          objective: string | null
+          period_end: string | null
+          period_start: string | null
+          platform: string
+          platform_connection_id: string | null
+          project_id: string
+          reach: number | null
+          roas: number | null
+          spend: number | null
+          status: string | null
+        }
+        Insert: {
+          budget_daily?: number | null
+          budget_total?: number | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number | null
+          conversions?: number | null
+          cost_per_conversion?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          ctr?: number | null
+          fetched_at?: string | null
+          frequency?: number | null
+          id?: string
+          impressions?: number | null
+          metadata?: Json | null
+          objective?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          platform: string
+          platform_connection_id?: string | null
+          project_id: string
+          reach?: number | null
+          roas?: number | null
+          spend?: number | null
+          status?: string | null
+        }
+        Update: {
+          budget_daily?: number | null
+          budget_total?: number | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number | null
+          conversions?: number | null
+          cost_per_conversion?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          ctr?: number | null
+          fetched_at?: string | null
+          frequency?: number | null
+          id?: string
+          impressions?: number | null
+          metadata?: Json | null
+          objective?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          platform?: string
+          platform_connection_id?: string | null
+          project_id?: string
+          reach?: number | null
+          roas?: number | null
+          spend?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_campaigns_platform_connection_id_fkey"
+            columns: ["platform_connection_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_campaigns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ads_library: {
         Row: {
           ad_body: string | null
@@ -810,6 +962,147 @@ export type Database = {
           },
         ]
       }
+      ga4_pages: {
+        Row: {
+          avg_time_on_page: number | null
+          bounce_rate: number | null
+          date: string
+          entrances: number | null
+          exits: number | null
+          fetched_at: string | null
+          id: string
+          metadata: Json | null
+          page_path: string | null
+          page_title: string | null
+          platform_connection_id: string | null
+          project_id: string
+          unique_views: number | null
+          views: number | null
+        }
+        Insert: {
+          avg_time_on_page?: number | null
+          bounce_rate?: number | null
+          date: string
+          entrances?: number | null
+          exits?: number | null
+          fetched_at?: string | null
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          page_title?: string | null
+          platform_connection_id?: string | null
+          project_id: string
+          unique_views?: number | null
+          views?: number | null
+        }
+        Update: {
+          avg_time_on_page?: number | null
+          bounce_rate?: number | null
+          date?: string
+          entrances?: number | null
+          exits?: number | null
+          fetched_at?: string | null
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          page_title?: string | null
+          platform_connection_id?: string | null
+          project_id?: string
+          unique_views?: number | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ga4_pages_platform_connection_id_fkey"
+            columns: ["platform_connection_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ga4_pages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ga4_traffic: {
+        Row: {
+          avg_session_duration: number | null
+          bounce_rate: number | null
+          channel_group: string | null
+          conversions: number | null
+          date: string
+          fetched_at: string | null
+          id: string
+          medium: string | null
+          metadata: Json | null
+          new_users: number | null
+          pages_per_session: number | null
+          platform_connection_id: string | null
+          project_id: string
+          revenue: number | null
+          sessions: number | null
+          source: string | null
+          users: number | null
+        }
+        Insert: {
+          avg_session_duration?: number | null
+          bounce_rate?: number | null
+          channel_group?: string | null
+          conversions?: number | null
+          date: string
+          fetched_at?: string | null
+          id?: string
+          medium?: string | null
+          metadata?: Json | null
+          new_users?: number | null
+          pages_per_session?: number | null
+          platform_connection_id?: string | null
+          project_id: string
+          revenue?: number | null
+          sessions?: number | null
+          source?: string | null
+          users?: number | null
+        }
+        Update: {
+          avg_session_duration?: number | null
+          bounce_rate?: number | null
+          channel_group?: string | null
+          conversions?: number | null
+          date?: string
+          fetched_at?: string | null
+          id?: string
+          medium?: string | null
+          metadata?: Json | null
+          new_users?: number | null
+          pages_per_session?: number | null
+          platform_connection_id?: string | null
+          project_id?: string
+          revenue?: number | null
+          sessions?: number | null
+          source?: string | null
+          users?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ga4_traffic_platform_connection_id_fkey"
+            columns: ["platform_connection_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ga4_traffic_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_comments: {
         Row: {
           comment_id_instagram: string | null
@@ -1429,6 +1722,59 @@ export type Database = {
           },
         ]
       }
+      platform_connections: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          created_at: string
+          credentials_ref: string | null
+          id: string
+          last_sync_at: string | null
+          metadata: Json | null
+          platform: string
+          project_id: string
+          status: string
+          sync_frequency: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string
+          credentials_ref?: string | null
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json | null
+          platform: string
+          project_id: string
+          status?: string
+          sync_frequency?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string
+          credentials_ref?: string | null
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json | null
+          platform?: string
+          project_id?: string
+          status?: string
+          sync_frequency?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_connections_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1705,6 +2051,72 @@ export type Database = {
           },
           {
             foreignKeyName: "reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_console_data: {
+        Row: {
+          clicks: number | null
+          country: string | null
+          ctr: number | null
+          date: string
+          device: string | null
+          fetched_at: string | null
+          id: string
+          impressions: number | null
+          metadata: Json | null
+          page: string | null
+          platform_connection_id: string | null
+          position: number | null
+          project_id: string
+          query: string | null
+        }
+        Insert: {
+          clicks?: number | null
+          country?: string | null
+          ctr?: number | null
+          date: string
+          device?: string | null
+          fetched_at?: string | null
+          id?: string
+          impressions?: number | null
+          metadata?: Json | null
+          page?: string | null
+          platform_connection_id?: string | null
+          position?: number | null
+          project_id: string
+          query?: string | null
+        }
+        Update: {
+          clicks?: number | null
+          country?: string | null
+          ctr?: number | null
+          date?: string
+          device?: string | null
+          fetched_at?: string | null
+          id?: string
+          impressions?: number | null
+          metadata?: Json | null
+          page?: string | null
+          platform_connection_id?: string | null
+          position?: number | null
+          project_id?: string
+          query?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_console_data_platform_connection_id_fkey"
+            columns: ["platform_connection_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "search_console_data_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
